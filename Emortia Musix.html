@@ -442,11 +442,7 @@ input,textarea,button{font-family:inherit;}
         <p style="color:var(--dim);font-size:16px;line-height:1.6;max-width:380px;margin:0 0 28px;">Bookings, collaborations, or just to send a track you think I'd like — the inbox is open.</p>
         <div style="display:flex;flex-direction:column;gap:12px;font-family:'Space Mono',monospace;font-size:14px;color:var(--text2);">
           <div>hello@emortia.fm</div>
-          <div style="display:flex;gap:14px;">
-            <span style="color:var(--dim);cursor:pointer;" style-hover="color:var(--accent);">Instagram</span>
-            <span style="color:var(--dim);cursor:pointer;" style-hover="color:var(--accent);">Bandcamp</span>
-            <span style="color:var(--dim);cursor:pointer;" style-hover="color:var(--accent);">SoundCloud</span>
-          </div>
+          {{ socialLinks }}
         </div>
       </div>
       <div style="border:1px solid var(--line);border-radius:20px;background:var(--panelS);padding:28px;">
@@ -727,6 +723,23 @@ class Component extends DCLogic {
   setHero(h){ return ()=>this.setState({hero:h}); }
   play(i){ return ()=>this.loadTrack(i, true); }
 
+  socials(){
+    const items=[
+      {name:'YouTube', href:'https://www.youtube.com/@EmortiaMusix', path:'M23.5 6.2a3 3 0 0 0-2.12-2.12C19.5 3.55 12 3.55 12 3.55s-7.5 0-9.38.53A3 3 0 0 0 .5 6.2 31.2 31.2 0 0 0 0 12a31.2 31.2 0 0 0 .5 5.8 3 3 0 0 0 2.12 2.12c1.88.53 9.38.53 9.38.53s7.5 0 9.38-.53a3 3 0 0 0 2.12-2.12A31.2 31.2 0 0 0 24 12a31.2 31.2 0 0 0-.5-5.8zM9.55 15.57V8.43L15.82 12z'},
+      {name:'TikTok', href:'https://www.tiktok.com/@emortiamusix', path:'M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 1 1-1.59-2.39V9.66a5.65 5.65 0 1 0 4.68 5.58V8.95a7.35 7.35 0 0 0 4.3 1.38V7.3a4.28 4.28 0 0 1-3.24-1.48z'},
+    ];
+    return React.createElement('div',{style:{display:'flex',gap:'10px',flexWrap:'wrap'}},
+      items.map(it=>React.createElement('a',{key:it.name, href:it.href, target:'_blank', rel:'noopener noreferrer', title:it.name,
+        style:{display:'inline-flex',alignItems:'center',gap:'9px',color:'var(--dim)',textDecoration:'none',border:'1px solid var(--line3)',borderRadius:'999px',padding:'10px 18px',fontFamily:"'Space Mono',monospace",fontSize:'13px',transition:'color .2s ease,border-color .2s ease'},
+        onMouseEnter:(e)=>{e.currentTarget.style.color='var(--text)';e.currentTarget.style.borderColor='var(--accent)';},
+        onMouseLeave:(e)=>{e.currentTarget.style.color='var(--dim)';e.currentTarget.style.borderColor='var(--line3)';},
+      },
+        React.createElement('svg',{width:16,height:16,viewBox:'0 0 24 24',fill:'currentColor','aria-hidden':true},React.createElement('path',{d:it.path})),
+        it.name
+      ))
+    );
+  }
+
   wave(opts){
     const {n=28, maxH=26, barW=3, gap:g=2, dur=1.1, origin='flex-end', cushion=false} = opts;
     const playing = this.state.playing;
@@ -918,6 +931,7 @@ class Component extends DCLogic {
       audioMissing:!!s.audioMissing, notMissing:!s.audioMissing,
       queueOpen:s.queueOpen,
 
+      socialLinks: this.socials(),
       playerWave: this.wave({ n:26, maxH:26, barW:3, gap:2 }),
       heroWave: this.wave({ n:64, maxH:160, barW:5, gap:4, origin:'center', cushion:true, dur:1.4 }),
       musicWave: this.wave({ n:52, maxH:54, barW:4, gap:3, origin:'center', cushion:true }),
