@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<template id="__bundler_thumbnail" data-bg-color="#14110d">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#14110d"/>
+    <rect x="516" y="316" width="168" height="168" rx="38" fill="#e8a13c"/>
+    <g fill="#14110d">
+      <rect x="556" y="384" width="15" height="40" rx="7.5"/>
+      <rect x="584" y="356" width="15" height="68" rx="7.5"/>
+      <rect x="612" y="372" width="15" height="52" rx="7.5"/>
+      <rect x="640" y="350" width="15" height="74" rx="7.5"/>
+    </g>
+    <text x="600" y="560" font-family="Georgia, serif" font-size="52" font-weight="700" fill="#f4efe6" text-anchor="middle">Emortia <tspan fill="#e8a13c">Musix</tspan></text>
+  </svg>
+</template>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23e8a13c'/%3E%3Cg fill='%2314110d'%3E%3Crect x='8' y='13' width='3' height='8' rx='1.5'/%3E%3Crect x='13' y='9' width='3' height='14' rx='1.5'/%3E%3Crect x='18' y='11' width='3' height='10' rx='1.5'/%3E%3Crect x='23' y='8' width='3' height='15' rx='1.5'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#14110d;--bg2:#1d1813;--surface:#241e17;--surface2:#1a160f;--line:#2a231b;--line2:#322a20;--line3:#3a3128;--text:#f4efe6;--text2:#d6cdbf;--dim:#b3a896;--mute:#7d7567;--faint:#5a5346;--accent:#e8a13c;--accentB:#ffb84d;--accentD:#c47e20;--artA:#3a2a17;--panel:rgba(36,30,23,0.4);--panelS:rgba(36,30,23,0.5);--panel2:rgba(26,22,15,0.6);--bar:rgba(20,17,13,0.72);--bar2:rgba(20,17,13,0.92);--queueBg:rgba(26,22,15,0.96);--glow:rgba(232,161,60,0.5);--glow0:rgba(232,161,60,0);--glowSoft:rgba(232,161,60,0.28);--stripe:rgba(232,161,60,0.06);--dot:rgba(255,184,77,0.7);}
+[data-theme="amber"]{--bg:#14110d;--bg2:#1d1813;--surface:#241e17;--surface2:#1a160f;--line:#2a231b;--line2:#322a20;--line3:#3a3128;--text:#f4efe6;--text2:#d6cdbf;--dim:#b3a896;--mute:#7d7567;--faint:#5a5346;--accent:#e8a13c;--accentB:#ffb84d;--accentD:#c47e20;--artA:#3a2a17;--panel:rgba(36,30,23,0.4);--panelS:rgba(36,30,23,0.5);--panel2:rgba(26,22,15,0.6);--bar:rgba(20,17,13,0.72);--bar2:rgba(20,17,13,0.92);--queueBg:rgba(26,22,15,0.96);--glow:rgba(232,161,60,0.5);--glow0:rgba(232,161,60,0);--glowSoft:rgba(232,161,60,0.28);--stripe:rgba(232,161,60,0.06);--dot:rgba(255,184,77,0.7);}
+[data-theme="indigo"]{--bg:#0e1018;--bg2:#161a27;--surface:#1c2233;--surface2:#12151f;--line:#262d3f;--line2:#303851;--line3:#3d4763;--text:#eef1f8;--text2:#c7cee2;--dim:#98a1bc;--mute:#6e7791;--faint:#4d5570;--accent:#5b8cff;--accentB:#7da6ff;--accentD:#3f6ad6;--artA:#23304f;--panel:rgba(28,34,51,0.4);--panelS:rgba(28,34,51,0.5);--panel2:rgba(18,21,31,0.6);--bar:rgba(14,16,24,0.72);--bar2:rgba(14,16,24,0.92);--queueBg:rgba(18,21,31,0.96);--glow:rgba(91,140,255,0.5);--glow0:rgba(91,140,255,0);--glowSoft:rgba(91,140,255,0.28);--stripe:rgba(91,140,255,0.06);--dot:rgba(125,166,255,0.7);}
+[data-theme="emerald"]{--bg:#0c120e;--bg2:#121b16;--surface:#16221b;--surface2:#0e1410;--line:#203029;--line2:#2a3d33;--line3:#395243;--text:#eef4ef;--text2:#c6d6cb;--dim:#97aaa0;--mute:#6c8074;--faint:#4c5f54;--accent:#34c98b;--accentB:#54e0a4;--accentD:#1f9a68;--artA:#1d3a2c;--panel:rgba(22,34,27,0.4);--panelS:rgba(22,34,27,0.5);--panel2:rgba(14,20,16,0.6);--bar:rgba(12,18,14,0.72);--bar2:rgba(12,18,14,0.92);--queueBg:rgba(14,20,16,0.96);--glow:rgba(52,201,139,0.5);--glow0:rgba(52,201,139,0);--glowSoft:rgba(52,201,139,0.28);--stripe:rgba(52,201,139,0.06);--dot:rgba(84,224,164,0.7);}
+[data-theme="crimson"]{--bg:#150e0d;--bg2:#201413;--surface:#271817;--surface2:#190f0e;--line:#33211f;--line2:#3f2a27;--line3:#4d3531;--text:#f6eeec;--text2:#e0cbc7;--dim:#bd9f9a;--mute:#8a6f6a;--faint:#5e4844;--accent:#f0523f;--accentB:#ff7a68;--accentD:#c63a2a;--artA:#3a201c;--panel:rgba(39,24,23,0.4);--panelS:rgba(39,24,23,0.5);--panel2:rgba(25,15,14,0.6);--bar:rgba(21,14,13,0.72);--bar2:rgba(21,14,13,0.92);--queueBg:rgba(25,15,14,0.96);--glow:rgba(240,82,63,0.5);--glow0:rgba(240,82,63,0);--glowSoft:rgba(240,82,63,0.28);--stripe:rgba(240,82,63,0.06);--dot:rgba(255,122,104,0.7);}
+[data-theme="mono"]{--bg:#101113;--bg2:#191b1e;--surface:#1e2125;--surface2:#141517;--line:#292c31;--line2:#33373d;--line3:#41464d;--text:#f3f4f6;--text2:#cfd2d7;--dim:#9aa0a8;--mute:#6c7178;--faint:#4a4e54;--accent:#d7dbe2;--accentB:#eef0f4;--accentD:#aeb4be;--artA:#2a2e34;--panel:rgba(30,33,37,0.4);--panelS:rgba(30,33,37,0.5);--panel2:rgba(20,21,23,0.6);--bar:rgba(16,17,19,0.72);--bar2:rgba(16,17,19,0.92);--queueBg:rgba(20,21,23,0.96);--glow:rgba(215,219,226,0.5);--glow0:rgba(215,219,226,0);--glowSoft:rgba(215,219,226,0.28);--stripe:rgba(215,219,226,0.06);--dot:rgba(238,240,244,0.7);}
+[data-theme]{transition:background .35s ease,color .35s ease;}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{background:var(--bg);}
+::selection{background:var(--accent);color:var(--bg);}
+@keyframes eq{0%,100%{transform:scaleY(0.5);}50%{transform:scaleY(1);}}
+@keyframes spin{to{transform:rotate(360deg);}}
+@keyframes fadeUp{from{transform:translateY(14px);}to{transform:none;}}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 var(--glow);}50%{box-shadow:0 0 0 16px var(--glow0);}}
+input,textarea,button{font-family:inherit;}
+</style>
+</helmet>
+
+<div data-theme="{{ theme }}" style="min-height:100vh;background:radial-gradient(120% 80% at 80% -10%,var(--bg2) 0%,var(--bg) 60%);color:var(--text);font-family:'Hanken Grotesk',system-ui,sans-serif;padding-bottom:132px;">
+
+  <header style="position:sticky;top:0;z-index:40;backdrop-filter:blur(14px);background:var(--bar);border-bottom:1px solid var(--line);">
+    <div style="max-width:1180px;margin:0 auto;padding:14px 28px;display:flex;align-items:center;justify-content:space-between;gap:20px;">
+      <div onClick="{{ nav.home }}" style="display:flex;align-items:center;gap:11px;cursor:pointer;">
+        <div style="width:32px;height:32px;border-radius:9px;background:linear-gradient(150deg,var(--accentB),var(--accentD));display:flex;align-items:center;justify-content:center;gap:2.5px;box-shadow:0 6px 18px var(--glowSoft);">
+          <span style="width:3px;height:8px;border-radius:2px;background:var(--bg);transform-origin:center;animation:eq 0.85s ease-in-out infinite;animation-delay:0s;animation-play-state:{{ spinState }};"></span>
+          <span style="width:3px;height:14px;border-radius:2px;background:var(--bg);transform-origin:center;animation:eq 0.85s ease-in-out infinite;animation-delay:0.18s;animation-play-state:{{ spinState }};"></span>
+          <span style="width:3px;height:10px;border-radius:2px;background:var(--bg);transform-origin:center;animation:eq 0.85s ease-in-out infinite;animation-delay:0.36s;animation-play-state:{{ spinState }};"></span>
+          <span style="width:3px;height:15px;border-radius:2px;background:var(--bg);transform-origin:center;animation:eq 0.85s ease-in-out infinite;animation-delay:0.1s;animation-play-state:{{ spinState }};"></span>
+        </div>
+        <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:18px;letter-spacing:-0.02em;">Emortia <span style="color:var(--accent);">Musix</span></div>
+      </div>
+      <nav style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
+        <sc-for list="{{ navItems }}" as="item" hint-placeholder-count="7">
+          <button onClick="{{ item.onClick }}" style="position:relative;background:none;border:none;color:var(--dim);font-size:14.5px;font-weight:500;padding:8px 13px;cursor:pointer;border-radius:8px;letter-spacing:0.01em;" style-hover="color:var(--text);background:rgba(244,239,230,0.05);">
+            {{ item.label }}
+            <sc-if value="{{ item.active }}" hint-placeholder-val="{{ false }}">
+              <span style="position:absolute;left:13px;right:13px;bottom:2px;height:2px;background:var(--accent);border-radius:2px;"></span>
+            </sc-if>
+          </button>
+        </sc-for>
+      </nav>
+    </div>
+  </header>
+
+  <main style="max-width:1180px;margin:0 auto;padding:0 28px;">
+
+    <!-- ============ HOME ============ -->
+    <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+    <section style="animation:fadeUp 0.5s ease;padding:30px 0 70px;">
+      <div style="display:flex;align-items:center;gap:14px;margin:18px 0 30px;">
+        <span style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:0.16em;color:var(--mute);text-transform:uppercase;">Home hero direction</span>
+        <div style="display:flex;gap:6px;">
+          <button onClick="{{ heroSet.a }}" style="font-family:'Space Mono',monospace;font-size:12px;padding:6px 12px;border-radius:999px;border:1px solid var(--line3);background:none;color:var(--dim);cursor:pointer;" style-hover="border-color:var(--accent);color:var(--text);">01 · Editorial</button>
+          <button onClick="{{ heroSet.b }}" style="font-family:'Space Mono',monospace;font-size:12px;padding:6px 12px;border-radius:999px;border:1px solid var(--line3);background:none;color:var(--dim);cursor:pointer;" style-hover="border-color:var(--accent);color:var(--text);">02 · Release</button>
+          <button onClick="{{ heroSet.c }}" style="font-family:'Space Mono',monospace;font-size:12px;padding:6px 12px;border-radius:999px;border:1px solid var(--line3);background:none;color:var(--dim);cursor:pointer;" style-hover="border-color:var(--accent);color:var(--text);">03 · Visualizer</button>
+        </div>
+      </div>
+
+      <!-- HERO A: editorial big type -->
+      <sc-if value="{{ heroA }}" hint-placeholder-val="{{ true }}">
+        <div style="animation:fadeUp 0.45s ease;">
+          <div style="font-family:'Space Mono',monospace;font-size:13px;letter-spacing:0.22em;color:var(--accent);text-transform:uppercase;margin-bottom:18px;">Artist · Producer · Sound designer</div>
+          <h1 style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(52px,12vw,176px);line-height:0.9;letter-spacing:-0.03em;margin:0;">Emortia<br><span style="color:var(--accent);">Musix</span><span style="color:var(--line3);">.</span></h1>
+          <p style="max-width:520px;color:var(--dim);font-size:18px;line-height:1.6;margin:28px 0 0;">A home for the music, the work, and the late-night admin. Press play and look around — everything here moves to the same tempo.</p>
+          <div style="display:flex;gap:12px;margin-top:30px;flex-wrap:wrap;">
+            <button onClick="{{ startPlay }}" style="display:flex;align-items:center;gap:10px;background:var(--accent);color:var(--bg);border:none;font-weight:700;font-size:15px;padding:15px 24px;border-radius:999px;cursor:pointer;" style-hover="background:var(--accentB);">
+              <svg width="14" height="14" viewBox="0 0 24 24"><polygon points="7,4 20,12 7,20" fill="var(--bg)"></polygon></svg> Press play
+            </button>
+            <button onClick="{{ nav.music }}" style="background:none;color:var(--text);border:1px solid var(--line3);font-weight:600;font-size:15px;padding:15px 24px;border-radius:999px;cursor:pointer;" style-hover="border-color:var(--text);">Browse the catalogue →</button>
+          </div>
+          <div style="margin-top:46px;display:flex;align-items:center;gap:18px;padding:16px 20px;border:1px solid var(--line);border-radius:16px;background:var(--panelS);max-width:480px;">
+            <div style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.16em;color:var(--mute);">NOW<br>PLAYING</div>
+            <div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ curTitle }}</div><div style="color:var(--mute);font-size:13px;">{{ curArtist }}</div></div>
+            <div>{{ playerWave }}</div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- HERO B: release split -->
+      <sc-if value="{{ heroB }}" hint-placeholder-val="{{ false }}">
+        <div style="animation:fadeUp 0.45s ease;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:48px;align-items:center;margin-top:8px;">
+          <div style="position:relative;aspect-ratio:1;border-radius:22px;background:linear-gradient(150deg,var(--artA),var(--bg2));border:1px solid var(--line3);overflow:hidden;display:grid;place-items:center;">
+            <div style="position:absolute;inset:0;background-image:repeating-linear-gradient(135deg,var(--stripe) 0 2px,transparent 2px 16px);"></div>
+            <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(80px,16vw,200px);color:rgba(244,239,230,0.08);">{{ curInitial }}</div>
+            <button onClick="{{ togglePlay }}" style="position:absolute;width:78px;height:78px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;display:grid;place-items:center;animation:glow 2.6s ease-in-out infinite;" style-hover="background:var(--accentB);">
+              <sc-if value="{{ paused }}" hint-placeholder-val="{{ true }}"><svg width="26" height="26" viewBox="0 0 24 24"><polygon points="8,5 19,12 8,19" fill="var(--bg)"></polygon></svg></sc-if>
+              <sc-if value="{{ playing }}" hint-placeholder-val="{{ false }}"><svg width="24" height="24" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1" fill="var(--bg)"></rect><rect x="14" y="5" width="4" height="14" rx="1" fill="var(--bg)"></rect></svg></sc-if>
+            </button>
+          </div>
+          <div>
+            <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:0.2em;color:var(--accent);text-transform:uppercase;margin-bottom:14px;">Latest release · 2026</div>
+            <h1 style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(44px,7vw,88px);line-height:1;letter-spacing:-0.03em;margin:0 0 14px;">{{ curTitle }}</h1>
+            <div style="color:var(--dim);font-size:18px;margin-bottom:22px;">{{ curArtist }}</div>
+            <p style="max-width:440px;color:var(--dim);font-size:16px;line-height:1.6;margin:0 0 26px;">Six tracks recorded between a rented studio and a kitchen table. Warm, a little broken, exactly as intended.</p>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;">
+              <button onClick="{{ nav.music }}" style="background:var(--accent);color:var(--bg);border:none;font-weight:700;font-size:15px;padding:14px 24px;border-radius:999px;cursor:pointer;" style-hover="background:var(--accentB);">Open the record</button>
+              <button onClick="{{ toggleQueue }}" style="background:none;color:var(--text);border:1px solid var(--line3);font-weight:600;font-size:15px;padding:14px 24px;border-radius:999px;cursor:pointer;" style-hover="border-color:var(--text);">View tracklist</button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- HERO C: visualizer immersive -->
+      <sc-if value="{{ heroC }}" hint-placeholder-val="{{ false }}">
+        <div style="animation:fadeUp 0.45s ease;position:relative;border-radius:24px;border:1px solid var(--line);background:linear-gradient(180deg,var(--bg2),var(--bg));overflow:hidden;padding:clamp(40px,8vw,96px) 24px;text-align:center;">
+          <div style="position:absolute;inset:0;display:grid;place-items:center;opacity:0.5;">{{ heroWave }}</div>
+          <div style="position:relative;">
+            <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:0.24em;color:var(--accent);text-transform:uppercase;margin-bottom:22px;">Put the headphones on</div>
+            <h1 style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(48px,11vw,150px);line-height:0.9;letter-spacing:-0.03em;margin:0 0 30px;">Emortia <span style="color:var(--accent);">Musix</span></h1>
+            <button onClick="{{ startPlay }}" style="display:inline-flex;align-items:center;gap:12px;background:var(--accent);color:var(--bg);border:none;font-weight:700;font-size:16px;padding:17px 30px;border-radius:999px;cursor:pointer;animation:glow 2.6s ease-in-out infinite;" style-hover="background:var(--accentB);">
+              <svg width="16" height="16" viewBox="0 0 24 24"><polygon points="7,4 20,12 7,20" fill="var(--bg)"></polygon></svg> Press play to enter
+            </button>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- shared landing strip -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:54px;">
+        <div onClick="{{ nav.music }}" style="padding:22px;border:1px solid var(--line);border-radius:18px;background:var(--panel);cursor:pointer;" style-hover="border-color:var(--accent);">
+          <div style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.14em;color:var(--mute);">01</div>
+          <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:22px;margin:8px 0 6px;">Listen</div>
+          <div style="color:var(--dim);font-size:14px;">The full catalogue, with a player that follows you around.</div>
+        </div>
+        <div onClick="{{ nav.dash }}" style="padding:22px;border:1px solid var(--line);border-radius:18px;background:var(--panel);cursor:pointer;" style-hover="border-color:var(--accent);">
+          <div style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.14em;color:var(--mute);">02</div>
+          <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:22px;margin:8px 0 6px;">Workspace</div>
+          <div style="color:var(--dim);font-size:14px;">The office side — projects, tasks and deadlines on one board.</div>
+        </div>
+      </div>
+    </section>
+    </sc-if>
+
+    <!-- ============ MUSIC ============ -->
+    <sc-if value="{{ isMusic }}" hint-placeholder-val="{{ false }}">
+    <section style="animation:fadeUp 0.5s ease;padding:40px 0 60px;">
+      <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:0.2em;color:var(--accent);text-transform:uppercase;">Catalogue</div>
+      <h2 style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(40px,6vw,68px);letter-spacing:-0.03em;margin:6px 0 34px;">Music</h2>
+
+      <div style="display:flex;gap:24px;align-items:center;flex-wrap:wrap;padding:26px;border:1px solid var(--line);border-radius:22px;background:linear-gradient(150deg,var(--surface),var(--surface2));margin-bottom:40px;">
+        <div style="width:120px;height:120px;border-radius:16px;background:linear-gradient(150deg,var(--artA),var(--bg2));display:grid;place-items:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:54px;color:rgba(244,239,230,0.14);flex-shrink:0;">{{ curInitial }}</div>
+        <div style="flex:1;min-width:220px;">
+          <div style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.16em;color:var(--mute);">NOW PLAYING</div>
+          <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:30px;letter-spacing:-0.02em;margin:4px 0;">{{ curTitle }}</div>
+          <div style="color:var(--dim);font-size:15px;">{{ curArtist }}</div>
+          <div style="margin-top:18px;">{{ musicWave }}</div>
+        </div>
+        <button onClick="{{ togglePlay }}" style="width:64px;height:64px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;display:grid;place-items:center;flex-shrink:0;" style-hover="background:var(--accentB);">
+          <sc-if value="{{ paused }}" hint-placeholder-val="{{ true }}"><svg width="22" height="22" viewBox="0 0 24 24"><polygon points="8,5 19,12 8,19" fill="var(--bg)"></polygon></svg></sc-if>
+          <sc-if value="{{ playing }}" hint-placeholder-val="{{ false }}"><svg width="20" height="20" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1" fill="var(--bg)"></rect><rect x="14" y="5" width="4" height="14" rx="1" fill="var(--bg)"></rect></svg></sc-if>
+        </button>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:2px;">
+        <sc-for list="{{ tracks }}" as="track" hint-placeholder-count="6">
+          <div onClick="{{ track.onPlay }}" style="display:flex;align-items:center;gap:16px;padding:13px 16px;border-radius:12px;cursor:pointer;border:1px solid transparent;" style-hover="background:rgba(244,239,230,0.04);border-color:var(--line);">
+            <div style="width:30px;font-family:'Space Mono',monospace;font-size:13px;color:var(--mute);">{{ track.num }}</div>
+            <div style="width:44px;height:44px;border-radius:9px;display:grid;place-items:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:18px;color:rgba(244,239,230,0.5);flex-shrink:0;background:{{ track.tone }};">{{ track.initial }}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:600;font-size:15.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ track.t }}</div>
+              <div style="color:var(--mute);font-size:13px;">{{ track.a }}</div>
+            </div>
+            <sc-if value="{{ track.current }}" hint-placeholder-val="{{ false }}"><div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:0.1em;">● PLAYING</div></sc-if>
+            <div style="font-family:'Space Mono',monospace;font-size:13px;color:var(--dim);">{{ track.durLabel }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+    </sc-if>
+
+    <!-- ============ WORKSPACE / DASHBOARD ============ -->
+    <sc-if value="{{ isDash }}" hint-placeholder-val="{{ false }}">
+    <section style="animation:fadeUp 0.5s ease;padding:40px 0 60px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px;">
+        <div>
+          <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:0.2em;color:var(--accent);text-transform:uppercase;">The office side · your live workbook</div>
+          <h2 style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(40px,6vw,68px);letter-spacing:-0.03em;margin:6px 0 6px;">Workspace</h2>
+          <div style="color:var(--dim);font-size:14px;">{{ wsSubtitle }}</div>
+        </div>
+        <sc-if value="{{ wsHasData }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:center;gap:8px;">
+          <sc-if value="{{ wsDirty }}" hint-placeholder-val="{{ false }}"><span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--accent);display:flex;align-items:center;gap:6px;"><span style="width:7px;height:7px;border-radius:50%;background:var(--accent);"></span>{{ wsDirtyLabel }}</span></sc-if>
+          <button onClick="{{ exportXlsx }}" style="display:flex;align-items:center;gap:8px;background:var(--accent);color:var(--bg);border:none;font-weight:700;font-size:13px;padding:11px 18px;border-radius:10px;cursor:pointer;white-space:nowrap;" style-hover="background:var(--accentB);">
+            <svg width="15" height="15" viewBox="0 0 24 24"><path d="M12 3v12M12 15l-4-4M12 15l4-4" stroke="var(--bg)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path><path d="M5 19h14" stroke="var(--bg)" stroke-width="2" stroke-linecap="round"></path></svg>
+            Export .xlsx
+          </button>
+          <button onClick="{{ exportCsv }}" style="background:none;color:var(--dim);border:1px solid var(--line2);font-weight:600;font-size:13px;padding:11px 14px;border-radius:10px;cursor:pointer;white-space:nowrap;" style-hover="border-color:var(--accent);color:var(--text);">CSV</button>
+        </div></sc-if>
+      </div>
+
+      <!-- empty state (workbook removed) -->
+      <sc-if value="{{ wsEmpty }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:40px;border:1px dashed var(--line3);border-radius:20px;background:var(--panel);padding:56px 32px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:14px;">
+          <div style="width:58px;height:58px;border-radius:15px;background:var(--surface);border:1px solid var(--line2);display:grid;place-items:center;">
+            <svg width="26" height="26" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" stroke="var(--mute)" stroke-width="1.6" fill="none"></rect><path d="M3 9h18M9 9v11" stroke="var(--mute)" stroke-width="1.6"></path></svg>
+          </div>
+          <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:24px;letter-spacing:-0.02em;">No workbook loaded</div>
+          <div style="color:var(--dim);font-size:15px;line-height:1.6;max-width:420px;">The uploaded spreadsheet has been removed. Send me a new Excel file anytime and I'll bring the editable workspace — sheets, grid, and export — right back.</div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ wsHasData }}" hint-placeholder-val="{{ true }}">
+      <!-- KPI summary strip -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:28px 0 22px;">
+        <sc-for list="{{ heroStats }}" as="s" hint-placeholder-count="4">
+          <div style="padding:16px 18px;border:1px solid var(--line);border-radius:14px;background:var(--panel);">
+            <div style="font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:0.1em;color:var(--mute);text-transform:uppercase;">{{ s.label }}</div>
+            <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:34px;letter-spacing:-0.02em;margin:4px 0 0;color:{{ s.color }};">{{ s.value }}</div>
+            <div style="color:var(--dim);font-size:12.5px;">{{ s.sub }}</div>
+          </div>
+        </sc-for>
+      </div>
+
+      <!-- Sheet tabs -->
+      <div style="display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line);margin-bottom:0;padding-bottom:0;">
+        <sc-for list="{{ sheetTabs }}" as="tab" hint-placeholder-count="9">
+          <button onClick="{{ tab.onClick }}" style="position:relative;background:none;border:none;cursor:pointer;padding:11px 15px;white-space:nowrap;font-size:13.5px;font-weight:600;color:{{ tab.color }};border-bottom:2px solid {{ tab.border }};" style-hover="color:var(--text);">
+            {{ tab.name }} <span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--mute);">{{ tab.count }}</span>
+          </button>
+        </sc-for>
+      </div>
+
+      <!-- Grid toolbar -->
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 0;">
+        <div style="display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line2);border-radius:10px;padding:8px 12px;flex:1;min-width:200px;max-width:360px;">
+          <svg width="15" height="15" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" stroke="var(--mute)" stroke-width="2" fill="none"></circle><path d="M21 21l-4-4" stroke="var(--mute)" stroke-width="2" stroke-linecap="round"></path></svg>
+          <input value="{{ wsQuery }}" onInput="{{ onSearch }}" placeholder="Search this sheet…" style="background:none;border:none;outline:none;color:var(--text);font-size:14px;width:100%;"></input>
+        </div>
+        <button onClick="{{ addRow }}" style="display:flex;align-items:center;gap:7px;background:var(--panel);color:var(--text);border:1px solid var(--line2);font-weight:600;font-size:13px;padding:9px 14px;border-radius:10px;cursor:pointer;white-space:nowrap;" style-hover="border-color:var(--accent);">
+          <span style="font-size:16px;line-height:0;color:var(--accent);">+</span> Add row
+        </button>
+        <span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--mute);margin-left:auto;">{{ gridInfo }}</span>
+        <button onClick="{{ wsReset }}" style="font-family:'Space Mono',monospace;font-size:11px;color:var(--dim);background:none;border:1px solid var(--line2);border-radius:8px;padding:8px 12px;cursor:pointer;white-space:nowrap;" style-hover="border-color:#f0523f;color:#f0523f;">Reset to original</button>
+      </div>
+
+      <!-- Editable grid -->
+      <div style="border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--surface2);">
+        <div style="overflow:auto;max-height:62vh;">
+          <table style="border-collapse:separate;border-spacing:0;font-size:13px;width:max-content;min-width:100%;">
+            <thead>{{ gridHead }}</thead>
+            <tbody>{{ gridBody }}</tbody>
+          </table>
+        </div>
+      </div>
+      <sc-if value="{{ wsTruncated }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:10px;font-family:'Space Mono',monospace;font-size:11px;color:#e8843c;">{{ wsTruncNote }}</div>
+      </sc-if>
+
+      <div style="margin-top:18px;padding:16px 18px;border:1px solid var(--line);border-radius:12px;background:var(--panel);display:flex;gap:12px;align-items:flex-start;">
+        <span style="font-size:15px;line-height:1.2;">☁️</span>
+        <div style="font-size:13px;color:var(--dim);line-height:1.55;">
+          <b style="color:var(--text);font-weight:600;">About syncing.</b> Your edits, new rows and deletions are saved automatically in this browser as your working copy. To update your real file or push to Google Sheets / OneDrive, hit <b style="color:var(--text);">Export .xlsx</b> and save or upload it — a standalone page can't sign in to your cloud account to write back silently. Want true auto-sync? That needs a connected backend; I can walk you through the options.
+        </div>
+      </div>
+
+      <div style="margin-top:16px;font-family:'Space Mono',monospace;font-size:11px;color:var(--faint);">Source: {{ wsTitle }} · {{ sheetCount }} sheets imported from your spreadsheet.</div>
+      </sc-if>
+    </section>
+    </sc-if>
+
+    <!-- ============ JOURNAL / BLOG ============ -->
+    <sc-if value="{{ isBlog }}" hint-placeholder-val="{{ false }}">
+    <section style="animation:fadeUp 0.5s ease;padding:40px 0 60px;">
+      <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:0.2em;color:var(--accent);text-transform:uppercase;">Notes from the studio</div>
+      <h2 style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(40px,6vw,68px);letter-spacing:-0.03em;margin:6px 0 34px;">Journal</h2>
+      <div style="display:flex;flex-direction:column;">
+        <sc-for list="{{ posts }}" as="p" hint-placeholder-count="3">
+          <div style="display:grid;grid-template-columns:140px 1fr;gap:24px;padding:26px 0;border-top:1px solid var(--line);cursor:pointer;" style-hover="opacity:0.82;">
+            <div style="font-family:'Space Mono',monospace;font-size:12px;color:var(--mute);letter-spacing:0.06em;">{{ p.date }}<br><span style="color:var(--faint);">{{ p.read }}</span></div>
+            <div>
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:clamp(22px,3vw,30px);letter-spacing:-0.02em;line-height:1.1;">{{ p.title }}</div>
+              <p style="color:var(--dim);font-size:15.5px;line-height:1.55;margin:10px 0 0;max-width:560px;">{{ p.excerpt }}</p>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+    </sc-if>
+
+    <!-- ============ ABOUT ============ -->
+    <sc-if value="{{ isAbout }}" hint-placeholder-val="{{ false }}">
+    <section style="animation:fadeUp 0.5s ease;padding:40px 0 60px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:48px;align-items:start;">
+      <div style="position:sticky;top:90px;">
+        <div style="aspect-ratio:3/4;border-radius:20px;background:linear-gradient(150deg,var(--artA),var(--bg2));border:1px solid var(--line3);position:relative;overflow:hidden;display:grid;place-items:end center;">
+          <div style="position:absolute;inset:0;background-image:repeating-linear-gradient(135deg,var(--stripe) 0 2px,transparent 2px 16px);"></div>
+          <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--faint);letter-spacing:0.14em;padding-bottom:20px;text-transform:uppercase;">portrait</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:0.2em;color:var(--accent);text-transform:uppercase;">Who's behind it</div>
+        <h2 style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(36px,5vw,60px);letter-spacing:-0.03em;margin:6px 0 24px;">About</h2>
+        <p style="color:var(--text2);font-size:18px;line-height:1.7;margin:0 0 18px;">Emortia is a producer and sound designer who never quite picked a lane. Half the week is spent writing music; the other half is spent running the small machine that lets the music exist — invoices, decks, deadlines, the lot.</p>
+        <p style="color:var(--dim);font-size:16px;line-height:1.7;margin:0 0 28px;">This site is both halves in one place: a player for the work, and a workspace for everything around it. Built warm, kept honest.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+          <sc-for list="{{ skills }}" as="sk" hint-placeholder-count="6">
+            <span style="font-family:'Space Mono',monospace;font-size:12px;color:var(--dim);border:1px solid var(--line3);border-radius:999px;padding:7px 14px;">{{ sk }}</span>
+          </sc-for>
+        </div>
+      </div>
+    </section>
+    </sc-if>
+
+    <!-- ============ NOTES (calendar) ============ -->
+    <sc-if value="{{ isNotes }}" hint-placeholder-val="{{ false }}">
+    <section style="animation:fadeUp 0.5s ease;padding:40px 0 60px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px;margin-bottom:30px;">
+        <div>
+          <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:0.2em;color:var(--accent);text-transform:uppercase;">Plan & remember</div>
+          <h2 style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(40px,6vw,68px);letter-spacing:-0.03em;margin:6px 0 0;">Notes</h2>
+        </div>
+        <div style="font-family:'Space Mono',monospace;font-size:12px;color:var(--mute);">{{ noteTotal }}</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:minmax(300px,1.1fr) minmax(280px,0.9fr);gap:24px;align-items:start;">
+        <!-- Calendar -->
+        <div style="border:1px solid var(--line);border-radius:20px;background:var(--panel);padding:20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+            <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:22px;">{{ calLabel }}</div>
+            <div style="display:flex;gap:6px;">
+              <button onClick="{{ calToday }}" style="font-family:'Space Mono',monospace;font-size:11px;color:var(--dim);background:none;border:1px solid var(--line2);border-radius:8px;padding:7px 11px;cursor:pointer;" style-hover="border-color:var(--accent);color:var(--text);">Today</button>
+              <button onClick="{{ calPrev }}" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--line2);background:none;cursor:pointer;color:var(--dim);display:grid;place-items:center;" style-hover="border-color:var(--accent);color:var(--text);"><svg width="14" height="14" viewBox="0 0 24 24"><polyline points="15,5 8,12 15,19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline></svg></button>
+              <button onClick="{{ calNext }}" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--line2);background:none;cursor:pointer;color:var(--dim);display:grid;place-items:center;" style-hover="border-color:var(--accent);color:var(--text);"><svg width="14" height="14" viewBox="0 0 24 24"><polyline points="9,5 16,12 9,19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline></svg></button>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:8px;">
+            <sc-for list="{{ weekdays }}" as="wd" hint-placeholder-count="7">
+              <div style="text-align:center;font-family:'Space Mono',monospace;font-size:11px;color:var(--faint);letter-spacing:0.04em;">{{ wd }}</div>
+            </sc-for>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;">
+            <sc-for list="{{ calDays }}" as="d" hint-placeholder-count="35">
+              <button onClick="{{ d.onClick }}" disabled="{{ d.empty }}" style="aspect-ratio:1;border-radius:10px;border:1px solid {{ d.border }};background:{{ d.bg }};cursor:{{ d.cursor }};position:relative;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:{{ d.color }};padding:0;" style-hover="border-color:var(--accent);">
+                {{ d.label }}
+                <sc-if value="{{ d.hasNotes }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;bottom:5px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:{{ d.dot }};"></span></sc-if>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+
+        <!-- Day notes -->
+        <div style="border:1px solid var(--line);border-radius:20px;background:var(--panel);padding:20px;min-height:360px;display:flex;flex-direction:column;">
+          <div style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.12em;color:var(--mute);text-transform:uppercase;">Selected</div>
+          <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:24px;letter-spacing:-0.02em;margin:4px 0 16px;">{{ selLabel }}</div>
+
+          <div style="display:flex;gap:8px;margin-bottom:16px;">
+            <input value="{{ noteDraft }}" onInput="{{ onNoteDraft }}" onKeyDown="{{ onNoteKey }}" placeholder="Add a note for this day…" style="flex:1;background:var(--surface2);border:1px solid var(--line2);border-radius:10px;padding:11px 13px;color:var(--text);font-size:14px;outline:none;" style-focus="border-color:var(--accent);"></input>
+            <button onClick="{{ addNote }}" style="background:var(--accent);color:var(--bg);border:none;font-weight:700;font-size:18px;width:42px;border-radius:10px;cursor:pointer;flex-shrink:0;" style-hover="background:var(--accentB);">+</button>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:9px;overflow:auto;flex:1;">
+            <sc-if value="{{ noNotes }}" hint-placeholder-val="{{ true }}">
+              <div style="color:var(--faint);font-size:14px;text-align:center;padding:40px 10px;line-height:1.5;">No notes yet for this day.<br>Jot something above.</div>
+            </sc-if>
+            <sc-for list="{{ dayNotes }}" as="n" hint-placeholder-count="0">
+              <div style="display:flex;align-items:flex-start;gap:11px;background:var(--surface);border:1px solid var(--line2);border-radius:12px;padding:12px 13px;">
+                <button onClick="{{ n.onToggle }}" style="flex-shrink:0;margin-top:1px;width:18px;height:18px;border-radius:5px;border:1.5px solid {{ n.checkBorder }};background:{{ n.checkBg }};cursor:pointer;display:grid;place-items:center;padding:0;">
+                  <sc-if value="{{ n.done }}" hint-placeholder-val="{{ false }}"><svg width="11" height="11" viewBox="0 0 24 24"><polyline points="5,13 10,18 19,6" fill="none" stroke="var(--bg)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline></svg></sc-if>
+                </button>
+                <span style="flex:1;font-size:14px;line-height:1.45;color:{{ n.textColor }};text-decoration:{{ n.strike }};word-break:break-word;">{{ n.text }}</span>
+                <button onClick="{{ n.onDelete }}" title="Delete" style="flex-shrink:0;background:none;border:none;cursor:pointer;color:var(--mute);font-size:15px;line-height:1;padding:2px;" style-hover="color:#f0523f;">×</button>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </section>
+    </sc-if>
+
+    <!-- ============ CONTACT ============ -->
+    <sc-if value="{{ isContact }}" hint-placeholder-val="{{ false }}">
+    <section style="animation:fadeUp 0.5s ease;padding:40px 0 60px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:48px;align-items:start;">
+      <div>
+        <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:0.2em;color:var(--accent);text-transform:uppercase;">Say hello</div>
+        <h2 style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(40px,6vw,72px);letter-spacing:-0.03em;margin:6px 0 22px;">Let's make<br>something loud.</h2>
+        <p style="color:var(--dim);font-size:16px;line-height:1.6;max-width:380px;margin:0 0 28px;">Bookings, collaborations, or just to send a track you think I'd like — the inbox is open.</p>
+        <div style="display:flex;flex-direction:column;gap:12px;font-family:'Space Mono',monospace;font-size:14px;color:var(--text2);">
+          <div>hello@emortia.fm</div>
+          <div style="display:flex;gap:14px;">
+            <span style="color:var(--dim);cursor:pointer;" style-hover="color:var(--accent);">Instagram</span>
+            <span style="color:var(--dim);cursor:pointer;" style-hover="color:var(--accent);">Bandcamp</span>
+            <span style="color:var(--dim);cursor:pointer;" style-hover="color:var(--accent);">SoundCloud</span>
+          </div>
+        </div>
+      </div>
+      <div style="border:1px solid var(--line);border-radius:20px;background:var(--panelS);padding:28px;">
+        <sc-if value="{{ notSent }}" hint-placeholder-val="{{ true }}">
+          <form onSubmit="{{ onSubmit }}" style="display:flex;flex-direction:column;gap:16px;">
+            <label style="display:flex;flex-direction:column;gap:7px;">
+              <span style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.1em;color:var(--mute);text-transform:uppercase;">Name</span>
+              <input value="{{ cName }}" onChange="{{ onField.name }}" placeholder="Your name" style="background:var(--bg);border:1px solid var(--line3);border-radius:10px;padding:13px 14px;color:var(--text);font-size:15px;outline:none;" style-focus="border-color:var(--accent);"></input>
+            </label>
+            <label style="display:flex;flex-direction:column;gap:7px;">
+              <span style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.1em;color:var(--mute);text-transform:uppercase;">Email</span>
+              <input value="{{ cEmail }}" onChange="{{ onField.email }}" placeholder="you@email.com" style="background:var(--bg);border:1px solid var(--line3);border-radius:10px;padding:13px 14px;color:var(--text);font-size:15px;outline:none;" style-focus="border-color:var(--accent);"></input>
+            </label>
+            <label style="display:flex;flex-direction:column;gap:7px;">
+              <span style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.1em;color:var(--mute);text-transform:uppercase;">Message</span>
+              <textarea value="{{ cMsg }}" onChange="{{ onField.msg }}" placeholder="What's on your mind?" rows="4" style="background:var(--bg);border:1px solid var(--line3);border-radius:10px;padding:13px 14px;color:var(--text);font-size:15px;outline:none;resize:vertical;" style-focus="border-color:var(--accent);"></textarea>
+            </label>
+            <button type="submit" style="background:var(--accent);color:var(--bg);border:none;font-weight:700;font-size:15px;padding:15px;border-radius:11px;cursor:pointer;margin-top:4px;" style-hover="background:var(--accentB);">Send it →</button>
+          </form>
+        </sc-if>
+        <sc-if value="{{ sent }}" hint-placeholder-val="{{ false }}">
+          <div style="text-align:center;padding:40px 10px;">
+            <div style="width:56px;height:56px;border-radius:50%;background:var(--accent);display:grid;place-items:center;margin:0 auto 18px;"><svg width="26" height="26" viewBox="0 0 24 24"><polyline points="5,13 10,18 19,6" fill="none" stroke="var(--bg)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline></svg></div>
+            <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:24px;">Message sent.</div>
+            <div style="color:var(--dim);font-size:15px;margin-top:6px;">I'll get back to you between sessions.</div>
+          </div>
+        </sc-if>
+      </div>
+    </section>
+    </sc-if>
+
+  </main>
+
+  <!-- ============ PERSISTENT PLAYER DOCK ============ -->
+  <sc-if value="{{ queueOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;left:0;right:0;bottom:96px;z-index:45;display:flex;justify-content:center;padding:0 16px;">
+      <div style="width:100%;max-width:540px;background:var(--queueBg);backdrop-filter:blur(14px);border:1px solid var(--line2);border-radius:18px;box-shadow:0 24px 60px rgba(0,0,0,0.5);padding:14px;max-height:44vh;overflow:auto;">
+        <div style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.14em;color:var(--mute);text-transform:uppercase;padding:4px 8px 12px;">Up next</div>
+        <sc-for list="{{ tracks }}" as="track" hint-placeholder-count="6">
+          <div onClick="{{ track.onPlay }}" style="display:flex;align-items:center;gap:13px;padding:9px 8px;border-radius:10px;cursor:pointer;" style-hover="background:rgba(244,239,230,0.05);">
+            <div style="width:34px;height:34px;border-radius:8px;display:grid;place-items:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:14px;color:rgba(244,239,230,0.5);flex-shrink:0;background:{{ track.tone }};">{{ track.initial }}</div>
+            <div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ track.t }}</div><div style="color:var(--mute);font-size:12px;">{{ track.a }}</div></div>
+            <sc-if value="{{ track.current }}" hint-placeholder-val="{{ false }}"><span style="color:var(--accent);font-size:12px;">●</span></sc-if>
+            <div style="font-family:'Space Mono',monospace;font-size:12px;color:var(--dim);">{{ track.durLabel }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ============ THEME SWITCHER ============ -->
+  <div style="position:fixed;right:18px;bottom:112px;z-index:48;display:flex;align-items:center;gap:11px;background:var(--bar2);backdrop-filter:blur(14px);border:1px solid var(--line2);border-radius:999px;padding:8px 13px;box-shadow:0 14px 34px rgba(0,0,0,0.4);">
+    <span style="font-family:'Space Mono',monospace;font-size:10px;letter-spacing:0.16em;color:var(--mute);text-transform:uppercase;">Theme</span>
+    <div style="display:flex;gap:8px;">
+      <sc-for list="{{ themes }}" as="th" hint-placeholder-count="5">
+        <button onClick="{{ th.onClick }}" title="{{ th.name }}" style="width:20px;height:20px;border-radius:50%;border:none;cursor:pointer;padding:0;position:relative;background:{{ th.dot }};" style-hover="transform:scale(1.14);">
+          <sc-if value="{{ th.active }}" hint-placeholder-val="{{ false }}">
+            <span style="position:absolute;inset:-5px;border-radius:50%;border:1.5px solid var(--text);"></span>
+          </sc-if>
+        </button>
+      </sc-for>
+    </div>
+  </div>
+
+  <footer style="position:fixed;left:0;right:0;bottom:0;z-index:50;background:var(--bar2);backdrop-filter:blur(16px);border-top:1px solid var(--line2);">
+    <div style="height:3px;background:var(--surface);cursor:pointer;position:relative;" onClick="{{ onSeek }}">
+      <div style="height:100%;background:linear-gradient(90deg,var(--accentD),var(--accentB));width:{{ pctLabel }};position:relative;">
+        <span style="position:absolute;right:-5px;top:50%;transform:translateY(-50%);width:10px;height:10px;border-radius:50%;background:var(--accentB);box-shadow:0 0 8px var(--dot);"></span>
+      </div>
+    </div>
+    <div style="max-width:1180px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:18px;">
+      <div style="display:flex;align-items:center;gap:13px;flex:1;min-width:0;">
+        <div style="width:46px;height:46px;border-radius:50%;background:{{ curTone }};display:grid;place-items:center;flex-shrink:0;border:1px solid var(--line3);animation:spin 8s linear infinite;animation-play-state:{{ spinState }};">
+          <div style="width:13px;height:13px;border-radius:50%;background:var(--bg);border:2px solid var(--surface2);"></div>
+        </div>
+        <div style="min-width:0;">
+          <div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ curTitle }}</div>
+          <sc-if value="{{ audioMissing }}" hint-placeholder-val="{{ false }}">
+            <div style="color:#f0523f;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Audio file not found — see audio/README.md</div>
+          </sc-if>
+          <sc-if value="{{ notMissing }}" hint-placeholder-val="{{ true }}">
+            <div style="color:var(--mute);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ curArtist }}</div>
+          </sc-if>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button onClick="{{ playPrev }}" style="background:none;border:none;cursor:pointer;padding:8px;display:grid;place-items:center;" style-hover="opacity:0.7;">
+          <svg width="20" height="20" viewBox="0 0 24 24"><polygon points="18,5 9,12 18,19" fill="var(--text)"></polygon><rect x="5" y="5" width="2.4" height="14" rx="1" fill="var(--text)"></rect></svg>
+        </button>
+        <button onClick="{{ togglePlay }}" style="width:44px;height:44px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;display:grid;place-items:center;flex-shrink:0;" style-hover="background:var(--accentB);">
+          <sc-if value="{{ paused }}" hint-placeholder-val="{{ true }}"><svg width="17" height="17" viewBox="0 0 24 24"><polygon points="8,5 19,12 8,19" fill="var(--bg)"></polygon></svg></sc-if>
+          <sc-if value="{{ playing }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1" fill="var(--bg)"></rect><rect x="14" y="5" width="4" height="14" rx="1" fill="var(--bg)"></rect></svg></sc-if>
+        </button>
+        <button onClick="{{ playNext }}" style="background:none;border:none;cursor:pointer;padding:8px;display:grid;place-items:center;" style-hover="opacity:0.7;">
+          <svg width="20" height="20" viewBox="0 0 24 24"><polygon points="6,5 15,12 6,19" fill="var(--text)"></polygon><rect x="16.6" y="5" width="2.4" height="14" rx="1" fill="var(--text)"></rect></svg>
+        </button>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px;font-family:'Space Mono',monospace;font-size:12px;color:var(--dim);">
+        <span>{{ curTime }}</span><span style="color:var(--faint);">/</span><span style="color:var(--mute);">{{ curDur }}</span>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:14px;flex:1;justify-content:flex-end;min-width:0;">
+        <div style="display:flex;align-items:center;">{{ playerWave }}</div>
+        <button onClick="{{ toggleQueue }}" style="background:none;border:1px solid var(--line2);border-radius:9px;cursor:pointer;padding:8px 10px;display:grid;place-items:center;" style-hover="border-color:var(--accent);">
+          <svg width="16" height="16" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="2" rx="1" fill="var(--dim)"></rect><rect x="3" y="11" width="13" height="2" rx="1" fill="var(--dim)"></rect><rect x="3" y="16" width="9" height="2" rx="1" fill="var(--dim)"></rect><polygon points="18,15 18,21 22,18" fill="var(--accent)"></polygon></svg>
+        </button>
+      </div>
+    </div>
+  </footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  constructor(props){
+    super(props);
+    const raw = [
+      {t:'Static Bloom', a:'Emortia', d:222, tone:'var(--artA)'},
+      {t:'Velour Midnight', a:'Emortia', d:255, tone:'#312338'},
+      {t:'Paper Cities', a:'Emortia ft. Lune', d:178, tone:'#1f2e2c'},
+      {t:'Amber Static', a:'Emortia', d:210, tone:'#3a2414'},
+      {t:'Low Tide Lights', a:'Emortia', d:302, tone:'#212c39'},
+      {t:'Cassette Sun', a:'Emortia', d:198, tone:'#33291a'},
+    ];
+    const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+    this.tracks = raw.map((x,i)=>({
+      ...x, i, initial:x.t[0], dur:x.d,
+      num:String(i+1).padStart(2,'0'),
+      durLabel:this.fmt(x.d),
+      src: x.src || ('audio/' + slugify(x.t) + '.mp3'),
+    }));
+    this.state = { page:'home', theme:'amber', hero:'a', playing:false, idx:0, progress:0, volume:0.78, queueOpen:false, contact:{name:'',email:'',msg:''}, sent:false, wb:null, activeSheet:0, wsQuery:'', gridVer:0, wsDirty:false, notes:this.loadNotes(), noteDraft:'', cal:this.todayParts(), selKey:this.todayKey(), audioMissing:false };
+    this.WB_KEY='emortia_workbook_v1';
+    this.NOTES_KEY='emortia_notes_v1';
+    this.audio = new Audio();
+    this.audio.preload = 'metadata';
+  }
+
+  // ---- real audio playback ----
+  loadTrack(i, autoplay){
+    const track = this.tracks[i];
+    this.audio.pause();
+    this.audio.src = track.src;
+    this.audio.currentTime = 0;
+    this.setState({ idx:i, progress:0, audioMissing:false });
+    if(autoplay){
+      this.audio.play().catch(()=>this.setState({playing:false, audioMissing:true}));
+    }
+  }
+  bindAudioEvents(){
+    this.audio.addEventListener('timeupdate', ()=>{
+      this.setState({ progress: this.audio.currentTime });
+    });
+    this.audio.addEventListener('loadedmetadata', ()=>{
+      if(isFinite(this.audio.duration) && this.audio.duration>0){
+        const t=this.tracks[this.state.idx];
+        t.dur=this.audio.duration; t.durLabel=this.fmt(this.audio.duration);
+        this.setState({});
+      }
+    });
+    this.audio.addEventListener('play', ()=>this.setState({playing:true, audioMissing:false}));
+    this.audio.addEventListener('pause', ()=>this.setState({playing:false}));
+    this.audio.addEventListener('ended', ()=>{
+      const next=(this.state.idx+1)%this.tracks.length;
+      this.loadTrack(next, true);
+    });
+    this.audio.addEventListener('error', ()=>this.setState({playing:false, audioMissing:true}));
+  }
+
+  // ---- notes / calendar ----
+  todayParts(){ const d=new Date(); return {y:d.getFullYear(), m:d.getMonth()}; }
+  todayKey(){ return this.dateKey(new Date()); }
+  dateKey(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  loadNotes(){ try{ return JSON.parse(localStorage.getItem('emortia_notes_v1')||'{}'); }catch(e){ return {}; } }
+  persistNotes(notes){ try{ localStorage.setItem(this.NOTES_KEY, JSON.stringify(notes)); }catch(e){} }
+  addNote(){
+    const text=(this.state.noteDraft||'').trim(); if(!text) return;
+    const key=this.state.selKey; const notes={...this.state.notes};
+    const arr=(notes[key]||[]).slice(); arr.push({id:Date.now()+'-'+Math.random().toString(36).slice(2,6), text, done:false});
+    notes[key]=arr; this.persistNotes(notes); this.setState({notes, noteDraft:''});
+  }
+  deleteNote(key, id){
+    const notes={...this.state.notes}; const arr=(notes[key]||[]).filter(n=>n.id!==id);
+    if(arr.length) notes[key]=arr; else delete notes[key];
+    this.persistNotes(notes); this.setState({notes});
+  }
+  toggleNote(key, id){
+    const notes={...this.state.notes}; const arr=(notes[key]||[]).map(n=>n.id===id?{...n,done:!n.done}:n);
+    notes[key]=arr; this.persistNotes(notes); this.setState({notes});
+  }
+  calShift(delta){ let {y,m}=this.state.cal; m+=delta; if(m<0){m=11;y--;} if(m>11){m=0;y++;} this.setState({cal:{y,m}}); }
+
+  // ---- workbook working-copy management ----
+  persistWb(wb){ try{ localStorage.setItem(this.WB_KEY, JSON.stringify({sheets:wb.sheets})); }catch(e){ console.warn('persist failed',e); } }
+  cloneSheets(wb){ return wb.sheets.map(sh=>({name:sh.name, rows:(sh.rows||[]).map(r=>r.slice())})); }
+
+  setCell(sheetIdx, r, c, val){
+    const wb=this.state.wb; if(!wb) return;
+    const cur=(wb.sheets[sheetIdx].rows[r]||[])[c];
+    if((cur===undefined?'':cur)===val) return;
+    const sheets=this.cloneSheets(wb);
+    while(sheets[sheetIdx].rows[r].length<=c) sheets[sheetIdx].rows[r].push('');
+    sheets[sheetIdx].rows[r][c]=val;
+    const next={...wb, sheets};
+    this.persistWb(next);
+    this.setState({wb:next, wsDirty:true});
+  }
+  addRow(){
+    const wb=this.state.wb; if(!wb) return; const i=Math.min(this.state.activeSheet,wb.sheets.length-1);
+    const sheets=this.cloneSheets(wb);
+    const cols=sheets[i].rows.reduce((m,r)=>Math.max(m,r.length),1);
+    sheets[i].rows.push(new Array(cols).fill(''));
+    const next={...wb, sheets};
+    this.persistWb(next); this.setState({wb:next, wsDirty:true, gridVer:this.state.gridVer+1});
+  }
+  duplicateRow(r){
+    const wb=this.state.wb; if(!wb) return; const i=Math.min(this.state.activeSheet,wb.sheets.length-1);
+    const sheets=this.cloneSheets(wb);
+    sheets[i].rows.splice(r+1,0,(sheets[i].rows[r]||[]).slice());
+    const next={...wb, sheets};
+    this.persistWb(next); this.setState({wb:next, wsDirty:true, gridVer:this.state.gridVer+1});
+  }
+  deleteRow(r){
+    const wb=this.state.wb; if(!wb) return; const i=Math.min(this.state.activeSheet,wb.sheets.length-1);
+    const sheets=this.cloneSheets(wb);
+    sheets[i].rows.splice(r,1);
+    const next={...wb, sheets};
+    this.persistWb(next); this.setState({wb:next, wsDirty:true, gridVer:this.state.gridVer+1});
+  }
+  resetWorkbook(){
+    if(!this.original) return;
+    if(!window.confirm('Discard all your edits and reload the original spreadsheet data?')) return;
+    try{ localStorage.removeItem(this.WB_KEY); }catch(e){}
+    const wb={...this.original, sheets:this.cloneSheets(this.original)};
+    this.setState({wb, wsDirty:false, gridVer:this.state.gridVer+1, wsQuery:''});
+  }
+  async exportWorkbook(kind){
+    const wb=this.state.wb; if(!wb) return;
+    try{
+      const mod=await import('./xlsx-export.js');
+      const stamp=new Date().toISOString().slice(0,10);
+      if(kind==='csv'){
+        const i=Math.min(this.state.activeSheet,wb.sheets.length-1);
+        const csv=mod.toCsv(wb.sheets[i].rows||[]);
+        mod.downloadBlob(new Blob([csv],{type:'text/csv'}), (wb.sheets[i].name||'sheet').replace(/[^\w]+/g,'_')+'_'+stamp+'.csv');
+      } else {
+        const blob=mod.buildXlsx(wb.sheets.map(sh=>({name:sh.name, rows:sh.rows||[]})));
+        mod.downloadBlob(blob, (wb.workbookName||'workbook').replace(/[^\w]+/g,'_')+'_'+stamp+'.xlsx');
+      }
+    }catch(e){ console.error('export failed',e); window.alert('Export failed: '+e.message); }
+  }
+
+  fmt(s){ s = Math.max(0, Math.floor(s)); const m=Math.floor(s/60); const ss=String(s%60).padStart(2,'0'); return m+':'+ss; }
+
+  componentDidMount(){
+    this.bindAudioEvents();
+    this.loadTrack(this.state.idx, false);
+    fetch('workspace-data.json').then(r=>r.json()).then(orig=>{
+      this.original=orig;
+      let wb={...orig, sheets:this.cloneSheets(orig)};
+      let dirty=false;
+      try{ const saved=JSON.parse(localStorage.getItem(this.WB_KEY)||'null'); if(saved&&saved.sheets&&saved.sheets.length){ wb={...orig, sheets:saved.sheets}; dirty=true; } }catch(e){}
+      this.setState({wb, wsDirty:dirty});
+    }).catch(e=>{ console.warn('workbook load failed',e); this.setState({wb:null, wsEmpty:true}); });
+  }
+  componentWillUnmount(){ this.audio.pause(); }
+
+  go(p){ return ()=>this.setState({page:p, queueOpen:false}); }
+  setHero(h){ return ()=>this.setState({hero:h}); }
+  play(i){ return ()=>this.loadTrack(i, true); }
+
+  wave(opts){
+    const {n=28, maxH=26, barW=3, gap:g=2, dur=1.1, origin='flex-end', cushion=false} = opts;
+    const playing = this.state.playing;
+    const bars=[];
+    for(let i=0;i<n;i++){
+      const h = 0.30 + 0.70*Math.abs(Math.sin(i*1.73 + 1.2));
+      const d = ((i*0.37)%1.4).toFixed(2);
+      const du = (dur*(0.7 + (i%5)*0.13)).toFixed(2);
+      bars.push(React.createElement('span',{key:i,style:{
+        display:'block', width:barW+'px', height:Math.max(3, h*maxH)+'px',
+        background:'linear-gradient(180deg,var(--accentB),var(--accentD))', borderRadius:barW+'px',
+        transformOrigin: cushion?'center':'bottom',
+        transform: playing ? 'scaleY(1)' : 'scaleY(0.55)',
+        animation: 'eq '+du+'s ease-in-out infinite',
+        animationDelay: d+'s',
+        animationPlayState: playing ? 'running' : 'paused',
+        opacity: playing ? 1 : 0.5,
+        transition:'opacity .3s ease',
+      }}));
+    }
+    return React.createElement('div',{style:{display:'flex',alignItems:origin,gap:g+'px',height:maxH+'px'}}, bars);
+  }
+
+  notesVals(){
+    const s=this.state;
+    const {y,m}=s.cal;
+    const monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const first=new Date(y,m,1).getDay();
+    const daysInMonth=new Date(y,m+1,0).getDate();
+    const todayKey=this.todayKey();
+    const accent='var(--accent)';
+    const cells=[];
+    for(let i=0;i<first;i++) cells.push({empty:true, label:'', border:'transparent', bg:'transparent', color:'transparent', cursor:'default', hasNotes:false, dot:accent, onClick:()=>{}});
+    for(let d=1;d<=daysInMonth;d++){
+      const key=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+      const isSel=key===s.selKey;
+      const isToday=key===todayKey;
+      const arr=s.notes[key]||[];
+      const has=arr.length>0;
+      const allDone=has&&arr.every(n=>n.done);
+      cells.push({
+        empty:false, label:String(d), cursor:'pointer',
+        border: isSel?accent:(isToday?'var(--line3)':'var(--line2)'),
+        bg: isSel?'color-mix(in oklab, var(--accent) 18%, transparent)':'var(--surface2)',
+        color: isSel?'var(--text)':'var(--text2)',
+        hasNotes:has, dot: allDone?'#34c98b':accent,
+        onClick:()=>this.setState({selKey:key}),
+      });
+    }
+    // selected label
+    const [sy,sm,sd]=s.selKey.split('-').map(Number);
+    const selDate=new Date(sy,sm-1,sd);
+    const wdNames=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const selLabel=wdNames[selDate.getDay()]+', '+monthNames[sm-1]+' '+sd;
+    const arr=s.notes[s.selKey]||[];
+    const dayNotes=arr.map(n=>({
+      text:n.text, done:n.done,
+      strike: n.done?'line-through':'none',
+      textColor: n.done?'var(--mute)':'var(--text2)',
+      checkBorder: n.done?'var(--accent)':'var(--line3)',
+      checkBg: n.done?'var(--accent)':'transparent',
+      onToggle:()=>this.toggleNote(s.selKey, n.id),
+      onDelete:()=>this.deleteNote(s.selKey, n.id),
+    }));
+    const total=Object.values(s.notes).reduce((a,b)=>a+b.length,0);
+
+    return {
+      weekdays:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
+      calDays:cells, calLabel:monthNames[m]+' '+y,
+      calPrev:()=>this.calShift(-1), calNext:()=>this.calShift(1),
+      calToday:()=>this.setState({cal:this.todayParts(), selKey:this.todayKey()}),
+      selLabel, dayNotes, noNotes:dayNotes.length===0,
+      noteDraft:s.noteDraft, onNoteDraft:(e)=>this.setState({noteDraft:e.target.value}),
+      onNoteKey:(e)=>{ if(e.key==='Enter'){ e.preventDefault(); this.addNote(); } },
+      addNote:()=>this.addNote(),
+      noteTotal: total+(total===1?' note saved':' notes saved'),
+    };
+  }
+
+  wsVals(){
+    const s=this.state, wb=s.wb;
+    const setSheet=(i)=>()=>this.setState({activeSheet:i, wsQuery:''});
+    const base={
+      wsSubtitle: wb? (wb.subtitle||'Your imported workbook') : (s.wsEmpty?'No spreadsheet loaded':'Loading your workbook…'),
+      wsTitle: wb? (wb.workbookName||'Spreadsheet') : '',
+      sheetCount: wb? String(wb.sheets.length) : '0',
+      heroStats:[], sheetTabs:[], gridHead:null, gridBody:null, gridInfo:'',
+      wsQuery:s.wsQuery||'', onSearch:(e)=>this.setState({wsQuery:e.target.value}),
+      addRow:()=>this.addRow(), wsReset:()=>this.resetWorkbook(),
+      exportXlsx:()=>this.exportWorkbook('xlsx'), exportCsv:()=>this.exportWorkbook('csv'),
+      wsDirty:!!s.wsDirty, wsDirtyLabel:'Unsaved working copy',
+      wsTruncated:false, wsTruncNote:'',
+      wsHasData:!!wb, wsEmpty:!wb && !!s.wsEmpty,
+    };
+    if(!wb) return base;
+
+    const sum=wb.summary||{total:0,onAir:0,tx:0,completion:0};
+    base.heroStats=[
+      {label:'Total Sites', value:String(sum.total), sub:'in Full Plan', color:'var(--text)'},
+      {label:'On Air', value:String(sum.onAir), sub:'live & commissioned', color:'#34c98b'},
+      {label:'Tx Pending', value:String(sum.tx), sub:'transmission blocked', color:'#f0523f'},
+      {label:'Completion', value:sum.completion+'%', sub:'on-air ratio', color:'var(--accent)'},
+    ];
+
+    const ai=Math.min(s.activeSheet||0, wb.sheets.length-1);
+    base.sheetTabs=wb.sheets.map((sh,i)=>({
+      name:sh.name, count:String(Math.max(0,(sh.rows||[]).length)), onClick:setSheet(i),
+      color: i===ai?'var(--text)':'var(--dim)',
+      border: i===ai?'var(--accent)':'transparent',
+    }));
+
+    const sheet=wb.sheets[ai];
+    const rows=sheet.rows||[];
+    const totalCols=rows.reduce((m,r)=>Math.max(m,r.length),1);
+    const CAP=60;
+    const showCols=Math.min(totalCols, CAP);
+    if(totalCols>CAP){ base.wsTruncated=true; base.wsTruncNote='Showing first '+CAP+' of '+totalCols+' columns for speed — every column is still saved and included when you export.'; }
+
+    const q=(s.wsQuery||'').trim().toLowerCase();
+    // build visible row index list (always keep row 0 as header context unless searching)
+    const visible=[];
+    for(let r=0;r<rows.length;r++){
+      if(q){ const hay=(rows[r]||[]).join(' ').toLowerCase(); if(!hay.includes(q)) continue; }
+      visible.push(r);
+    }
+    base.gridInfo = q ? (visible.length+' of '+rows.length+' rows') : (rows.length+' rows · '+totalCols+' cols');
+
+    // column-letter helper
+    const colL=(n)=>{let s2='';n+=1;while(n>0){const m=(n-1)%26;s2=String.fromCharCode(65+m)+s2;n=Math.floor((n-1)/26);}return s2;};
+
+    const thBase={position:'sticky',top:0,zIndex:2,background:'var(--panel2)',borderBottom:'1px solid var(--line)',borderRight:'1px solid var(--line2)',padding:'8px 11px',textAlign:'left',fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:'10.5px',letterSpacing:'0.05em',color:'var(--mute)',whiteSpace:'nowrap'};
+    const headCells=[ React.createElement('th',{key:'__rn',style:{...thBase,left:0,zIndex:3,minWidth:'58px',textAlign:'center'}},'#') ];
+    for(let c=0;c<showCols;c++) headCells.push(React.createElement('th',{key:'h'+c,style:thBase}, colL(c)));
+    base.gridHead=React.createElement('tr',null,headCells);
+
+    const tdBase={borderBottom:'1px solid var(--line)',borderRight:'1px solid var(--line2)',padding:'0',verticalAlign:'top'};
+    const editStyle={outline:'none',cursor:'text',display:'block',minWidth:'90px',maxWidth:'320px',minHeight:'17px',padding:'8px 11px',fontSize:'13px',color:'var(--text2)',whiteSpace:'pre-wrap',wordBreak:'break-word'};
+    const ver=s.gridVer||0;
+
+    const trs=visible.map((r)=>{
+      const row=rows[r]||[];
+      const isHeaderRow = r===0;
+      const rn=React.createElement('td',{key:'rn',style:{...tdBase,position:'sticky',left:0,zIndex:1,background:'var(--surface2)',padding:'6px 6px',textAlign:'center',minWidth:'58px'}},
+        React.createElement('div',{style:{display:'flex',alignItems:'center',gap:'4px',justifyContent:'center'}},
+          React.createElement('span',{style:{fontFamily:"'Space Mono',monospace",fontSize:'11px',color:'var(--faint)'}}, String(r+1)),
+          React.createElement('button',{title:'Duplicate row', onClick:()=>this.duplicateRow(r), style:{background:'none',border:'none',cursor:'pointer',color:'var(--mute)',fontSize:'12px',padding:'2px',lineHeight:1}},'⎘'),
+          React.createElement('button',{title:'Delete row', onClick:()=>this.deleteRow(r), style:{background:'none',border:'none',cursor:'pointer',color:'var(--mute)',fontSize:'14px',padding:'2px',lineHeight:1}},'×')
+        ));
+      const cells=[rn];
+      for(let c=0;c<showCols;c++){
+        const val=row[c]!==undefined?row[c]:'';
+        cells.push(React.createElement('td',{key:c,style:{...tdBase, background: isHeaderRow?'var(--panel)':'transparent'}},
+          React.createElement('span',{
+            suppressContentEditableWarning:true, contentEditable:true,
+            onFocus:(e)=>{e.target.style.boxShadow='inset 0 0 0 2px var(--accent)';e.target.style.background='var(--surface)';},
+            onBlur:(e)=>{e.target.style.boxShadow='none';e.target.style.background='transparent';const v=e.target.innerText.replace(/\n$/,''); this.setCell(ai,r,c,v);},
+            style:{...editStyle, fontWeight: isHeaderRow?700:400, color: isHeaderRow?'var(--text)':'var(--text2)'}
+          }, val)));
+      }
+      return React.createElement('tr',{key:'r'+ai+'-'+r+'-'+ver, style:{background: (r%2&&!isHeaderRow)?'var(--panelS)':'transparent'}}, cells);
+    });
+    base.gridBody=React.createElement(React.Fragment,null,trs);
+    return base;
+  }
+
+  renderVals(){
+    const s = this.state;
+    const t = this.tracks[s.idx];
+    const dur = t.dur;
+    const pct = Math.min(100, (s.progress/dur)*100);
+    const navDefs = [['home','Home'],['music','Music'],['dash','Workspace'],['blog','Journal'],['notes','Notes'],['about','About'],['contact','Contact']];
+
+    return {
+      isHome:s.page==='home', isMusic:s.page==='music', isDash:s.page==='dash', isBlog:s.page==='blog', isNotes:s.page==='notes', isAbout:s.page==='about', isContact:s.page==='contact',
+      heroA:s.hero==='a', heroB:s.hero==='b', heroC:s.hero==='c',
+      theme:s.theme,
+      themes:[['amber','Amber','#e8a13c'],['indigo','Indigo','#5b8cff'],['emerald','Emerald','#34c98b'],['crimson','Crimson','#f0523f'],['mono','Mono','#d7dbe2']].map(([key,name,dot])=>({key,name,dot,active:s.theme===key,onClick:()=>this.setState({theme:key})})),
+
+      navItems: navDefs.map(([k,label])=>({ key:k, label, active:s.page===k, onClick:this.go(k) })),
+      tracks: this.tracks.map(x=>({ ...x, current:x.i===s.idx, onPlay:this.play(x.i) })),
+
+      curTitle:t.t, curArtist:t.a, curInitial:t.initial, curTone:t.tone, curDur:t.durLabel, curTime:this.fmt(s.progress),
+      pct, pctLabel: pct.toFixed(2)+'%',
+      playing:s.playing, paused:!s.playing, spinState: s.playing?'running':'paused',
+      audioMissing:!!s.audioMissing, notMissing:!s.audioMissing,
+      queueOpen:s.queueOpen,
+
+      playerWave: this.wave({ n:26, maxH:26, barW:3, gap:2 }),
+      heroWave: this.wave({ n:64, maxH:160, barW:5, gap:4, origin:'center', cushion:true, dur:1.4 }),
+      musicWave: this.wave({ n:52, maxH:54, barW:4, gap:3, origin:'center', cushion:true }),
+
+      nav: { home:this.go('home'), music:this.go('music'), dash:this.go('dash'), blog:this.go('blog'), notes:this.go('notes'), about:this.go('about'), contact:this.go('contact') },
+      ...this.notesVals(),
+      heroSet: { a:this.setHero('a'), b:this.setHero('b'), c:this.setHero('c') },
+      togglePlay: ()=>{ if(this.audio.paused) this.audio.play().catch(()=>this.setState({playing:false, audioMissing:true})); else this.audio.pause(); },
+      startPlay: ()=>this.audio.play().catch(()=>this.setState({playing:false, audioMissing:true})),
+      playNext: ()=>this.loadTrack((this.state.idx+1)%this.tracks.length, true),
+      playPrev: ()=>this.loadTrack((this.state.idx-1+this.tracks.length)%this.tracks.length, true),
+      toggleQueue: ()=>this.setState(st=>({queueOpen:!st.queueOpen})),
+      onSeek: (e)=>{ const r=e.currentTarget.getBoundingClientRect(); const f=Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)); const t=f*this.tracks[this.state.idx].dur; this.audio.currentTime=t; this.setState({progress:t}); },
+
+      ...this.wsVals(),
+      posts:[
+        {date:'May 2026', read:'6 min read', title:'Writing songs in the dark', excerpt:'Why I stopped chasing the perfect take and started chasing the honest one.'},
+        {date:'Apr 2026', read:'4 min read', title:'Field recording diary: rain', excerpt:'Three weeks, one cheap mic, and the sound of a city learning to be quiet.'},
+        {date:'Mar 2026', read:'8 min read', title:'Why I switched back to analog', excerpt:'Tape hiss, broken knobs, and the case for friction in a frictionless world.'},
+      ],
+      skills:['Production','Mixing','Sound design','Live visuals','Art direction','Songwriting'],
+
+      cName:s.contact.name, cEmail:s.contact.email, cMsg:s.contact.msg, sent:s.sent, notSent:!s.sent,
+      onField:{
+        name:(e)=>{ const v=e.target.value; this.setState(st=>({contact:{...st.contact,name:v}})); },
+        email:(e)=>{ const v=e.target.value; this.setState(st=>({contact:{...st.contact,email:v}})); },
+        msg:(e)=>{ const v=e.target.value; this.setState(st=>({contact:{...st.contact,msg:v}})); },
+      },
+      onSubmit:(e)=>{ e.preventDefault(); this.setState({sent:true}); },
+    };
+  }
+}
+</script>
+</body>
+</html>
