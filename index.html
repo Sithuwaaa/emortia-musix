@@ -3,17 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<template id="__bundler_thumbnail" data-bg-color="#14110d">
+<template id="__bundler_thumbnail" data-bg-color="#170d10">
   <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
-    <rect width="1200" height="800" fill="#14110d"/>
-    <rect x="516" y="316" width="168" height="168" rx="38" fill="#e8a13c"/>
-    <g fill="#14110d">
+    <rect width="1200" height="800" fill="#170d10"/>
+    <rect x="516" y="316" width="168" height="168" rx="38" fill="#b03a56"/>
+    <g fill="#170d10">
       <rect x="556" y="384" width="15" height="40" rx="7.5"/>
       <rect x="584" y="356" width="15" height="68" rx="7.5"/>
       <rect x="612" y="372" width="15" height="52" rx="7.5"/>
       <rect x="640" y="350" width="15" height="74" rx="7.5"/>
     </g>
-    <text x="600" y="560" font-family="Georgia, serif" font-size="52" font-weight="700" fill="#f4efe6" text-anchor="middle">Emortia <tspan fill="#e8a13c">Musix</tspan></text>
+    <text x="600" y="560" font-family="Georgia, serif" font-size="52" font-weight="700" fill="#f7edf0" text-anchor="middle">Emortia <tspan fill="#b03a56">Musix</tspan></text>
   </svg>
 </template>
 <script src="./support.js"></script>
@@ -21,12 +21,13 @@
 <body>
 <x-dc>
 <helmet>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23e8a13c'/%3E%3Cg fill='%2314110d'%3E%3Crect x='8' y='13' width='3' height='8' rx='1.5'/%3E%3Crect x='13' y='9' width='3' height='14' rx='1.5'/%3E%3Crect x='18' y='11' width='3' height='10' rx='1.5'/%3E%3Crect x='23' y='8' width='3' height='15' rx='1.5'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b03a56'/%3E%3Cg fill='%23170d10'%3E%3Crect x='8' y='13' width='3' height='8' rx='1.5'/%3E%3Crect x='13' y='9' width='3' height='14' rx='1.5'/%3E%3Crect x='18' y='11' width='3' height='10' rx='1.5'/%3E%3Crect x='23' y='8' width='3' height='15' rx='1.5'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#14110d;--bg2:#1d1813;--surface:#241e17;--surface2:#1a160f;--line:#2a231b;--line2:#322a20;--line3:#3a3128;--text:#f4efe6;--text2:#d6cdbf;--dim:#b3a896;--mute:#7d7567;--faint:#5a5346;--accent:#e8a13c;--accentB:#ffb84d;--accentD:#c47e20;--artA:#3a2a17;--panel:rgba(36,30,23,0.4);--panelS:rgba(36,30,23,0.5);--panel2:rgba(26,22,15,0.6);--bar:rgba(20,17,13,0.72);--bar2:rgba(20,17,13,0.92);--queueBg:rgba(26,22,15,0.96);--glow:rgba(232,161,60,0.5);--glow0:rgba(232,161,60,0);--glowSoft:rgba(232,161,60,0.28);--stripe:rgba(232,161,60,0.06);--dot:rgba(255,184,77,0.7);}
+:root{--bg:#170d10;--bg2:#221318;--surface:#2b171e;--surface2:#1c0f13;--line:#352027;--line2:#412730;--line3:#51313c;--text:#f7edf0;--text2:#e3cbd2;--dim:#c19da8;--mute:#8d6a75;--faint:#614851;--accent:#b03a56;--accentB:#d15873;--accentD:#87213c;--artA:#401d29;--panel:rgba(43,23,30,0.4);--panelS:rgba(43,23,30,0.5);--panel2:rgba(28,15,19,0.6);--bar:rgba(23,13,16,0.72);--bar2:rgba(23,13,16,0.92);--queueBg:rgba(28,15,19,0.96);--glow:rgba(176,58,86,0.5);--glow0:rgba(176,58,86,0);--glowSoft:rgba(176,58,86,0.28);--stripe:rgba(176,58,86,0.06);--dot:rgba(209,88,115,0.7);}
+[data-theme="burgundy"]{--bg:#170d10;--bg2:#221318;--surface:#2b171e;--surface2:#1c0f13;--line:#352027;--line2:#412730;--line3:#51313c;--text:#f7edf0;--text2:#e3cbd2;--dim:#c19da8;--mute:#8d6a75;--faint:#614851;--accent:#b03a56;--accentB:#d15873;--accentD:#87213c;--artA:#401d29;--panel:rgba(43,23,30,0.4);--panelS:rgba(43,23,30,0.5);--panel2:rgba(28,15,19,0.6);--bar:rgba(23,13,16,0.72);--bar2:rgba(23,13,16,0.92);--queueBg:rgba(28,15,19,0.96);--glow:rgba(176,58,86,0.5);--glow0:rgba(176,58,86,0);--glowSoft:rgba(176,58,86,0.28);--stripe:rgba(176,58,86,0.06);--dot:rgba(209,88,115,0.7);}
 [data-theme="amber"]{--bg:#14110d;--bg2:#1d1813;--surface:#241e17;--surface2:#1a160f;--line:#2a231b;--line2:#322a20;--line3:#3a3128;--text:#f4efe6;--text2:#d6cdbf;--dim:#b3a896;--mute:#7d7567;--faint:#5a5346;--accent:#e8a13c;--accentB:#ffb84d;--accentD:#c47e20;--artA:#3a2a17;--panel:rgba(36,30,23,0.4);--panelS:rgba(36,30,23,0.5);--panel2:rgba(26,22,15,0.6);--bar:rgba(20,17,13,0.72);--bar2:rgba(20,17,13,0.92);--queueBg:rgba(26,22,15,0.96);--glow:rgba(232,161,60,0.5);--glow0:rgba(232,161,60,0);--glowSoft:rgba(232,161,60,0.28);--stripe:rgba(232,161,60,0.06);--dot:rgba(255,184,77,0.7);}
 [data-theme="indigo"]{--bg:#0e1018;--bg2:#161a27;--surface:#1c2233;--surface2:#12151f;--line:#262d3f;--line2:#303851;--line3:#3d4763;--text:#eef1f8;--text2:#c7cee2;--dim:#98a1bc;--mute:#6e7791;--faint:#4d5570;--accent:#5b8cff;--accentB:#7da6ff;--accentD:#3f6ad6;--artA:#23304f;--panel:rgba(28,34,51,0.4);--panelS:rgba(28,34,51,0.5);--panel2:rgba(18,21,31,0.6);--bar:rgba(14,16,24,0.72);--bar2:rgba(14,16,24,0.92);--queueBg:rgba(18,21,31,0.96);--glow:rgba(91,140,255,0.5);--glow0:rgba(91,140,255,0);--glowSoft:rgba(91,140,255,0.28);--stripe:rgba(91,140,255,0.06);--dot:rgba(125,166,255,0.7);}
 [data-theme="emerald"]{--bg:#0c120e;--bg2:#121b16;--surface:#16221b;--surface2:#0e1410;--line:#203029;--line2:#2a3d33;--line3:#395243;--text:#eef4ef;--text2:#c6d6cb;--dim:#97aaa0;--mute:#6c8074;--faint:#4c5f54;--accent:#34c98b;--accentB:#54e0a4;--accentD:#1f9a68;--artA:#1d3a2c;--panel:rgba(22,34,27,0.4);--panelS:rgba(22,34,27,0.5);--panel2:rgba(14,20,16,0.6);--bar:rgba(12,18,14,0.72);--bar2:rgba(12,18,14,0.92);--queueBg:rgba(14,20,16,0.96);--glow:rgba(52,201,139,0.5);--glow0:rgba(52,201,139,0);--glowSoft:rgba(52,201,139,0.28);--stripe:rgba(52,201,139,0.06);--dot:rgba(84,224,164,0.7);}
@@ -556,7 +557,7 @@ class Component extends DCLogic {
       durLabel:this.fmt(x.d),
       src: x.src || ('audio/' + slugify(x.t) + '.mp3'),
     }));
-    this.state = { page:'home', theme:'amber', hero:'a', playing:false, idx:0, progress:0, volume:0.78, queueOpen:false, contact:{name:'',email:'',msg:''}, sent:false, wb:null, activeSheet:0, wsQuery:'', gridVer:0, wsDirty:false, notes:this.loadNotes(), noteDraft:'', cal:this.todayParts(), selKey:this.todayKey(), audioMissing:false };
+    this.state = { page:'home', theme:'burgundy', hero:'a', playing:false, idx:0, progress:0, volume:0.78, queueOpen:false, contact:{name:'',email:'',msg:''}, sent:false, wb:null, activeSheet:0, wsQuery:'', gridVer:0, wsDirty:false, notes:this.loadNotes(), noteDraft:'', cal:this.todayParts(), selKey:this.todayKey(), audioMissing:false };
     this.WB_KEY='emortia_workbook_v1';
     this.NOTES_KEY='emortia_notes_v1';
     this.audio = new Audio();
@@ -872,7 +873,7 @@ class Component extends DCLogic {
       isHome:s.page==='home', isMusic:s.page==='music', isDash:s.page==='dash', isBlog:s.page==='blog', isNotes:s.page==='notes', isAbout:s.page==='about', isContact:s.page==='contact',
       heroA:s.hero==='a', heroB:s.hero==='b', heroC:s.hero==='c',
       theme:s.theme,
-      themes:[['amber','Amber','#e8a13c'],['indigo','Indigo','#5b8cff'],['emerald','Emerald','#34c98b'],['crimson','Crimson','#f0523f'],['mono','Mono','#d7dbe2']].map(([key,name,dot])=>({key,name,dot,active:s.theme===key,onClick:()=>this.setState({theme:key})})),
+      themes:[['burgundy','Burgundy','#b03a56'],['amber','Amber','#e8a13c'],['indigo','Indigo','#5b8cff'],['emerald','Emerald','#34c98b'],['mono','Mono','#d7dbe2']].map(([key,name,dot])=>({key,name,dot,active:s.theme===key,onClick:()=>this.setState({theme:key})})),
 
       navItems: navDefs.map(([k,label])=>({ key:k, label, active:s.page===k, onClick:this.go(k) })),
       tracks: this.tracks.map(x=>({ ...x, current:x.i===s.idx, onPlay:this.play(x.i), hasArt:!!x.img, noArt:!x.img })),
