@@ -166,7 +166,12 @@ input,textarea,button{font-family:inherit;}
       <h2 style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(40px,6vw,68px);letter-spacing:-0.03em;margin:6px 0 34px;">Music</h2>
 
       <div style="display:flex;gap:24px;align-items:center;flex-wrap:wrap;padding:26px;border:1px solid var(--line);border-radius:22px;background:linear-gradient(150deg,var(--surface),var(--surface2));margin-bottom:40px;">
-        <div style="width:120px;height:120px;border-radius:16px;background:linear-gradient(150deg,var(--artA),var(--bg2));display:grid;place-items:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:54px;color:rgba(244,239,230,0.14);flex-shrink:0;">{{ curInitial }}</div>
+        <sc-if value="{{ curHasArt }}" hint-placeholder-val="{{ false }}">
+          <img src="{{ curArt }}" style="width:120px;height:120px;border-radius:16px;object-fit:cover;flex-shrink:0;"></img>
+        </sc-if>
+        <sc-if value="{{ curNoArt }}" hint-placeholder-val="{{ true }}">
+          <div style="width:120px;height:120px;border-radius:16px;background:linear-gradient(150deg,var(--artA),var(--bg2));display:grid;place-items:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:54px;color:rgba(244,239,230,0.14);flex-shrink:0;">{{ curInitial }}</div>
+        </sc-if>
         <div style="flex:1;min-width:220px;">
           <div style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.16em;color:var(--mute);">NOW PLAYING</div>
           <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:30px;letter-spacing:-0.02em;margin:4px 0;">{{ curTitle }}</div>
@@ -183,7 +188,12 @@ input,textarea,button{font-family:inherit;}
         <sc-for list="{{ tracks }}" as="track" hint-placeholder-count="6">
           <div onClick="{{ track.onPlay }}" style="display:flex;align-items:center;gap:16px;padding:13px 16px;border-radius:12px;cursor:pointer;border:1px solid transparent;" style-hover="background:rgba(244,239,230,0.04);border-color:var(--line);">
             <div style="width:30px;font-family:'Space Mono',monospace;font-size:13px;color:var(--mute);">{{ track.num }}</div>
-            <div style="width:44px;height:44px;border-radius:9px;display:grid;place-items:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:18px;color:rgba(244,239,230,0.5);flex-shrink:0;background:{{ track.tone }};">{{ track.initial }}</div>
+            <sc-if value="{{ track.hasArt }}" hint-placeholder-val="{{ false }}">
+              <img src="{{ track.img }}" style="width:44px;height:44px;border-radius:9px;object-fit:cover;flex-shrink:0;"></img>
+            </sc-if>
+            <sc-if value="{{ track.noArt }}" hint-placeholder-val="{{ true }}">
+              <div style="width:44px;height:44px;border-radius:9px;display:grid;place-items:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:18px;color:rgba(244,239,230,0.5);flex-shrink:0;background:{{ track.tone }};">{{ track.initial }}</div>
+            </sc-if>
             <div style="flex:1;min-width:0;">
               <div style="font-weight:600;font-size:15.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ track.t }}</div>
               <div style="color:var(--mute);font-size:13px;">{{ track.a }}</div>
@@ -447,7 +457,12 @@ input,textarea,button{font-family:inherit;}
         <div style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.14em;color:var(--mute);text-transform:uppercase;padding:4px 8px 12px;">Up next</div>
         <sc-for list="{{ tracks }}" as="track" hint-placeholder-count="6">
           <div onClick="{{ track.onPlay }}" style="display:flex;align-items:center;gap:13px;padding:9px 8px;border-radius:10px;cursor:pointer;" style-hover="background:rgba(244,239,230,0.05);">
-            <div style="width:34px;height:34px;border-radius:8px;display:grid;place-items:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:14px;color:rgba(244,239,230,0.5);flex-shrink:0;background:{{ track.tone }};">{{ track.initial }}</div>
+            <sc-if value="{{ track.hasArt }}" hint-placeholder-val="{{ false }}">
+              <img src="{{ track.img }}" style="width:34px;height:34px;border-radius:8px;object-fit:cover;flex-shrink:0;"></img>
+            </sc-if>
+            <sc-if value="{{ track.noArt }}" hint-placeholder-val="{{ true }}">
+              <div style="width:34px;height:34px;border-radius:8px;display:grid;place-items:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:14px;color:rgba(244,239,230,0.5);flex-shrink:0;background:{{ track.tone }};">{{ track.initial }}</div>
+            </sc-if>
             <div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ track.t }}</div><div style="color:var(--mute);font-size:12px;">{{ track.a }}</div></div>
             <sc-if value="{{ track.current }}" hint-placeholder-val="{{ false }}"><span style="color:var(--accent);font-size:12px;">●</span></sc-if>
             <div style="font-family:'Space Mono',monospace;font-size:12px;color:var(--dim);">{{ track.durLabel }}</div>
@@ -479,9 +494,14 @@ input,textarea,button{font-family:inherit;}
     </div>
     <div style="max-width:1180px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:18px;">
       <div style="display:flex;align-items:center;gap:13px;flex:1;min-width:0;">
-        <div style="width:46px;height:46px;border-radius:50%;background:{{ curTone }};display:grid;place-items:center;flex-shrink:0;border:1px solid var(--line3);animation:spin 8s linear infinite;animation-play-state:{{ spinState }};">
-          <div style="width:13px;height:13px;border-radius:50%;background:var(--bg);border:2px solid var(--surface2);"></div>
-        </div>
+        <sc-if value="{{ curHasArt }}" hint-placeholder-val="{{ false }}">
+          <img src="{{ curArt }}" style="width:46px;height:46px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1px solid var(--line3);animation:spin 8s linear infinite;animation-play-state:{{ spinState }};"></img>
+        </sc-if>
+        <sc-if value="{{ curNoArt }}" hint-placeholder-val="{{ true }}">
+          <div style="width:46px;height:46px;border-radius:50%;background:{{ curTone }};display:grid;place-items:center;flex-shrink:0;border:1px solid var(--line3);animation:spin 8s linear infinite;animation-play-state:{{ spinState }};">
+            <div style="width:13px;height:13px;border-radius:50%;background:var(--bg);border:2px solid var(--surface2);"></div>
+          </div>
+        </sc-if>
         <div style="min-width:0;">
           <div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ curTitle }}</div>
           <sc-if value="{{ audioMissing }}" hint-placeholder-val="{{ false }}">
@@ -526,12 +546,9 @@ class Component extends DCLogic {
   constructor(props){
     super(props);
     const raw = [
-      {t:'Static Bloom', a:'Emortia', d:222, tone:'var(--artA)'},
-      {t:'Velour Midnight', a:'Emortia', d:255, tone:'#312338'},
-      {t:'Paper Cities', a:'Emortia ft. Lune', d:178, tone:'#1f2e2c'},
-      {t:'Amber Static', a:'Emortia', d:210, tone:'#3a2414'},
-      {t:'Low Tide Lights', a:'Emortia', d:302, tone:'#212c39'},
-      {t:'Cassette Sun', a:'Emortia', d:198, tone:'#33291a'},
+      {t:'Harana Hitha', a:'Emortia', d:222, tone:'var(--artA)', src:'audio/harana-hitha.wav', img:'audio/art/harana-hitha.jpg'},
+      {t:'Napuru Hitha', a:'Emortia', d:180, tone:'#312338', src:'audio/napuru-hitha.wav'},
+      {t:'Suwanda Vitharayi', a:'Emortia', d:210, tone:'#1f2e2c', src:'audio/suwanda-vitharayi.wav', img:'audio/art/suwanda-vitharayi.jpg'},
     ];
     const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
     this.tracks = raw.map((x,i)=>({
@@ -859,9 +876,10 @@ class Component extends DCLogic {
       themes:[['amber','Amber','#e8a13c'],['indigo','Indigo','#5b8cff'],['emerald','Emerald','#34c98b'],['crimson','Crimson','#f0523f'],['mono','Mono','#d7dbe2']].map(([key,name,dot])=>({key,name,dot,active:s.theme===key,onClick:()=>this.setState({theme:key})})),
 
       navItems: navDefs.map(([k,label])=>({ key:k, label, active:s.page===k, onClick:this.go(k) })),
-      tracks: this.tracks.map(x=>({ ...x, current:x.i===s.idx, onPlay:this.play(x.i) })),
+      tracks: this.tracks.map(x=>({ ...x, current:x.i===s.idx, onPlay:this.play(x.i), hasArt:!!x.img, noArt:!x.img })),
 
       curTitle:t.t, curArtist:t.a, curInitial:t.initial, curTone:t.tone, curDur:t.durLabel, curTime:this.fmt(s.progress),
+      curArt:t.img||'', curHasArt:!!t.img, curNoArt:!t.img,
       pct, pctLabel: pct.toFixed(2)+'%',
       playing:s.playing, paused:!s.playing, spinState: s.playing?'running':'paused',
       audioMissing:!!s.audioMissing, notMissing:!s.audioMissing,
