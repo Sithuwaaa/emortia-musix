@@ -43,13 +43,34 @@ body{background:var(--bg);}
 @keyframes fadeUp{from{transform:translateY(14px);}to{transform:none;}}
 @keyframes glow{0%,100%{box-shadow:0 0 0 0 var(--glow);}50%{box-shadow:0 0 0 16px var(--glow0);}}
 input,textarea,button{font-family:inherit;}
+/* ---- responsive ---- */
+.nav-toggle{display:none;align-items:center;justify-content:center;}
+@media (max-width:940px){
+  .nav-toggle{display:flex;}
+  .site-nav{display:none !important;position:absolute;top:100%;left:0;right:0;flex-direction:column !important;align-items:stretch !important;background:var(--bar2);backdrop-filter:blur(16px);border-bottom:1px solid var(--line2);padding:8px 14px 14px;box-shadow:0 24px 40px rgba(0,0,0,0.45);}
+  .site-nav.open{display:flex !important;}
+  .site-nav button{width:100%;text-align:left;font-size:16px !important;padding:12px 14px !important;}
+}
+@media (max-width:760px){
+  .hdr-inner{padding:11px 16px !important;}
+  main{padding:0 18px !important;}
+  .notes-grid{grid-template-columns:1fr !important;}
+  .post-row{grid-template-columns:1fr !important;gap:8px !important;}
+}
+@media (max-width:640px){
+  .player-wave{display:none !important;}
+  .player-inner{gap:10px !important;padding:10px 12px !important;}
+}
+@media (max-width:480px){
+  .player-time{display:none !important;}
+}
 </style>
 </helmet>
 
 <div data-theme="{{ theme }}" style="min-height:100vh;background:radial-gradient(120% 80% at 80% -10%,var(--bg2) 0%,var(--bg) 60%);color:var(--text);font-family:'Hanken Grotesk',system-ui,sans-serif;padding-bottom:132px;">
 
   <header style="position:sticky;top:0;z-index:40;backdrop-filter:blur(14px);background:var(--bar);border-bottom:1px solid var(--line);">
-    <div style="max-width:1180px;margin:0 auto;padding:14px 28px;display:flex;align-items:center;justify-content:space-between;gap:20px;">
+    <div class="hdr-inner" style="max-width:1180px;margin:0 auto;padding:14px 28px;display:flex;align-items:center;justify-content:space-between;gap:20px;">
       <div onClick="{{ nav.home }}" style="display:flex;align-items:center;gap:11px;cursor:pointer;">
         <div style="width:32px;height:32px;border-radius:9px;background:linear-gradient(150deg,var(--accentB),var(--accentD));display:flex;align-items:center;justify-content:center;gap:2.5px;box-shadow:0 6px 18px var(--glowSoft);">
           <span style="width:3px;height:8px;border-radius:2px;background:var(--bg);transform-origin:center;animation:eq 0.85s ease-in-out infinite;animation-delay:0s;animation-play-state:{{ spinState }};"></span>
@@ -59,7 +80,7 @@ input,textarea,button{font-family:inherit;}
         </div>
         <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:18px;letter-spacing:-0.02em;">Emortia <span style="color:var(--accent);">Musix</span></div>
       </div>
-      <nav style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
+      <nav class="{{ navClass }}" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
         <sc-for list="{{ navItems }}" as="item" hint-placeholder-count="7">
           <button onClick="{{ item.onClick }}" style="position:relative;background:none;border:none;color:var(--dim);font-size:14.5px;font-weight:500;padding:8px 13px;cursor:pointer;border-radius:8px;letter-spacing:0.01em;" style-hover="color:var(--text);background:rgba(244,239,230,0.05);">
             {{ item.label }}
@@ -69,6 +90,14 @@ input,textarea,button{font-family:inherit;}
           </button>
         </sc-for>
       </nav>
+      <button class="nav-toggle" onClick="{{ toggleMenu }}" title="Menu" style="background:none;border:1px solid var(--line2);border-radius:9px;padding:9px;cursor:pointer;color:var(--text);flex-shrink:0;">
+        <sc-if value="{{ menuClosed }}" hint-placeholder-val="{{ true }}">
+          <svg width="18" height="18" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
+        </sc-if>
+        <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+          <svg width="18" height="18" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
+        </sc-if>
+      </button>
     </div>
   </header>
 
@@ -303,7 +332,7 @@ input,textarea,button{font-family:inherit;}
       <h2 style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(40px,6vw,68px);letter-spacing:-0.03em;margin:6px 0 34px;">Journal</h2>
       <div style="display:flex;flex-direction:column;">
         <sc-for list="{{ posts }}" as="p" hint-placeholder-count="3">
-          <div style="display:grid;grid-template-columns:140px 1fr;gap:24px;padding:26px 0;border-top:1px solid var(--line);cursor:pointer;" style-hover="opacity:0.82;">
+          <div class="post-row" style="display:grid;grid-template-columns:140px 1fr;gap:24px;padding:26px 0;border-top:1px solid var(--line);cursor:pointer;" style-hover="opacity:0.82;">
             <div style="font-family:'Space Mono',monospace;font-size:12px;color:var(--mute);letter-spacing:0.06em;">{{ p.date }}<br><span style="color:var(--faint);">{{ p.read }}</span></div>
             <div>
               <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:clamp(22px,3vw,30px);letter-spacing:-0.02em;line-height:1.1;">{{ p.title }}</div>
@@ -348,7 +377,7 @@ input,textarea,button{font-family:inherit;}
         <div style="font-family:'Space Mono',monospace;font-size:12px;color:var(--mute);">{{ noteTotal }}</div>
       </div>
 
-      <div style="display:grid;grid-template-columns:minmax(300px,1.1fr) minmax(280px,0.9fr);gap:24px;align-items:start;">
+      <div class="notes-grid" style="display:grid;grid-template-columns:minmax(300px,1.1fr) minmax(280px,0.9fr);gap:24px;align-items:start;">
         <!-- Calendar -->
         <div style="border:1px solid var(--line);border-radius:20px;background:var(--panel);padding:20px;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
@@ -492,7 +521,7 @@ input,textarea,button{font-family:inherit;}
         <span style="position:absolute;right:-5px;top:50%;transform:translateY(-50%);width:10px;height:10px;border-radius:50%;background:var(--accentB);box-shadow:0 0 8px var(--dot);"></span>
       </div>
     </div>
-    <div style="max-width:1180px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:18px;">
+    <div class="player-inner" style="max-width:1180px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:18px;">
       <div style="display:flex;align-items:center;gap:13px;flex:1;min-width:0;">
         <sc-if value="{{ curHasArt }}" hint-placeholder-val="{{ false }}">
           <img src="{{ curArt }}" style="width:46px;height:46px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1px solid var(--line3);animation:spin 8s linear infinite;animation-play-state:{{ spinState }};"></img>
@@ -526,12 +555,12 @@ input,textarea,button{font-family:inherit;}
         </button>
       </div>
 
-      <div style="display:flex;align-items:center;gap:10px;font-family:'Space Mono',monospace;font-size:12px;color:var(--dim);">
+      <div class="player-time" style="display:flex;align-items:center;gap:10px;font-family:'Space Mono',monospace;font-size:12px;color:var(--dim);">
         <span>{{ curTime }}</span><span style="color:var(--faint);">/</span><span style="color:var(--mute);">{{ curDur }}</span>
       </div>
 
       <div style="display:flex;align-items:center;gap:14px;flex:1;justify-content:flex-end;min-width:0;">
-        <div style="display:flex;align-items:center;">{{ playerWave }}</div>
+        <div class="player-wave" style="display:flex;align-items:center;">{{ playerWave }}</div>
         <button onClick="{{ toggleQueue }}" style="background:none;border:1px solid var(--line2);border-radius:9px;cursor:pointer;padding:8px 10px;display:grid;place-items:center;" style-hover="border-color:var(--accent);">
           <svg width="16" height="16" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="2" rx="1" fill="var(--dim)"></rect><rect x="3" y="11" width="13" height="2" rx="1" fill="var(--dim)"></rect><rect x="3" y="16" width="9" height="2" rx="1" fill="var(--dim)"></rect><polygon points="18,15 18,21 22,18" fill="var(--accent)"></polygon></svg>
         </button>
@@ -557,7 +586,7 @@ class Component extends DCLogic {
       durLabel:this.fmt(x.d),
       src: x.src || ('audio/' + slugify(x.t) + '.mp3'),
     }));
-    this.state = { page:'home', theme:'burgundy', hero:'a', playing:false, idx:0, progress:0, volume:0.78, queueOpen:false, contact:{name:'',email:'',msg:''}, sent:false, wb:null, activeSheet:0, wsQuery:'', gridVer:0, wsDirty:false, notes:this.loadNotes(), noteDraft:'', cal:this.todayParts(), selKey:this.todayKey(), audioMissing:false };
+    this.state = { page:'home', theme:'burgundy', hero:'a', menuOpen:false, playing:false, idx:0, progress:0, volume:0.78, queueOpen:false, contact:{name:'',email:'',msg:''}, sent:false, wb:null, activeSheet:0, wsQuery:'', gridVer:0, wsDirty:false, notes:this.loadNotes(), noteDraft:'', cal:this.todayParts(), selKey:this.todayKey(), audioMissing:false };
     this.WB_KEY='emortia_workbook_v1';
     this.NOTES_KEY='emortia_notes_v1';
     this.audio = new Audio();
@@ -693,7 +722,7 @@ class Component extends DCLogic {
   }
   componentWillUnmount(){ this.audio.pause(); }
 
-  go(p){ return ()=>this.setState({page:p, queueOpen:false}); }
+  go(p){ return ()=>this.setState({page:p, queueOpen:false, menuOpen:false}); }
   setHero(h){ return ()=>this.setState({hero:h}); }
   play(i){ return ()=>this.loadTrack(i, true); }
 
@@ -876,6 +905,9 @@ class Component extends DCLogic {
       themes:[['burgundy','Burgundy','#b03a56'],['amber','Amber','#e8a13c'],['indigo','Indigo','#5b8cff'],['emerald','Emerald','#34c98b'],['mono','Mono','#d7dbe2']].map(([key,name,dot])=>({key,name,dot,active:s.theme===key,onClick:()=>this.setState({theme:key})})),
 
       navItems: navDefs.map(([k,label])=>({ key:k, label, active:s.page===k, onClick:this.go(k) })),
+      navClass: s.menuOpen ? 'site-nav open' : 'site-nav',
+      menuOpen:!!s.menuOpen, menuClosed:!s.menuOpen,
+      toggleMenu: ()=>this.setState(st=>({menuOpen:!st.menuOpen})),
       tracks: this.tracks.map(x=>({ ...x, current:x.i===s.idx, onPlay:this.play(x.i), hasArt:!!x.img, noArt:!x.img })),
 
       curTitle:t.t, curArtist:t.a, curInitial:t.initial, curTone:t.tone, curDur:t.durLabel, curTime:this.fmt(s.progress),
