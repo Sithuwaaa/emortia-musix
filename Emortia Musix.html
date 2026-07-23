@@ -65,29 +65,50 @@ input,textarea,button{font-family:inherit;}
 @media (max-width:480px){
   .player-time{display:none !important;}
 }
-/* ---- music-playing animated background ---- */
-.music-bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;opacity:0;transition:opacity .9s ease;}
+/* ---- music-playing dreamy animated background ---- */
+.music-bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;opacity:0;transition:opacity 1.1s ease;}
 .music-bg.on{opacity:1;}
+.music-bg .scene{position:absolute;inset:0;overflow:hidden;}
+/* living album-art backdrop */
+.music-bg .art{position:absolute;inset:-7%;background-size:cover;background-position:center;filter:blur(4px) brightness(0.66) saturate(1.22);animation:bgDrift 46s ease-in-out infinite alternate;}
+.music-bg .scrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(12,7,12,0.5) 0%,rgba(12,7,12,0.08) 30%,rgba(12,7,12,0.14) 60%,rgba(12,7,12,0.62) 100%);}
+/* stars */
+.music-bg .star{position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;animation:twinkle ease-in-out infinite;}
+/* glow blooms (moon / flower / fragrance) */
+.music-bg .bloom{position:absolute;border-radius:50%;filter:blur(26px);mix-blend-mode:screen;}
+.music-bg .moonbloom{width:44vh;height:44vh;left:47%;top:17%;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(255,240,205,0.62),transparent 64%);animation:bloomPulse 6.5s ease-in-out infinite;}
+.music-bg .flowerbloom{width:54vh;height:54vh;left:64%;top:76%;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(240,90,150,0.52),transparent 66%);animation:bloomPulse 5s ease-in-out infinite;}
+/* moonlit water shimmer */
+.music-bg .shimmer{position:absolute;left:47%;top:70%;width:9vw;height:36vh;transform:translateX(-50%);background:linear-gradient(180deg,rgba(240,222,150,0.5),rgba(240,222,150,0.03));filter:blur(8px);animation:shimmer 3.6s ease-in-out infinite;}
+/* drifting petals: outer falls, inner sways */
+.music-bg .petal-fall{position:absolute;top:-14vh;will-change:transform;animation:petalFall linear infinite;}
+.music-bg .petal{width:100%;height:100%;border-radius:60% 0 60% 60%;box-shadow:0 0 9px rgba(240,90,140,0.45);will-change:transform;animation:petalSway ease-in-out infinite alternate;}
+/* rising fragrance motes */
+.music-bg .mote{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(255,222,190,0.9),transparent 70%);filter:blur(1px);will-change:transform,opacity;animation:moteRise linear infinite;}
+/* dreamy fallback orbs */
 .music-bg .orb{position:absolute;border-radius:50%;filter:blur(72px);mix-blend-mode:screen;will-change:transform;}
 .music-bg .orb.a{width:52vw;height:52vw;background:radial-gradient(circle,var(--accentB),transparent 68%);opacity:0.34;left:-12vw;top:-14vh;animation:orbA 15s ease-in-out infinite;}
 .music-bg .orb.b{width:44vw;height:44vw;background:radial-gradient(circle,var(--accent),transparent 68%);opacity:0.30;right:-10vw;top:6vh;animation:orbB 19s ease-in-out infinite;}
 .music-bg .orb.c{width:46vw;height:46vw;background:radial-gradient(circle,var(--accentD),transparent 70%);opacity:0.32;left:16vw;bottom:-18vh;animation:orbC 17s ease-in-out infinite;}
+@keyframes bgDrift{0%{transform:scale(1.05) translate(0,0);}100%{transform:scale(1.12) translate(-2%,-1.6%);}}
+@keyframes twinkle{0%,100%{opacity:0.12;}50%{opacity:0.9;}}
+@keyframes bloomPulse{0%,100%{opacity:0.5;filter:blur(26px);}50%{opacity:0.9;filter:blur(30px);}}
+@keyframes shimmer{0%,100%{transform:translateX(-50%) scaleY(1);opacity:0.4;}50%{transform:translateX(-53%) scaleY(1.09);opacity:0.72;}}
+@keyframes petalFall{0%{transform:translateY(0) rotate(0deg);}100%{transform:translateY(128vh) rotate(340deg);}}
+@keyframes petalSway{0%{transform:translateX(-2.2vw);}100%{transform:translateX(2.2vw);}}
+@keyframes moteRise{0%{transform:translateY(0);opacity:0;}16%{opacity:0.85;}100%{transform:translateY(-74vh);opacity:0;}}
 @keyframes orbA{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(9vw,7vh) scale(1.16);}}
 @keyframes orbB{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(-7vw,5vh) scale(1.12);}}
 @keyframes orbC{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(5vw,-7vh) scale(1.2);}}
 @media (prefers-reduced-motion:reduce){
-  .music-bg .orb{animation:none !important;}
+  .music-bg *{animation:none !important;}
 }
 </style>
 </helmet>
 
 <div data-theme="{{ theme }}" style="min-height:100vh;background:radial-gradient(120% 80% at 80% -10%,var(--bg2) 0%,var(--bg) 60%);color:var(--text);font-family:'Hanken Grotesk',system-ui,sans-serif;padding-bottom:132px;">
 
-  <div class="{{ musicBgClass }}" aria-hidden="true">
-    <span class="orb a"></span>
-    <span class="orb b"></span>
-    <span class="orb c"></span>
-  </div>
+  <div class="{{ musicBgClass }}" aria-hidden="true">{{ musicScene }}</div>
 
 
   <header style="position:sticky;top:0;z-index:40;backdrop-filter:blur(14px);background:var(--bar);border-bottom:1px solid var(--line);">
@@ -583,9 +604,9 @@ class Component extends DCLogic {
   constructor(props){
     super(props);
     const raw = [
-      {t:'Harana Hitha', a:'Emortia', d:222, tone:'var(--artA)', src:'audio/harana-hitha.wav', img:'audio/art/harana-hitha.jpg'},
-      {t:'Napuru Hitha', a:'Emortia', d:180, tone:'#312338', src:'audio/napuru-hitha.wav'},
-      {t:'Suwanda Vitharayi', a:'Emortia', d:210, tone:'#1f2e2c', src:'audio/suwanda-vitharayi.wav', img:'audio/art/suwanda-vitharayi.jpg'},
+      {t:'Harana Hitha', a:'Emortia', d:222, tone:'var(--artA)', src:'audio/harana-hitha.wav', img:'audio/art/harana-hitha.jpg', scene:'moon'},
+      {t:'Napuru Hitha', a:'Emortia', d:180, tone:'#312338', src:'audio/napuru-hitha.wav', scene:'dream'},
+      {t:'Suwanda Vitharayi', a:'Emortia', d:210, tone:'#1f2e2c', src:'audio/suwanda-vitharayi.wav', img:'audio/art/suwanda-vitharayi.jpg', scene:'petals'},
     ];
     const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
     this.tracks = raw.map((x,i)=>({
@@ -799,6 +820,79 @@ class Component extends DCLogic {
     return React.createElement('div',{style:{display:'flex',flexDirection:'column'}}, rows);
   }
 
+  // ---- dreamy per-song background scene ----
+  petalField(n, c1, c2){
+    const rnd=(a,b)=>a+Math.random()*(b-a);
+    const arr=[];
+    for(let i=0;i<n;i++){
+      const size=rnd(9,20);
+      arr.push(React.createElement('div',{key:'pf'+i, className:'petal-fall', style:{
+        left:rnd(-3,100).toFixed(1)+'vw', width:Math.round(size)+'px', height:Math.round(size*0.72)+'px',
+        animationDuration:rnd(11,21).toFixed(1)+'s', animationDelay:(-rnd(0,21)).toFixed(1)+'s',
+      }}, React.createElement('div',{className:'petal', style:{
+        background:'linear-gradient(135deg,'+c1+','+c2+')',
+        animationDuration:rnd(3,6).toFixed(1)+'s', animationDelay:(-rnd(0,4)).toFixed(1)+'s',
+      }})));
+    }
+    return React.createElement('div',{key:'petals'}, arr);
+  }
+  moteField(n){
+    const rnd=(a,b)=>a+Math.random()*(b-a);
+    const arr=[];
+    for(let i=0;i<n;i++){
+      const size=rnd(4,10);
+      arr.push(React.createElement('span',{key:'mo'+i, className:'mote', style:{
+        left:rnd(2,98).toFixed(1)+'vw', bottom:rnd(-6,28).toFixed(1)+'vh',
+        width:Math.round(size)+'px', height:Math.round(size)+'px',
+        animationDuration:rnd(9,17).toFixed(1)+'s', animationDelay:(-rnd(0,13)).toFixed(1)+'s',
+      }}));
+    }
+    return React.createElement('div',{key:'motes'}, arr);
+  }
+  starField(n){
+    const rnd=(a,b)=>a+Math.random()*(b-a);
+    const arr=[];
+    for(let i=0;i<n;i++){
+      arr.push(React.createElement('span',{key:'st'+i, className:'star', style:{
+        left:rnd(2,98).toFixed(1)+'%', top:rnd(2,58).toFixed(1)+'%',
+        width:(rnd(1,2.6)).toFixed(1)+'px', height:(rnd(1,2.6)).toFixed(1)+'px',
+        animationDuration:rnd(2.5,6).toFixed(2)+'s', animationDelay:(-rnd(0,6)).toFixed(2)+'s',
+      }}));
+    }
+    return React.createElement('div',{key:'stars'}, arr);
+  }
+  renderMusicBg(){
+    const idx=this.state.idx;
+    if(this._sceneIdx===idx && this._sceneEl) return this._sceneEl;  // cache per track so particles don't teleport each render
+    const t=this.tracks[idx];
+    const scene=t.scene||'dream';
+    const L=[];
+    if(t.img){
+      L.push(React.createElement('div',{key:'art', className:'art', style:{backgroundImage:'url('+t.img+')'}}));
+      L.push(React.createElement('div',{key:'scrim', className:'scrim'}));
+      L.push(this.starField(26));
+    }else{
+      L.push(React.createElement('span',{key:'oa', className:'orb a'}));
+      L.push(React.createElement('span',{key:'ob', className:'orb b'}));
+      L.push(React.createElement('span',{key:'oc', className:'orb c'}));
+    }
+    if(scene==='moon'){
+      L.push(React.createElement('div',{key:'mb', className:'bloom moonbloom'}));
+      L.push(React.createElement('div',{key:'sh', className:'shimmer'}));
+      L.push(this.petalField(14,'#ff86b0','#c23b6a'));
+    }else if(scene==='petals'){
+      L.push(React.createElement('div',{key:'mb', className:'bloom moonbloom'}));
+      L.push(React.createElement('div',{key:'fb', className:'bloom flowerbloom'}));
+      L.push(this.petalField(24,'#ff6fae','#a12f7a'));
+      L.push(this.moteField(12));
+    }else{
+      L.push(this.moteField(10));
+    }
+    this._sceneEl=React.createElement('div',{className:'scene'}, L);
+    this._sceneIdx=idx;
+    return this._sceneEl;
+  }
+
   wave(opts){
     const {n=28, maxH=26, barW=3, gap:g=2, dur=1.1, origin='flex-end', cushion=false} = opts;
     const playing = this.state.playing;
@@ -989,6 +1083,7 @@ class Component extends DCLogic {
       playing:s.playing, paused:!s.playing, spinState: s.playing?'running':'paused',
       audioMissing:!!s.audioMissing, notMissing:!s.audioMissing,
       musicBgClass: (s.page==='music' && s.playing) ? 'music-bg on' : 'music-bg',
+      musicScene: s.page==='music' ? this.renderMusicBg() : null,
       queueOpen:s.queueOpen,
 
       socialLinks: this.socials(),
