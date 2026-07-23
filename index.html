@@ -700,7 +700,7 @@ class Component extends DCLogic {
   componentDidMount(){
     this.bindAudioEvents();
     this.loadTrack(this.state.idx, false);
-    fetch('poems.txt').then(r=>r.ok?r.text():Promise.reject()).then(t=>{
+    fetch('poems/poems.txt').then(r=>r.ok?r.text():Promise.reject()).then(t=>{
       this.setState({poems:this.parsePoems(t), poemsLoaded:true});
     }).catch(()=>this.setState({poems:[], poemsLoaded:true}));
     fetch('workspace-data.json').then(r=>r.json()).then(orig=>{
@@ -762,7 +762,7 @@ class Component extends DCLogic {
     if(!s.poems.length){
       return React.createElement('div',{style:{border:'1px dashed var(--line3)',borderRadius:'18px',background:'var(--panel)',padding:'48px 28px',textAlign:'center',color:'var(--dim)',fontSize:'15px',lineHeight:1.6}},
         React.createElement('div',{style:{fontFamily:"'Bricolage Grotesque',sans-serif",fontWeight:700,fontSize:'22px',color:'var(--text)',marginBottom:'8px'}},'No poems published yet'),
-        'Add your first poem to poems.txt and it will show up here.');
+        'Add your first poem to poems/poems.txt and it will show up here.');
     }
     const rows=s.poems.map((p,i)=>{
       const open=s.openPoem===i;
