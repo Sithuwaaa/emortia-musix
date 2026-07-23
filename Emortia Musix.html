@@ -65,10 +65,30 @@ input,textarea,button{font-family:inherit;}
 @media (max-width:480px){
   .player-time{display:none !important;}
 }
+/* ---- music-playing animated background ---- */
+.music-bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;opacity:0;transition:opacity .9s ease;}
+.music-bg.on{opacity:1;}
+.music-bg .orb{position:absolute;border-radius:50%;filter:blur(72px);mix-blend-mode:screen;will-change:transform;}
+.music-bg .orb.a{width:52vw;height:52vw;background:radial-gradient(circle,var(--accentB),transparent 68%);opacity:0.34;left:-12vw;top:-14vh;animation:orbA 15s ease-in-out infinite;}
+.music-bg .orb.b{width:44vw;height:44vw;background:radial-gradient(circle,var(--accent),transparent 68%);opacity:0.30;right:-10vw;top:6vh;animation:orbB 19s ease-in-out infinite;}
+.music-bg .orb.c{width:46vw;height:46vw;background:radial-gradient(circle,var(--accentD),transparent 70%);opacity:0.32;left:16vw;bottom:-18vh;animation:orbC 17s ease-in-out infinite;}
+@keyframes orbA{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(9vw,7vh) scale(1.16);}}
+@keyframes orbB{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(-7vw,5vh) scale(1.12);}}
+@keyframes orbC{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(5vw,-7vh) scale(1.2);}}
+@media (prefers-reduced-motion:reduce){
+  .music-bg .orb{animation:none !important;}
+}
 </style>
 </helmet>
 
 <div data-theme="{{ theme }}" style="min-height:100vh;background:radial-gradient(120% 80% at 80% -10%,var(--bg2) 0%,var(--bg) 60%);color:var(--text);font-family:'Hanken Grotesk',system-ui,sans-serif;padding-bottom:132px;">
+
+  <div class="{{ musicBgClass }}" aria-hidden="true">
+    <span class="orb a"></span>
+    <span class="orb b"></span>
+    <span class="orb c"></span>
+  </div>
+
 
   <header style="position:sticky;top:0;z-index:40;backdrop-filter:blur(14px);background:var(--bar);border-bottom:1px solid var(--line);">
     <div class="hdr-inner" style="max-width:1180px;margin:0 auto;padding:14px 28px;display:flex;align-items:center;justify-content:space-between;gap:20px;">
@@ -192,7 +212,7 @@ input,textarea,button{font-family:inherit;}
 
     <!-- ============ MUSIC ============ -->
     <sc-if value="{{ isMusic }}" hint-placeholder-val="{{ false }}">
-    <section style="animation:fadeUp 0.5s ease;padding:40px 0 60px;">
+    <section style="animation:fadeUp 0.5s ease;padding:40px 0 60px;position:relative;z-index:1;">
       <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:0.2em;color:var(--accent);text-transform:uppercase;">Catalogue</div>
       <h2 style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(40px,6vw,68px);letter-spacing:-0.03em;margin:6px 0 34px;">Music</h2>
 
@@ -968,6 +988,7 @@ class Component extends DCLogic {
       pct, pctLabel: pct.toFixed(2)+'%',
       playing:s.playing, paused:!s.playing, spinState: s.playing?'running':'paused',
       audioMissing:!!s.audioMissing, notMissing:!s.audioMissing,
+      musicBgClass: (s.page==='music' && s.playing) ? 'music-bg on' : 'music-bg',
       queueOpen:s.queueOpen,
 
       socialLinks: this.socials(),
