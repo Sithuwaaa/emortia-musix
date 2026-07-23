@@ -1,0 +1,33 @@
+HOW TO ADD A POEM
+-----------------
+Everything above the first "@title:" line is ignored, so these notes stay private.
+
+To publish a new poem, copy the block below and change the words:
+
+    @title: Your poem title
+    @date: July 2026
+    First line of the poem.
+    Second line.
+
+    A blank line just makes a stanza break — it is kept exactly as you type it.
+
+Rules:
+  - "@title:" starts a new poem (this is required).
+  - "@date:" is optional — write anything you like (a month, a full date, a mood).
+  - Newest poem at the top shows first on the site.
+  - Save the file, commit, and it appears on the Journal page automatically.
+
+Delete this whole note block and the sample poem below once you add your own.
+
+
+@title: How to add a poem
+@date: July 2026
+This is a sample entry so you can see how a poem looks on the page.
+
+Replace it with your own words.
+Each line breaks exactly where you break it,
+
+and a blank line opens a little space
+the way a breath does between two thoughts.
+
+— Emortia

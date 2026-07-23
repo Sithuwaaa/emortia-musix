@@ -181,10 +181,10 @@ input,textarea,button{font-family:inherit;}
           <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:22px;margin:8px 0 6px;">Listen</div>
           <div style="color:var(--dim);font-size:14px;">The full catalogue, with a player that follows you around.</div>
         </div>
-        <div onClick="{{ nav.dash }}" style="padding:22px;border:1px solid var(--line);border-radius:18px;background:var(--panel);cursor:pointer;" style-hover="border-color:var(--accent);">
+        <div onClick="{{ nav.blog }}" style="padding:22px;border:1px solid var(--line);border-radius:18px;background:var(--panel);cursor:pointer;" style-hover="border-color:var(--accent);">
           <div style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.14em;color:var(--mute);">02</div>
-          <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:22px;margin:8px 0 6px;">Workspace</div>
-          <div style="color:var(--dim);font-size:14px;">The office side — projects, tasks and deadlines on one board.</div>
+          <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:22px;margin:8px 0 6px;">Journal</div>
+          <div style="color:var(--dim);font-size:14px;">Poems and writing from between the sessions.</div>
         </div>
       </div>
     </section>
@@ -329,19 +329,10 @@ input,textarea,button{font-family:inherit;}
     <!-- ============ JOURNAL / BLOG ============ -->
     <sc-if value="{{ isBlog }}" hint-placeholder-val="{{ false }}">
     <section style="animation:fadeUp 0.5s ease;padding:40px 0 60px;">
-      <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:0.2em;color:var(--accent);text-transform:uppercase;">Notes from the studio</div>
-      <h2 style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(40px,6vw,68px);letter-spacing:-0.03em;margin:6px 0 34px;">Journal</h2>
-      <div style="display:flex;flex-direction:column;">
-        <sc-for list="{{ posts }}" as="p" hint-placeholder-count="3">
-          <div class="post-row" style="display:grid;grid-template-columns:140px 1fr;gap:24px;padding:26px 0;border-top:1px solid var(--line);cursor:pointer;" style-hover="opacity:0.82;">
-            <div style="font-family:'Space Mono',monospace;font-size:12px;color:var(--mute);letter-spacing:0.06em;">{{ p.date }}<br><span style="color:var(--faint);">{{ p.read }}</span></div>
-            <div>
-              <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:clamp(22px,3vw,30px);letter-spacing:-0.02em;line-height:1.1;">{{ p.title }}</div>
-              <p style="color:var(--dim);font-size:15.5px;line-height:1.55;margin:10px 0 0;max-width:560px;">{{ p.excerpt }}</p>
-            </div>
-          </div>
-        </sc-for>
-      </div>
+      <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:0.2em;color:var(--accent);text-transform:uppercase;">Poems & writing</div>
+      <h2 style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(40px,6vw,68px);letter-spacing:-0.03em;margin:6px 0 6px;">Journal</h2>
+      <p style="color:var(--dim);font-size:14px;margin:0 0 28px;">Tap a title to read the full piece.</p>
+      {{ journalContent }}
     </section>
     </sc-if>
 
@@ -583,7 +574,7 @@ class Component extends DCLogic {
       durLabel:this.fmt(x.d),
       src: x.src || ('audio/' + slugify(x.t) + '.mp3'),
     }));
-    this.state = { page:'home', theme:'burgundy', hero:'a', menuOpen:false, playing:false, idx:0, progress:0, volume:0.78, queueOpen:false, contact:{name:'',email:'',msg:''}, sent:false, wb:null, activeSheet:0, wsQuery:'', gridVer:0, wsDirty:false, notes:this.loadNotes(), noteDraft:'', cal:this.todayParts(), selKey:this.todayKey(), audioMissing:false };
+    this.state = { page:'home', theme:'burgundy', hero:'a', menuOpen:false, poems:[], poemsLoaded:false, openPoem:null, playing:false, idx:0, progress:0, volume:0.78, queueOpen:false, contact:{name:'',email:'',msg:''}, sent:false, wb:null, activeSheet:0, wsQuery:'', gridVer:0, wsDirty:false, notes:this.loadNotes(), noteDraft:'', cal:this.todayParts(), selKey:this.todayKey(), audioMissing:false };
     this.WB_KEY='emortia_workbook_v1';
     this.NOTES_KEY='emortia_notes_v1';
     this.audio = new Audio();
@@ -709,6 +700,9 @@ class Component extends DCLogic {
   componentDidMount(){
     this.bindAudioEvents();
     this.loadTrack(this.state.idx, false);
+    fetch('poems.txt').then(r=>r.ok?r.text():Promise.reject()).then(t=>{
+      this.setState({poems:this.parsePoems(t), poemsLoaded:true});
+    }).catch(()=>this.setState({poems:[], poemsLoaded:true}));
     fetch('workspace-data.json').then(r=>r.json()).then(orig=>{
       this.original=orig;
       let wb={...orig, sheets:this.cloneSheets(orig)};
@@ -738,6 +732,51 @@ class Component extends DCLogic {
         it.name
       ))
     );
+  }
+
+  // ---- journal / poems ----
+  parsePoems(text){
+    const lines=String(text).split(/\r?\n/);
+    const poems=[]; let cur=null;
+    for(const line of lines){
+      const tm=line.match(/^@title:\s*(.*)$/i);
+      if(tm){ cur={title:tm[1].trim(),date:'',body:[]}; poems.push(cur); continue; }
+      if(!cur) continue;
+      const dm=line.match(/^@date:\s*(.*)$/i);
+      if(dm){ cur.date=dm[1].trim(); continue; }
+      cur.body.push(line);
+    }
+    return poems
+      .filter(p=>p.title)
+      .map(p=>({title:p.title, date:p.date, body:p.body.join('\n').replace(/^\n+|\n+$/g,'')}));
+  }
+  poemPreview(body){
+    const first=(String(body).split('\n').find(l=>l.trim())||'').trim();
+    return first.length>110 ? first.slice(0,110)+'…' : first;
+  }
+  renderJournal(){
+    const s=this.state;
+    if(!s.poemsLoaded){
+      return React.createElement('div',{style:{color:'var(--mute)',fontFamily:"'Space Mono',monospace",fontSize:'13px',padding:'20px 0'}},'Loading…');
+    }
+    if(!s.poems.length){
+      return React.createElement('div',{style:{border:'1px dashed var(--line3)',borderRadius:'18px',background:'var(--panel)',padding:'48px 28px',textAlign:'center',color:'var(--dim)',fontSize:'15px',lineHeight:1.6}},
+        React.createElement('div',{style:{fontFamily:"'Bricolage Grotesque',sans-serif",fontWeight:700,fontSize:'22px',color:'var(--text)',marginBottom:'8px'}},'No poems published yet'),
+        'Add your first poem to poems.txt and it will show up here.');
+    }
+    const rows=s.poems.map((p,i)=>{
+      const open=s.openPoem===i;
+      const dateCol=React.createElement('div',{style:{fontFamily:"'Space Mono',monospace",fontSize:'12px',color:'var(--mute)',letterSpacing:'0.06em'}}, p.date||'');
+      const caret=React.createElement('span',{style:{fontSize:'18px',color:'var(--accent)',display:'inline-block',transform:open?'rotate(90deg)':'none',transition:'transform .2s ease'}},'›');
+      const title=React.createElement('div',{style:{fontFamily:"'Bricolage Grotesque',sans-serif",fontWeight:700,fontSize:'clamp(22px,3vw,30px)',letterSpacing:'-0.02em',lineHeight:1.15,display:'flex',alignItems:'center',gap:'12px'}}, p.title, caret);
+      const detail=open
+        ? React.createElement('div',{style:{whiteSpace:'pre-wrap',color:'var(--text2)',fontSize:'16px',lineHeight:1.8,margin:'16px 0 0',maxWidth:'620px'}}, p.body)
+        : React.createElement('div',{style:{color:'var(--dim)',fontSize:'15.5px',lineHeight:1.55,margin:'10px 0 0',maxWidth:'560px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}, this.poemPreview(p.body));
+      return React.createElement('div',{key:i, onClick:()=>this.setState(st=>({openPoem:st.openPoem===i?null:i})), className:'post-row',
+        style:{display:'grid',gridTemplateColumns:'140px 1fr',gap:'24px',padding:'26px 0',borderTop:'1px solid var(--line)',cursor:'pointer'}},
+        dateCol, React.createElement('div',null, title, detail));
+    });
+    return React.createElement('div',{style:{display:'flex',flexDirection:'column'}}, rows);
   }
 
   wave(opts){
@@ -910,7 +949,7 @@ class Component extends DCLogic {
     const t = this.tracks[s.idx];
     const dur = t.dur;
     const pct = Math.min(100, (s.progress/dur)*100);
-    const navDefs = [['home','Home'],['music','Music'],['dash','Workspace'],['blog','Journal'],['notes','Notes'],['about','About'],['contact','Contact']];
+    const navDefs = [['home','Home'],['music','Music'],['blog','Journal'],['about','About'],['contact','Contact']];
 
     return {
       isHome:s.page==='home', isMusic:s.page==='music', isDash:s.page==='dash', isBlog:s.page==='blog', isNotes:s.page==='notes', isAbout:s.page==='about', isContact:s.page==='contact',
@@ -947,11 +986,7 @@ class Component extends DCLogic {
       onSeek: (e)=>{ const r=e.currentTarget.getBoundingClientRect(); const f=Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)); const t=f*this.tracks[this.state.idx].dur; this.audio.currentTime=t; this.setState({progress:t}); },
 
       ...this.wsVals(),
-      posts:[
-        {date:'May 2026', read:'6 min read', title:'Writing songs in the dark', excerpt:'Why I stopped chasing the perfect take and started chasing the honest one.'},
-        {date:'Apr 2026', read:'4 min read', title:'Field recording diary: rain', excerpt:'Three weeks, one cheap mic, and the sound of a city learning to be quiet.'},
-        {date:'Mar 2026', read:'8 min read', title:'Why I switched back to analog', excerpt:'Tape hiss, broken knobs, and the case for friction in a frictionless world.'},
-      ],
+      journalContent: this.renderJournal(),
       skills:['Production','Mixing','Sound design','Live visuals','Art direction','Songwriting'],
 
       cName:s.contact.name, cEmail:s.contact.email, cMsg:s.contact.msg, sent:s.sent, notSent:!s.sent,
