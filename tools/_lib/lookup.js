@@ -101,8 +101,10 @@ function renderDetail(r){
   }
   h+='</div></div>'; view.innerHTML=h;
   $('copyBtn').onclick=()=>{
-    const lines=COLS.map((c,i)=>(((C.labels&&C.labels[c])||c)+': '+(r[i]||'—'))).join('\n');
-    navigator.clipboard&&navigator.clipboard.writeText(lines).then(()=>toast('Details copied')).catch(()=>{});
+    const text=C.copyText
+      ? C.copyText(r,fieldVal)
+      : COLS.map((c,i)=>(((C.labels&&C.labels[c])||c)+': '+(r[i]||'—'))).join('\n');
+    navigator.clipboard&&navigator.clipboard.writeText(text).then(()=>toast('Details copied')).catch(()=>{});
   };
 }
 

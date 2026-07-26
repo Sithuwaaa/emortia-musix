@@ -63,7 +63,19 @@ window.LOOKUP_CONFIG = {
     if(!t) return [];
     return /no\s*(time\s*)?restrict/i.test(t) ? [{text:'✓ '+t,kind:'ok'}] : [{text:'⏱ '+t,kind:'warn'}];
   },
-  subBits:(r,v)=>{ const o=v(r,'Other_Site_IDS'), id=v(r,'Site_ID'); return [ (o&&o!==id)?'also '+o:'', v(r,'New_Region'), v(r,'District') ]; }
+  subBits:(r,v)=>{ const o=v(r,'Other_Site_IDS'), id=v(r,'Site_ID'); return [ (o&&o!==id)?'also '+o:'', v(r,'New_Region'), v(r,'District') ]; },
+  copyText:(r,v)=>{
+    const bad=s=>!s||/^(unknown|undefined|0|deny)$/i.test(String(s).trim());
+    const lat=v(r,'Latitude'), lng=v(r,'Longitude');
+    const officer=String(v(r,'Depot_officer(FME_ID)')||'').replace(/_\d+$/,'').trim();
+    const out=[];
+    if(!bad(lat)&&!bad(lng)) out.push('https://www.google.com/maps?q='+encodeURIComponent(lat+','+lng));
+    out.push('Site ID - '+(v(r,'Site_ID')||''));
+    out.push('Site Name - '+(v(r,'Site_Name')||''));
+    out.push('Depot Officer - '+officer);
+    out.push('Depot Officer Contact No - '+(v(r,'Depot_Contact')||''));
+    return out.join('\n');
+  }
 };
 </script>
 <script src="../_lib/lookup.js"></script>
