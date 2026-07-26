@@ -58,6 +58,9 @@ input,textarea,button{font-family:inherit;}
   .notes-grid{grid-template-columns:1fr !important;}
   .post-row{grid-template-columns:1fr !important;gap:8px !important;}
 }
+/* ---- full-screen lyrics overlay ---- */
+.lyrics-overlay{position:fixed;left:0;right:0;top:0;bottom:84px;z-index:60;overflow:hidden;animation:fadeUp .3s ease;}
+.lyrics-overlay .lyrics-box{max-height:min(66vh,560px);}
 /* ---- spotify-style track table ---- */
 .trk-head,.trk-row{display:grid;grid-template-columns:34px 1fr auto;gap:16px;align-items:center;}
 .trk-head{padding:6px 16px 8px;border-bottom:1px solid var(--line);margin-bottom:6px;}
@@ -253,6 +256,11 @@ input,textarea,button{font-family:inherit;}
           <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:22px;margin:8px 0 6px;">Journal</div>
           <div style="color:var(--dim);font-size:14px;">Poems and writing from between the sessions.</div>
         </div>
+        <div onClick="{{ nav.tools }}" style="padding:22px;border:1px solid var(--line);border-radius:18px;background:var(--panel);cursor:pointer;" style-hover="border-color:var(--accent);">
+          <div style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.14em;color:var(--mute);">03</div>
+          <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:22px;margin:8px 0 6px;">Tools</div>
+          <div style="color:var(--dim);font-size:14px;">The office side — small web utilities built for real work.</div>
+        </div>
       </div>
     </section>
     </sc-if>
@@ -324,11 +332,6 @@ input,textarea,button{font-family:inherit;}
         </sc-for>
       </div>
 
-      <!-- lyrics of the current track -->
-      <div style="margin:44px 0 0;padding:6px 12px;text-align:center;">
-        <div style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.18em;color:var(--mute);text-transform:uppercase;margin-bottom:16px;">Lyrics</div>
-        {{ lyricsPanel }}
-      </div>
     </section>
     </sc-if>
 
@@ -633,10 +636,10 @@ input,textarea,button{font-family:inherit;}
     <div class="player-inner" style="max-width:1180px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:18px;">
       <div style="display:flex;align-items:center;gap:13px;flex:1;min-width:0;">
         <sc-if value="{{ curHasArt }}" hint-placeholder-val="{{ false }}">
-          <img src="{{ curArt }}" style="width:46px;height:46px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1px solid var(--line3);animation:spin 8s linear infinite;animation-play-state:{{ spinState }};"></img>
+          <img src="{{ curArt }}" style="width:46px;height:46px;border-radius:10px;object-fit:cover;flex-shrink:0;border:1px solid var(--line3);"></img>
         </sc-if>
         <sc-if value="{{ curNoArt }}" hint-placeholder-val="{{ true }}">
-          <div style="width:46px;height:46px;border-radius:50%;background:{{ curTone }};display:grid;place-items:center;flex-shrink:0;border:1px solid var(--line3);animation:spin 8s linear infinite;animation-play-state:{{ spinState }};">
+          <div style="width:46px;height:46px;border-radius:10px;background:{{ curTone }};display:grid;place-items:center;flex-shrink:0;border:1px solid var(--line3);">
             <div style="width:13px;height:13px;border-radius:50%;background:var(--bg);border:2px solid var(--surface2);"></div>
           </div>
         </sc-if>
@@ -676,8 +679,10 @@ input,textarea,button{font-family:inherit;}
         <span>{{ curTime }}</span><span style="color:var(--faint);">/</span><span style="color:var(--mute);">{{ curDur }}</span>
       </div>
 
-      <div style="display:flex;align-items:center;gap:12px;flex:1;justify-content:flex-end;min-width:0;">
-        <div class="player-wave" style="display:flex;align-items:center;">{{ playerWave }}</div>
+      <div style="display:flex;align-items:center;gap:10px;flex:1;justify-content:flex-end;min-width:0;">
+        <button onClick="{{ toggleLyrics }}" title="Lyrics" style="background:none;border:none;cursor:pointer;padding:6px;display:grid;place-items:center;" style-hover="opacity:0.75;">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="{{ lyricsColor }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10"></path><path d="M4 11h16"></path><path d="M4 16h9"></path><circle cx="18.5" cy="15.5" r="2.5" fill="{{ lyricsColor }}" stroke="none"></circle><path d="M21 15.5V9l-2 1"></path></svg>
+        </button>
         <div class="player-vol" style="display:flex;align-items:center;gap:7px;">
           <button onClick="{{ toggleMute }}" title="Mute" style="background:none;border:none;cursor:pointer;padding:4px;display:grid;place-items:center;" style-hover="opacity:0.7;">
             <sc-if value="{{ volMuted }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--mute)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11,5 6,9 3,9 3,15 6,15 11,19" fill="var(--mute)" stroke="none"></polygon><line x1="16" y1="9" x2="21" y2="15"></line><line x1="21" y1="9" x2="16" y2="15"></line></svg></sc-if>
@@ -686,12 +691,17 @@ input,textarea,button{font-family:inherit;}
           </button>
           <input type="range" min="0" max="100" value="{{ volPct }}" onInput="{{ onVolume }}" class="vol-slider" aria-label="Volume"></input>
         </div>
-        <button onClick="{{ toggleQueue }}" style="background:none;border:1px solid var(--line2);border-radius:9px;cursor:pointer;padding:8px 10px;display:grid;place-items:center;" style-hover="border-color:var(--accent);">
+        <button onClick="{{ toggleQueue }}" title="Queue" style="background:none;border:1px solid var(--line2);border-radius:9px;cursor:pointer;padding:8px 10px;display:grid;place-items:center;" style-hover="border-color:var(--accent);">
           <svg width="16" height="16" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="2" rx="1" fill="var(--dim)"></rect><rect x="3" y="11" width="13" height="2" rx="1" fill="var(--dim)"></rect><rect x="3" y="16" width="9" height="2" rx="1" fill="var(--dim)"></rect><polygon points="18,15 18,21 22,18" fill="var(--accent)"></polygon></svg>
+        </button>
+        <button onClick="{{ toggleFullscreen }}" class="player-xtra" title="Full screen" style="background:none;border:none;cursor:pointer;padding:6px;display:grid;place-items:center;" style-hover="opacity:0.75;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--dim)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"></path><path d="M16 3h3a2 2 0 0 1 2 2v3"></path><path d="M8 21H5a2 2 0 0 1-2-2v-3"></path><path d="M16 21h3a2 2 0 0 0 2-2v-3"></path></svg>
         </button>
       </div>
     </div>
   </footer>
+
+  <div>{{ lyricsOverlay }}</div>
 
 </div>
 </x-dc>
@@ -712,7 +722,7 @@ class Component extends DCLogic {
       src: x.src || ('audio/' + slugify(x.t) + '.mp3'),
     }));
     const pp=this.loadPlayerPrefs();
-    this.state = { page:'home', theme:'burgundy', hero:'a', menuOpen:false, poems:[], poemsLoaded:false, openPoem:null, playing:false, idx:0, progress:0, volume:pp.volume, muted:pp.muted, shuffle:pp.shuffle, repeat:pp.repeat, queueOpen:false, contact:{name:'',email:'',msg:''}, sent:false, wb:null, activeSheet:0, wsQuery:'', gridVer:0, wsDirty:false, notes:this.loadNotes(), noteDraft:'', cal:this.todayParts(), selKey:this.todayKey(), audioMissing:false, syncTimes:[] };
+    this.state = { page:'home', theme:'burgundy', hero:'a', menuOpen:false, poems:[], poemsLoaded:false, openPoem:null, playing:false, idx:0, progress:0, volume:pp.volume, muted:pp.muted, shuffle:pp.shuffle, repeat:pp.repeat, queueOpen:false, contact:{name:'',email:'',msg:''}, sent:false, wb:null, activeSheet:0, wsQuery:'', gridVer:0, wsDirty:false, notes:this.loadNotes(), noteDraft:'', cal:this.todayParts(), selKey:this.todayKey(), audioMissing:false, syncTimes:[], lyricsOpen:false };
     this.WB_KEY='emortia_workbook_v1';
     this.NOTES_KEY='emortia_notes_v1';
     this.PLAYER_KEY='emortia_player_v1';
@@ -1207,6 +1217,40 @@ class Component extends DCLogic {
     return React.createElement('div',{id:'lyricsBox', className:'lyrics-box'},
       React.createElement('div',{style:{padding: synced?'140px 4px':'8px 4px'}}, lines));
   }
+  toggleLyrics(){
+    const open=!this.state.lyricsOpen;
+    this.setState({lyricsOpen:open});
+    if(open){ this._lastLyricIdx=-1; setTimeout(()=>this.syncLyricsScroll(), 70); }
+  }
+  toggleFullscreen(){
+    try{
+      if(document.fullscreenElement){ document.exitFullscreen(); }
+      else { (document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen).call(document.documentElement); }
+    }catch(e){}
+  }
+  renderLyricsOverlay(){
+    // return an element always (never null) — the runtime keeps a slot that turned null on screen
+    if(!this.state.lyricsOpen) return React.createElement('div',{style:{display:'none'}});
+    const t=this.tracks[this.state.idx];
+    const bg = t.img
+      ? React.createElement('div',{key:'bg',style:{position:'absolute',inset:0,backgroundImage:'url('+t.img+')',backgroundSize:'cover',backgroundPosition:'center',filter:'blur(46px) brightness(0.4) saturate(1.25)',transform:'scale(1.2)'}})
+      : React.createElement('div',{key:'bg',style:{position:'absolute',inset:0,background:'linear-gradient(160deg,var(--bg2),var(--bg))'}});
+    const scrim=React.createElement('div',{key:'scrim',style:{position:'absolute',inset:0,background:'linear-gradient(180deg,rgba(10,6,10,0.78),rgba(10,6,10,0.6) 40%,rgba(10,6,10,0.8))'}});
+    const thumb = t.img
+      ? React.createElement('img',{src:t.img,style:{width:44,height:44,borderRadius:9,objectFit:'cover',flexShrink:0}})
+      : React.createElement('div',{style:{width:44,height:44,borderRadius:9,background:t.tone,display:'grid',placeItems:'center',fontFamily:"'Bricolage Grotesque',sans-serif",fontWeight:700,color:'rgba(244,239,230,0.5)',flexShrink:0}}, t.initial);
+    const header=React.createElement('div',{key:'hd',style:{display:'flex',alignItems:'center',gap:'14px',padding:'20px 24px',flexShrink:0}},
+      thumb,
+      React.createElement('div',{style:{flex:1,minWidth:0}},
+        React.createElement('div',{style:{fontFamily:"'Space Mono',monospace",fontSize:'10px',letterSpacing:'0.16em',color:'var(--dim)',textTransform:'uppercase'}},'Lyrics'),
+        React.createElement('div',{style:{fontWeight:700,fontSize:'17px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}, t.t),
+        React.createElement('div',{style:{color:'var(--dim)',fontSize:'13px'}}, t.a)),
+      React.createElement('button',{title:'Close', onClick:()=>this.setState({lyricsOpen:false}),
+        style:{background:'none',border:'1px solid var(--line3)',borderRadius:'10px',color:'var(--text)',cursor:'pointer',width:'38px',height:'38px',display:'grid',placeItems:'center',flexShrink:0,fontSize:'18px',lineHeight:1}},'×'));
+    const body=React.createElement('div',{key:'bd',style:{flex:1,minHeight:0,display:'flex',flexDirection:'column',justifyContent:'center'}}, this.renderLyrics());
+    const content=React.createElement('div',{key:'ct',style:{position:'relative',zIndex:2,height:'100%',display:'flex',flexDirection:'column'}}, header, body);
+    return React.createElement('div',{className:'lyrics-overlay'}, bg, scrim, content);
+  }
 
   // ---- tap-to-sync helper (open the site with #sync in the URL) ----
   isSyncMode(){ return (location.hash||'').toLowerCase()==='#sync'; }
@@ -1530,7 +1574,10 @@ class Component extends DCLogic {
       audioMissing:!!s.audioMissing, notMissing:!s.audioMissing,
       musicBgClass: (s.page==='music' && s.playing) ? 'music-bg on' : 'music-bg',
       musicScene: s.page==='music' ? this.renderMusicBg() : null,
-      lyricsPanel: s.page==='music' ? this.renderLyrics() : null,
+      lyricsOverlay: this.renderLyricsOverlay(),
+      toggleLyrics: ()=>this.toggleLyrics(),
+      toggleFullscreen: ()=>this.toggleFullscreen(),
+      lyricsColor: s.lyricsOpen ? 'var(--accent)' : 'var(--dim)',
       syncPanel: this.renderSyncPanel(),
       queueOpen:s.queueOpen,
 
@@ -1539,7 +1586,7 @@ class Component extends DCLogic {
       heroWave: this.wave({ n:64, maxH:160, barW:5, gap:4, origin:'center', cushion:true, dur:1.4 }),
       musicWave: this.wave({ n:52, maxH:54, barW:4, gap:3, origin:'center', cushion:true }),
 
-      nav: { home:this.go('home'), music:this.go('music'), dash:this.go('dash'), blog:this.go('blog'), notes:this.go('notes'), about:this.go('about'), contact:this.go('contact') },
+      nav: { home:this.go('home'), music:this.go('music'), dash:this.go('dash'), blog:this.go('blog'), notes:this.go('notes'), tools:this.go('tools'), about:this.go('about'), contact:this.go('contact') },
       ...this.notesVals(),
       heroSet: { a:this.setHero('a'), b:this.setHero('b'), c:this.setHero('c') },
       togglePlay: ()=>{ if(this.audio.paused) this.audio.play().catch(()=>this.setState({playing:false, audioMissing:true})); else this.audio.pause(); },
