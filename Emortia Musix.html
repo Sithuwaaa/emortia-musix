@@ -64,6 +64,21 @@ input,textarea,button{font-family:inherit;}
   .notes-grid{grid-template-columns:1fr !important;}
   .post-row{grid-template-columns:1fr !important;gap:8px !important;}
 }
+/* ---- player progress bar ---- */
+.player-center{flex:0 1 auto;}
+.prog-row{display:flex;align-items:center;gap:10px;width:min(46vw,520px);}
+.prog-t{font-family:'Space Mono',monospace;font-size:11px;color:var(--mute);min-width:38px;text-align:center;flex-shrink:0;}
+.prog-bar{flex:1;height:4px;border-radius:999px;background:var(--line3);cursor:pointer;position:relative;}
+.prog-bar::before{content:'';position:absolute;left:0;right:0;top:-8px;bottom:-8px;}  /* taller hit area */
+.prog-fill{height:100%;border-radius:999px;background:var(--text2);position:relative;pointer-events:none;}
+.prog-bar:hover .prog-fill{background:var(--accent);}
+.prog-knob{position:absolute;right:-6px;top:50%;transform:translateY(-50%);width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:0 1px 5px rgba(0,0,0,0.6);opacity:0;transition:opacity .15s ease;}
+.prog-bar:hover .prog-knob{opacity:1;}
+/* ---- full-screen now-playing view ---- */
+.fs-view{position:fixed;left:0;right:0;top:0;bottom:84px;z-index:58;overflow:hidden;background:var(--bg);animation:fadeUp .35s ease;}
+.fs-view .music-bg{position:absolute;opacity:1;}
+.fs-inner{position:relative;z-index:3;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px;padding:24px;text-align:center;}
+.fs-art{width:min(44vh,360px);height:min(44vh,360px);border-radius:18px;object-fit:cover;box-shadow:0 30px 80px rgba(0,0,0,0.62);}
 /* ---- full-screen lyrics overlay ---- */
 .lyrics-overlay{position:fixed;left:0;right:0;top:0;bottom:84px;z-index:60;overflow:hidden;animation:fadeUp .3s ease;}
 .lyrics-overlay .lyrics-box{max-height:min(66vh,560px);}
@@ -86,13 +101,16 @@ input,textarea,button{font-family:inherit;}
 .vol-slider:hover{background:var(--line3);}
 @media (max-width:860px){
   .player-vol{display:none !important;}
+  .prog-row{width:min(52vw,340px);}
 }
 @media (max-width:640px){
   .player-wave{display:none !important;}
   .player-inner{gap:10px !important;padding:10px 12px !important;}
+  .prog-t{display:none;}
+  .prog-row{width:min(56vw,260px);}
 }
 @media (max-width:480px){
-  .player-time{display:none !important;}
+  .prog-row{display:none;}
   .player-xtra{display:none !important;}
 }
 /* ---- music-playing dreamy animated background ---- */
@@ -634,12 +652,7 @@ input,textarea,button{font-family:inherit;}
   </div>
 
   <footer style="position:fixed;left:0;right:0;bottom:0;z-index:50;background:var(--bar2);backdrop-filter:blur(16px);border-top:1px solid var(--line2);">
-    <div style="height:3px;background:var(--surface);cursor:pointer;position:relative;" onClick="{{ onSeek }}">
-      <div style="height:100%;background:linear-gradient(90deg,var(--accentD),var(--accentB));width:{{ pctLabel }};position:relative;">
-        <span style="position:absolute;right:-5px;top:50%;transform:translateY(-50%);width:10px;height:10px;border-radius:50%;background:var(--accentB);box-shadow:0 0 8px var(--dot);"></span>
-      </div>
-    </div>
-    <div class="player-inner" style="max-width:1180px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:18px;">
+    <div class="player-inner" style="max-width:1180px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:18px;">
       <div style="display:flex;align-items:center;gap:13px;flex:1;min-width:0;">
         <sc-if value="{{ curHasArt }}" hint-placeholder-val="{{ false }}">
           <img src="{{ curArt }}" style="width:46px;height:46px;border-radius:10px;object-fit:cover;flex-shrink:0;border:1px solid var(--line3);"></img>
@@ -660,6 +673,7 @@ input,textarea,button{font-family:inherit;}
         </div>
       </div>
 
+      <div class="player-center" style="display:flex;flex-direction:column;align-items:center;gap:4px;">
       <div style="display:flex;align-items:center;gap:6px;">
         <button onClick="{{ toggleShuffle }}" class="player-xtra" title="Shuffle" style="position:relative;background:none;border:none;cursor:pointer;padding:8px;display:grid;place-items:center;" style-hover="opacity:0.75;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{{ shuffleColor }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"></path><path d="M4 20L21 3"></path><path d="M21 16v5h-5"></path><path d="M15 15l6 6"></path><path d="M4 4l5 5"></path></svg>
@@ -681,8 +695,13 @@ input,textarea,button{font-family:inherit;}
         </button>
       </div>
 
-      <div class="player-time" style="display:flex;align-items:center;gap:10px;font-family:'Space Mono',monospace;font-size:12px;color:var(--dim);">
-        <span>{{ curTime }}</span><span style="color:var(--faint);">/</span><span style="color:var(--mute);">{{ curDur }}</span>
+      <div class="prog-row">
+        <span class="prog-t">{{ curTime }}</span>
+        <div class="prog-bar" onMouseDown="{{ onSeekDown }}">
+          <div class="prog-fill" style="width:{{ pctLabel }};"><span class="prog-knob"></span></div>
+        </div>
+        <span class="prog-t">{{ curRemain }}</span>
+      </div>
       </div>
 
       <div style="display:flex;align-items:center;gap:10px;flex:1;justify-content:flex-end;min-width:0;">
@@ -707,6 +726,7 @@ input,textarea,button{font-family:inherit;}
     </div>
   </footer>
 
+  <div>{{ fsView }}</div>
   <div>{{ lyricsOverlay }}</div>
 
 </div>
@@ -717,7 +737,7 @@ class Component extends DCLogic {
     super(props);
     const raw = [
       // d = fallback seconds, replaced by the file's real duration once metadata loads
-      {t:'Harana Hitha', a:'Emortia', d:111, tone:'var(--artA)', src:'audio/harana-hitha.wav', img:'audio/art/harana-hitha.jpg', scene:'moon'},
+      {t:'Harana Hitha', a:'Emortia', d:111, tone:'var(--artA)', src:'audio/harana-hitha.wav', img:'audio/art/harana-hitha.png', scene:'moon'},
       {t:'Napuru Hitha', a:'Emortia', d:44, tone:'#312338', src:'audio/napuru-hitha.wav', scene:'dream'},
       {t:'Suwanda Vitharayi', a:'Emortia', d:97, tone:'#1f2e2c', src:'audio/suwanda-vitharayi.wav', img:'audio/art/suwanda-vitharayi.jpg', scene:'petals'},
     ];
@@ -729,7 +749,7 @@ class Component extends DCLogic {
       src: x.src || ('audio/' + slugify(x.t) + '.mp3'),
     }));
     const pp=this.loadPlayerPrefs();
-    this.state = { page:'home', theme:'burgundy', hero:'a', menuOpen:false, poems:[], poemsLoaded:false, openPoem:null, playing:false, idx:0, progress:0, volume:pp.volume, muted:pp.muted, shuffle:pp.shuffle, repeat:pp.repeat, queueOpen:false, contact:{name:'',email:'',msg:''}, sent:false, wb:null, activeSheet:0, wsQuery:'', gridVer:0, wsDirty:false, notes:this.loadNotes(), noteDraft:'', cal:this.todayParts(), selKey:this.todayKey(), audioMissing:false, syncTimes:[], lyricsOpen:false };
+    this.state = { page:'home', theme:'burgundy', hero:'a', menuOpen:false, poems:[], poemsLoaded:false, openPoem:null, playing:false, idx:0, progress:0, volume:pp.volume, muted:pp.muted, shuffle:pp.shuffle, repeat:pp.repeat, queueOpen:false, contact:{name:'',email:'',msg:''}, sent:false, wb:null, activeSheet:0, wsQuery:'', gridVer:0, wsDirty:false, notes:this.loadNotes(), noteDraft:'', cal:this.todayParts(), selKey:this.todayKey(), audioMissing:false, syncTimes:[], lyricsOpen:false, fsOpen:false };
     this.WB_KEY='emortia_workbook_v1';
     this.NOTES_KEY='emortia_notes_v1';
     this.PLAYER_KEY='emortia_player_v1';
@@ -944,6 +964,22 @@ class Component extends DCLogic {
     this.probeDurations();
     this._checkHash=()=>this.setState({});   // hash is read at render time; just force a re-render
     window.addEventListener('hashchange', this._checkHash);
+    // leaving browser fullscreen (Esc) should close the now-playing screen too
+    this._onFsChange=()=>{
+      const inFs=!!(document.fullscreenElement||document.webkitFullscreenElement);
+      if(!inFs && this.state.fsOpen) this.setState({fsOpen:false});
+    };
+    document.addEventListener('fullscreenchange', this._onFsChange);
+    document.addEventListener('webkitfullscreenchange', this._onFsChange);
+    // wheel over the volume control adjusts it. Registered natively (non-passive)
+    // because React attaches wheel passively, where preventDefault is ignored.
+    this._onWheel=(e)=>{
+      if(!(e.target&&e.target.closest&&e.target.closest('.player-vol'))) return;
+      e.preventDefault();
+      const cur=this.state.muted?0:this.state.volume;
+      this.setVolume(cur + (e.deltaY<0 ? 0.05 : -0.05));
+    };
+    window.addEventListener('wheel', this._onWheel, {passive:false});
     this._onKey=(e)=>{
       if(!this.isSyncMode()) return;
       const tag=(e.target.tagName||'').toLowerCase();
@@ -972,6 +1008,11 @@ class Component extends DCLogic {
     this.audio.pause();
     if(this._onKey) window.removeEventListener('keydown', this._onKey);
     if(this._checkHash) window.removeEventListener('hashchange', this._checkHash);
+    if(this._onWheel) window.removeEventListener('wheel', this._onWheel);
+    if(this._onFsChange){
+      document.removeEventListener('fullscreenchange', this._onFsChange);
+      document.removeEventListener('webkitfullscreenchange', this._onFsChange);
+    }
   }
 
   go(p){ return ()=>this.setState({page:p, queueOpen:false, menuOpen:false}); }
@@ -1246,11 +1287,41 @@ class Component extends DCLogic {
     this.setState({lyricsOpen:open});
     if(open){ this._lastLyricIdx=-1; setTimeout(()=>this.syncLyricsScroll(), 70); }
   }
+  // Full screen = a dedicated now-playing screen (art + animated scene), with the
+  // player bar still usable underneath. The rest of the site is hidden.
   toggleFullscreen(){
+    const open=!this.state.fsOpen;
     try{
-      if(document.fullscreenElement){ document.exitFullscreen(); }
-      else { (document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen).call(document.documentElement); }
+      const el=document.documentElement;
+      if(open){ const rq=el.requestFullscreen||el.webkitRequestFullscreen; if(rq) rq.call(el); }
+      else if(document.fullscreenElement||document.webkitFullscreenElement){
+        const ex=document.exitFullscreen||document.webkitExitFullscreen; if(ex) ex.call(document);
+      }
     }catch(e){}
+    this.setState({fsOpen:open});
+  }
+  renderFsView(){
+    // always return an element — the runtime keeps a slot that turned null on screen
+    if(!this.state.fsOpen) return React.createElement('div',{style:{display:'none'}});
+    const t=this.tracks[this.state.idx];
+    const art = t.img
+      ? React.createElement('img',{className:'fs-art', src:t.img, alt:''})
+      : React.createElement('div',{className:'fs-art', style:{background:t.tone, display:'grid', placeItems:'center',
+          fontFamily:"'Bricolage Grotesque',sans-serif", fontWeight:800, fontSize:'clamp(56px,12vh,120px)', color:'rgba(244,239,230,0.5)'}}, t.initial);
+    return React.createElement('div',{className:'fs-view'},
+      React.createElement('div',{className:'music-bg on'}, this.renderMusicBg()),
+      React.createElement('button',{title:'Exit full screen', onClick:()=>this.toggleFullscreen(),
+        style:{position:'absolute',top:'18px',right:'20px',zIndex:4,background:'rgba(0,0,0,0.35)',border:'1px solid var(--line3)',
+          borderRadius:'10px',color:'var(--text)',cursor:'pointer',width:'40px',height:'40px',display:'grid',placeItems:'center',fontSize:'17px',lineHeight:1}},'×'),
+      React.createElement('div',{className:'fs-inner'},
+        art,
+        React.createElement('div',null,
+          React.createElement('div',{style:{fontFamily:"'Bricolage Grotesque',sans-serif",fontWeight:800,
+            fontSize:'clamp(28px,4.6vw,56px)',letterSpacing:'-0.02em',lineHeight:1.1,textShadow:'0 3px 26px rgba(0,0,0,0.75)'}}, t.t),
+          React.createElement('div',{style:{color:'var(--text2)',fontSize:'clamp(14px,1.8vw,19px)',marginTop:'10px',textShadow:'0 2px 16px rgba(0,0,0,0.75)'}}, t.a)
+        )
+      )
+    );
   }
   renderLyricsOverlay(){
     // return an element always (never null) — the runtime keeps a slot that turned null on screen
@@ -1634,6 +1705,21 @@ class Component extends DCLogic {
       volLow: !s.muted && s.volume>0 && s.volume<0.5,
       volHigh: !s.muted && s.volume>=0.5,
       onSeek: (e)=>{ const r=e.currentTarget.getBoundingClientRect(); const f=Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)); const t=f*this.tracks[this.state.idx].dur; this.audio.currentTime=t; this.setState({progress:t}); },
+      // press-and-drag scrubbing on the progress bar (mousedown also handles a plain click)
+      onSeekDown: (e)=>{
+        const el=e.currentTarget;
+        const at=(ev)=>{
+          const r=el.getBoundingClientRect();
+          const f=Math.min(1,Math.max(0,(ev.clientX-r.left)/r.width));
+          const t=f*this.tracks[this.state.idx].dur;
+          this.audio.currentTime=t; this.setState({progress:t});
+        };
+        at(e);
+        const up=()=>{ document.removeEventListener('mousemove',at); document.removeEventListener('mouseup',up); };
+        document.addEventListener('mousemove',at); document.addEventListener('mouseup',up);
+      },
+      curRemain: '-'+this.fmt(Math.max(0,(this.tracks[s.idx].dur||0)-s.progress)),
+      fsView: this.renderFsView(),
 
       ...this.wsVals(),
       journalContent: this.renderJournal(),
