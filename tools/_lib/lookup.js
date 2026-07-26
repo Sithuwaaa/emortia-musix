@@ -134,13 +134,16 @@ let dq; q.addEventListener('input',()=>{clearTimeout(dq);dq=setTimeout(route,120
 $('clr').onclick=()=>{q.value='';q.focus();route()};
 addEventListener('keydown',e=>{if(e.key==='/'&&document.activeElement!==q){e.preventDefault();q.focus()}});
 
-/* footer */
+/* footer — the data-editing links show only in owner mode (see _lib/owner.js) */
+const editLinks = window.IS_OWNER
+  ? '<br><a href="#" id="refresh">Update data from Excel…</a> · <a href="#" id="reset" style="color:var(--muted)">reset to bundled</a>'
+  : '';
 document.querySelector('main').insertAdjacentHTML('beforeend',
-  '<footer>Runs entirely on your device · '+C.source+'<br>'+
-  '<a href="#" id="refresh">Update data from Excel…</a> · '+
-  '<a href="#" id="reset" style="color:var(--muted)">reset to bundled</a></footer>');
-$('refresh').onclick=e=>{e.preventDefault();$('file').click()};
-$('reset').onclick=async e=>{e.preventDefault();await idbSet('dataset',null);location.reload()};
+  '<footer>Runs entirely on your device · '+C.source+editLinks+'</footer>');
+if(window.IS_OWNER){
+  $('refresh').onclick=e=>{e.preventDefault();$('file').click()};
+  $('reset').onclick=async e=>{e.preventDefault();await idbSet('dataset',null);location.reload()};
+}
 
 loadData();
 })();

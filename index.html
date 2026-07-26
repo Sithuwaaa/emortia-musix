@@ -16,6 +16,8 @@
     <text x="600" y="560" font-family="Georgia, serif" font-size="52" font-weight="700" fill="#f7edf0" text-anchor="middle">Emortia <tspan fill="#b03a56">Musix</tspan></text>
   </svg>
 </template>
+<script src="tools/_lib/owner-config.js"></script>
+<script src="tools/_lib/owner.js"></script>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -1257,7 +1259,7 @@ class Component extends DCLogic {
   }
 
   // ---- tap-to-sync helper (open the site with #sync in the URL) ----
-  isSyncMode(){ return (location.hash||'').toLowerCase()==='#sync'; }
+  isSyncMode(){ return (location.hash||'').toLowerCase()==='#sync' && !!window.IS_OWNER; }
   fmtLrcTime(t){
     // work in whole centiseconds so float noise can't shave 0.01s off a round-trip
     let cs=Math.round(Math.max(0,t)*100);
