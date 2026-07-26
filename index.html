@@ -716,9 +716,10 @@ class Component extends DCLogic {
   constructor(props){
     super(props);
     const raw = [
-      {t:'Harana Hitha', a:'Emortia', d:222, tone:'var(--artA)', src:'audio/harana-hitha.wav', img:'audio/art/harana-hitha.jpg', scene:'moon'},
-      {t:'Napuru Hitha', a:'Emortia', d:180, tone:'#312338', src:'audio/napuru-hitha.wav', scene:'dream'},
-      {t:'Suwanda Vitharayi', a:'Emortia', d:210, tone:'#1f2e2c', src:'audio/suwanda-vitharayi.wav', img:'audio/art/suwanda-vitharayi.jpg', scene:'petals'},
+      // d = fallback seconds, replaced by the file's real duration once metadata loads
+      {t:'Harana Hitha', a:'Emortia', d:111, tone:'var(--artA)', src:'audio/harana-hitha.wav', img:'audio/art/harana-hitha.jpg', scene:'moon'},
+      {t:'Napuru Hitha', a:'Emortia', d:44, tone:'#312338', src:'audio/napuru-hitha.wav', scene:'dream'},
+      {t:'Suwanda Vitharayi', a:'Emortia', d:97, tone:'#1f2e2c', src:'audio/suwanda-vitharayi.wav', img:'audio/art/suwanda-vitharayi.jpg', scene:'petals'},
     ];
     const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
     this.tracks = raw.map((x,i)=>({
@@ -752,6 +753,22 @@ class Component extends DCLogic {
     if(autoplay){
       this.audio.play().catch(()=>this.setState({playing:false, audioMissing:true}));
     }
+  }
+  // Read every track's real duration from its file, so the list shows true
+  // times instead of the hardcoded fallbacks (only the loaded track used to).
+  probeDurations(){
+    this.tracks.forEach(t=>{
+      const a=new Audio();
+      a.preload='metadata';
+      a.addEventListener('loadedmetadata', ()=>{
+        if(isFinite(a.duration) && a.duration>0){
+          t.dur=a.duration; t.durLabel=this.fmt(a.duration);
+          this.setState({});
+        }
+      });
+      a.addEventListener('error', ()=>{});
+      a.src=t.src;
+    });
   }
   bindAudioEvents(){
     this.audio.addEventListener('timeupdate', ()=>{
@@ -924,6 +941,7 @@ class Component extends DCLogic {
     this.bindAudioEvents();
     this.loadTrack(this.state.idx, false);
     this.loadLyrics(this.state.idx);
+    this.probeDurations();
     this._checkHash=()=>this.setState({});   // hash is read at render time; just force a re-render
     window.addEventListener('hashchange', this._checkHash);
     this._onKey=(e)=>{
