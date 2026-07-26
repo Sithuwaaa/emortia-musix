@@ -108,7 +108,78 @@ function renderDetail(r){
   };
 }
 
-/* refresh from xlsx */
+/* refresh from xlsx.
+   Full-format sheets (headers matching the bundled dataset) replace everything.
+   Partial sheets (e.g. just Site ID / Name / Lat / Long / Depot) MERGE by id:
+   only the supplied fields change, blanks never wipe existing values, and a
+   supplied depot auto-fills the matching officer + contact (learned from the
+   current dataset by majority). Configured via C.merge. */
+function normHdr(s){return String(s).toLowerCase().replace(/[\s_\-\/().]+/g,'')}
+function officerMapFromRows(){
+  const m={};
+  if(!C.merge) return m;
+  const di=ci(C.merge.officerFrom), oi=ci(C.merge.officerCol), ti=ci(C.merge.contactCol);
+  if(di<0||oi<0||ti<0) return m;
+  const tally={};
+  for(const r of ROWS){
+    const dep=String(r[di]||'').trim().toLowerCase(); if(!dep) continue;
+    const o=String(r[oi]||'').trim(), t=String(r[ti]||'').trim();
+    if(!o&&!t) continue;
+    ((tally[dep]=tally[dep]||{})[o+'|SEP|'+t]=(tally[dep][o+'|SEP|'+t]||0)+1);
+  }
+  for(const dep in tally){
+    const best=Object.entries(tally[dep]).sort((a,b)=>b[1]-a[1])[0][0].split('|SEP|');
+    m[dep]={officer:best[0], contact:best[1]};
+  }
+  return m;
+}
+function mergeUpload(arr){
+  // alias lookup: normalized header -> our column name
+  const aliasOf={};
+  for(const col in C.merge.aliases) for(const a of C.merge.aliases[col]) aliasOf[normHdr(a)]=col;
+  aliasOf[normHdr(C.idCol)]=C.idCol;
+  // find the header row (sheets often start with banner/filter rows)
+  let hdrRow=-1, colmap=null;
+  for(let i=0;i<Math.min(arr.length,12);i++){
+    const m={}; let hits=0, hasId=false;
+    arr[i].forEach((cell,j)=>{
+      const t=aliasOf[normHdr(cell)];
+      if(t && !Object.values(m).includes(t)){ m[j]=t; hits++; if(t===C.idCol) hasId=true; }
+    });
+    if(hasId&&hits>=2){ hdrRow=i; colmap=m; break; }
+  }
+  if(hdrRow<0) throw new Error('no recognizable header row (need at least Site ID + one more column)');
+  const officers=officerMapFromRows();
+  const idc=ci(C.idCol);
+  const byId={}; ROWS.forEach(r=>{const k=String(r[idc]||'').trim().toUpperCase(); if(k) byId[k]=r;});
+  let updated=0, added=0, seen=0;
+  for(let i=hdrRow+1;i<arr.length;i++){
+    const raw=arr[i]||[];
+    const vals={};
+    for(const j in colmap){ const v=(raw[j]==null?'':String(raw[j])).trim(); if(v) vals[colmap[j]]=v; }
+    const id=(vals[C.idCol]||'').toUpperCase();
+    if(!id||!/[A-Za-z]/.test(id)) continue;            // skips the autofilter count row etc.
+    seen++;
+    let r=byId[id], isNew=false, changed=false;
+    if(!r){ r=new Array(COLS.length).fill(''); r[idc]=vals[C.idCol]; byId[id]=r; ROWS.push(r); isNew=true; }
+    for(const col in vals){
+      if(col===C.idCol) continue;
+      const k=ci(col); if(k<0) continue;
+      if(String(r[k]||'').trim()!==vals[col]){ r[k]=vals[col]; changed=true; }
+    }
+    // depot supplied -> fill matching officer + contact
+    if(C.merge.officerFrom && vals[C.merge.officerFrom]){
+      const rec=officers[vals[C.merge.officerFrom].toLowerCase()];
+      if(rec){
+        const oi2=ci(C.merge.officerCol), ti2=ci(C.merge.contactCol);
+        if(oi2>=0&&rec.officer&&String(r[oi2]||'').trim()!==rec.officer){ r[oi2]=rec.officer; changed=true; }
+        if(ti2>=0&&rec.contact&&String(r[ti2]||'').trim()!==rec.contact){ r[ti2]=rec.contact; changed=true; }
+      }
+    }
+    if(isNew) added++; else if(changed) updated++;
+  }
+  return {updated,added,seen};
+}
 $('file').addEventListener('change', async e=>{
   const f=e.target.files[0]; e.target.value=''; if(!f) return;
   toast('Reading '+f.name+'…');
@@ -118,17 +189,27 @@ $('file').addEventListener('change', async e=>{
     const ws=wb.Sheets[C.sheetName]||wb.Sheets[wb.SheetNames[0]];
     if(!ws) throw new Error('sheet not found');
     const arr=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});
-    const cols=arr[0].map(c=>String(c).trim());
-    const rows=[];
-    for(let i=1;i<arr.length;i++){
-      const r=arr[i].map(v=>(v==null?'':String(v)).trim());
-      if(!r.some(v=>v&&v!=='Unknown'&&v!=='0'&&v!=='Undefined'&&v!=='Deny')) continue;
-      rows.push(r);
+    // full-format sheet? (row 0 matches the bundled columns) -> replace everything
+    const hdr0=(arr[0]||[]).map(c=>String(c).trim());
+    const overlap=hdr0.filter(h=>COLS.includes(h)).length;
+    if(!C.merge || overlap>=Math.ceil(COLS.length*0.8)){
+      const cols=hdr0;
+      const rows=[];
+      for(let i=1;i<arr.length;i++){
+        const r=arr[i].map(v=>(v==null?'':String(v)).trim());
+        if(!r.some(v=>v&&v!=='Unknown'&&v!=='0'&&v!=='Undefined'&&v!=='Deny')) continue;
+        rows.push(r);
+      }
+      await idbSet('dataset',{cols,rows,savedAt:new Date().toISOString().slice(0,10)});
+      toast('Replaced · '+rows.length.toLocaleString()+' '+C.unit);
+    }else{
+      const res=mergeUpload(arr);
+      ROWS.forEach(r=>{delete r.__blob});
+      await idbSet('dataset',{cols:COLS,rows:ROWS.map(r=>r.slice(0,COLS.length)),savedAt:new Date().toISOString().slice(0,10)});
+      toast('Merged · '+res.updated+' updated · '+res.added+' added (of '+res.seen+' rows)');
     }
-    await idbSet('dataset',{cols,rows,savedAt:new Date().toISOString().slice(0,10)});
-    toast('Updated · '+rows.length.toLocaleString()+' '+C.unit);
     await loadData();
-  }catch(err){console.error(err);toast('Could not read that file')}
+  }catch(err){console.error(err);toast('Could not read that file: '+err.message)}
 });
 
 /* events */

@@ -64,6 +64,20 @@ window.LOOKUP_CONFIG = {
     return /no\s*(time\s*)?restrict/i.test(t) ? [{text:'✓ '+t,kind:'ok'}] : [{text:'⏱ '+t,kind:'warn'}];
   },
   subBits:(r,v)=>{ const o=v(r,'Other_Site_IDS'), id=v(r,'Site_ID'); return [ (o&&o!==id)?'also '+o:'', v(r,'New_Region'), v(r,'District') ]; },
+  merge:{
+    officerFrom:'Depot', officerCol:'Depot_officer(FME_ID)', contactCol:'Depot_Contact',
+    aliases:{
+      'Site_ID':['site id','site_id','siteid'],
+      'Site_Name':['site name','site_name','sitename','name'],
+      'Latitude':['lat','latitude'],
+      'Longitude':['long','lng','longitude'],
+      'Depot':['depot'],
+      'District':['district'],
+      'New_Region':['region','new region','new_region'],
+      'Other_Site_IDS':['other ids','other site ids','other_site_ids'],
+      'Additional_data-Site_Address':['address','site address','site_address']
+    }
+  },
   copyText:(r,v)=>{
     const bad=s=>!s||/^(unknown|undefined|0|deny)$/i.test(String(s).trim());
     const lat=v(r,'Latitude'), lng=v(r,'Longitude');
