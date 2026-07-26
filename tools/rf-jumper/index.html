@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#16203a">
+<title>RF Jumper Colour Codes</title>
+<link rel="icon" href="../gin-extractor/icon-192.png">
+<style>
+  :root{--navy:#16203a;--navy-2:#1d2a4d;--accent:#ffb020;--accent-ink:#231a04;
+    --bg:#e9edf4;--card:#fff;--card-2:#f4f6fa;--line:#dde3ec;--text:#1c2433;--muted:#68738a}
+  html[data-theme="dark"]{--bg:#12161d;--card:#1b202a;--card-2:#232a36;--line:#303948;--text:#e8ebf1;--muted:#8c96a8}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:15px}
+  .hdr{position:fixed;top:0;left:0;right:0;z-index:20;background:var(--navy);color:#fff;
+    padding:calc(env(safe-area-inset-top) + 10px) 14px 10px;display:flex;align-items:center;gap:10px;
+    box-shadow:0 2px 10px rgba(0,0,0,.25)}
+  .hdr .logo{width:28px;height:28px;border-radius:7px;background:linear-gradient(150deg,#ffc04d,#d8892a);
+    display:grid;place-items:center;font-weight:800;color:#231a04;font-size:15px;flex-shrink:0}
+  .hdr h1{font-size:16.5px;font-weight:700;margin-right:auto;white-space:nowrap}
+  .theme{background:none;border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:8px;
+    width:32px;height:32px;font-size:15px;cursor:pointer;flex-shrink:0}
+  /* controls bar */
+  .bar{position:fixed;left:0;right:0;z-index:18;top:calc(env(safe-area-inset-top) + 50px);
+    background:var(--card);border-bottom:1px solid var(--line);padding:8px 12px;
+    display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .searchwrap{position:relative;flex:1;min-width:170px}
+  #q{width:100%;font-size:15px;padding:9px 34px 9px 32px;border-radius:10px;border:1px solid var(--line);
+    background:var(--bg);color:var(--text);outline:none}
+  #q:focus{border-color:var(--accent)}
+  .searchwrap .ic{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted)}
+  .clr{position:absolute;right:7px;top:50%;transform:translateY(-50%);border:none;background:var(--card-2);
+    color:var(--muted);width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:14px;display:none}
+  .tabs{display:flex;gap:4px}
+  .tab{border:1px solid var(--line);background:var(--card-2);color:var(--text);border-radius:8px;
+    padding:8px 12px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+  .tab.on{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+  .zbtns{display:flex;gap:4px}
+  .zb{width:34px;height:34px;border:1px solid var(--line);background:var(--card-2);color:var(--text);
+    border-radius:8px;font-size:16px;cursor:pointer;line-height:1}
+  /* results dropdown */
+  .drop{position:fixed;z-index:19;left:12px;right:12px;max-width:520px;background:var(--card);
+    border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 36px rgba(0,0,0,.25);
+    overflow:hidden;display:none;max-height:60vh;overflow-y:auto}
+  .drop .ritem{padding:11px 14px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;gap:10px;align-items:center}
+  .drop .ritem:last-child{border-bottom:none}
+  .drop .ritem:hover,.drop .ritem.sel{background:var(--card-2)}
+  .drop .ritem .nm{font-weight:600;flex:1}
+  .drop .ritem .pg{font-size:11px;color:var(--muted);font-family:ui-monospace,monospace}
+  .drop mark{background:rgba(255,176,32,.35);border-radius:3px}
+  /* stage */
+  .stage{position:absolute;top:0;left:0;right:0;bottom:0;overflow:hidden;
+    padding-top:calc(env(safe-area-inset-top) + 104px);touch-action:none;cursor:grab;background:var(--bg)}
+  .stage.drag{cursor:grabbing}
+  .canvas{position:absolute;transform-origin:0 0;will-change:transform}
+  .canvas img{display:block;width:1836px;height:auto;user-select:none;-webkit-user-drag:none;
+    box-shadow:0 6px 30px rgba(0,0,0,.25);background:#fff}
+  .hlite{position:absolute;border:3px solid var(--accent);border-radius:5px;pointer-events:none;
+    box-shadow:0 0 0 3px rgba(255,176,32,.35),0 0 26px 6px rgba(255,176,32,.55);
+    display:none;transition:opacity .2s}
+  .hint{position:fixed;bottom:calc(env(safe-area-inset-bottom) + 10px);left:50%;transform:translateX(-50%);
+    z-index:15;background:var(--navy);color:#cfd6e6;font-size:11.5px;padding:6px 14px;border-radius:999px;
+    opacity:.9;white-space:nowrap;pointer-events:none}
+</style>
+</head>
+<body>
+<header class="hdr">
+  <div class="logo">R</div>
+  <h1>RF Jumper Colour Codes</h1>
+  <button class="theme" id="themeBtn" aria-label="Toggle theme">☾</button>
+</header>
+<div class="bar">
+  <div class="searchwrap">
+    <span class="ic">⌕</span>
+    <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="Search band combo — e.g. DCS+L2100">
+    <button class="clr" id="clr">×</button>
+  </div>
+  <div class="tabs">
+    <button class="tab on" data-pg="1">Page 1</button>
+    <button class="tab" data-pg="2">Page 2</button>
+  </div>
+  <div class="zbtns">
+    <button class="zb" id="zout">−</button>
+    <button class="zb" id="zfit" title="Fit">⤢</button>
+    <button class="zb" id="zin">+</button>
+  </div>
+</div>
+<div class="drop" id="drop"></div>
+<div class="stage" id="stage">
+  <div class="canvas" id="cv">
+    <img id="img1" src="page1.png" alt="RF Jumper chart page 1">
+    <img id="img2" src="page2.png" alt="RF Jumper chart page 2" style="display:none">
+    <div class="hlite" id="hlite"></div>
+  </div>
+</div>
+<div class="hint">Scroll or pinch to zoom · drag to pan · search a band combo to jump</div>
+
+<script>
+/* theme */
+const THEME_KEY='office_tool_theme';
+function applyTheme(t){document.documentElement.dataset.theme=t;document.getElementById('themeBtn').textContent=t==='dark'?'☀':'☾';try{localStorage.setItem(THEME_KEY,t)}catch(e){}}
+applyTheme(localStorage.getItem(THEME_KEY)||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
+document.getElementById('themeBtn').onclick=()=>applyTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
+
+/* ---- chart geometry (image is 1836 wide; each page image is its own 1836xH) ---- */
+const IMG_W=1836;
+const COL_X0=228, COL_X1=1562;                 // 4 columns span this x-range
+/* row bands (image px) detected from the official chart; each entry is a combo row's y-start */
+const ROWS={
+  1:{ tops:[334,486,660,836,1056, 1302,1525,1748,1972], ends:[429,603,778,975,1173, 1440,1664,1887,2109], panelEndAfter:[5] },
+  2:{ tops:[289,562,859], ends:[452,747,1041], panelEndAfter:[3] }
+};
+function cellRect(page,idx){
+  const col=idx%4, rowAbs=Math.floor(idx/4);
+  const R=ROWS[page]; if(!R||rowAbs>=R.tops.length) return null;
+  const cw=(COL_X1-COL_X0)/4;
+  const top=R.tops[rowAbs]-52;                 // include the combo's title above its grid
+  const isEnd=(rowAbs+1>=R.tops.length)||R.panelEndAfter.includes(rowAbs+1);
+  const bot=isEnd ? R.ends[rowAbs]+72 : R.tops[rowAbs+1]-16;
+  return {x:COL_X0+col*cw, y:top, w:cw, h:bot-top};
+}
+/* band combos in reading order (4 per row). Names are for search only —
+   the colours shown are always the official chart image. */
+const P1=[
+  'TDD','GSM','DCS','UMTS(3G)',
+  'L2600','L900','FDD','L2100',
+  'TDD+L2600','GSM+L900','DCS+FDD','3G+L2100',
+  'DCS+3G','DCS+L2100','FDD+3G','FDD+L2100',
+  'DCS+TDD','FDD+TDD','3G+TDD','L2100+TDD',
+  'DCS+L2600','FDD+L2600','3G+L2600','L2100+L2600',
+  'DCS+FDD+3G','DCS+FDD+TDD','DCS+FDD+L2600','DCS+3G+L2600',
+  'DCS+TDD+L2600','FDD+TDD+L2600','3G+TDD+L2600','L2100+TDD+L2600',
+  'DCS+3G+L2100','DCS+FDD+3G+L2100','DCS+FDD+L2100','FDD+3G+L2100'
+];
+const P2=[
+  'DCS+3G+L2100+TDD','DCS+FDD+3G+L2100+TDD','DCS+FDD+L2100+TDD','FDD+3G+L2100+TDD',
+  'DCS+3G+L2100+L2600','DCS+FDD+3G+L2100+L2600','DCS+FDD+L2100+L2600','FDD+3G+L2100+L2600',
+  'DCS+3G+L2100+L2600+TDD','DCS+FDD+3G+L2100+L2600+TDD','DCS+FDD+L2100+L2600+TDD','FDD+3G+L2100+L2600+TDD'
+];
+const COMBOS=[];
+P1.forEach((n,i)=>COMBOS.push({name:n,page:1,idx:i,rect:cellRect(1,i)}));
+P2.forEach((n,i)=>COMBOS.push({name:n,page:2,idx:i,rect:cellRect(2,i)}));
+const norm=s=>s.toLowerCase().replace(/[\s()]/g,'').replace(/umts/,'3g');
+
+/* ---- pan / zoom ---- */
+const stage=document.getElementById('stage'), cv=document.getElementById('cv');
+const img1=document.getElementById('img1'), img2=document.getElementById('img2');
+let curPage=1, scale=1, tx=0, ty=0, imgH=2376;
+function apply(){ cv.style.transform='translate('+tx+'px,'+ty+'px) scale('+scale+')'; }
+function stageBox(){ return stage.getBoundingClientRect(); }
+function fit(){
+  const b=stageBox(); const pad=16;
+  scale=Math.min((b.width-pad*2)/IMG_W, (b.height-pad*2)/imgH);
+  tx=(b.width-IMG_W*scale)/2; ty=pad;
+  apply();
+}
+function setPage(pg){
+  curPage=pg; document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',+t.dataset.pg===pg));
+  img1.style.display=pg===1?'block':'none'; img2.style.display=pg===2?'block':'none';
+  const im=pg===1?img1:img2; imgH=im.naturalHeight||2376;
+  document.getElementById('hlite').style.display='none';
+  fit();
+}
+function zoomAt(cx,cy,factor){
+  const b=stageBox(); const px=cx-b.left, py=cy-b.top;
+  const nx=(px-tx)/scale, ny=(py-ty)/scale;
+  scale=Math.max(0.1,Math.min(8,scale*factor));
+  tx=px-nx*scale; ty=py-ny*scale; apply();
+}
+stage.addEventListener('wheel',e=>{e.preventDefault();zoomAt(e.clientX,e.clientY,e.deltaY<0?1.15:1/1.15)},{passive:false});
+document.getElementById('zin').onclick=()=>{const b=stageBox();zoomAt(b.left+b.width/2,b.top+b.height/2,1.3)};
+document.getElementById('zout').onclick=()=>{const b=stageBox();zoomAt(b.left+b.width/2,b.top+b.height/2,1/1.3)};
+document.getElementById('zfit').onclick=fit;
+/* drag */
+let drag=null;
+stage.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,tx,ty};stage.setPointerCapture(e.pointerId);stage.classList.add('drag')});
+stage.addEventListener('pointermove',e=>{if(!drag)return;tx=drag.tx+(e.clientX-drag.x);ty=drag.ty+(e.clientY-drag.y);apply()});
+stage.addEventListener('pointerup',e=>{drag=null;stage.classList.remove('drag')});
+stage.addEventListener('pointercancel',()=>{drag=null;stage.classList.remove('drag')});
+/* pinch */
+let pts=new Map(),pinch=null;
+stage.addEventListener('pointerdown',e=>pts.set(e.pointerId,e));
+stage.addEventListener('pointermove',e=>{
+  if(!pts.has(e.pointerId))return; pts.set(e.pointerId,e);
+  if(pts.size===2){ drag=null; const[a,b]=[...pts.values()];
+    const d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY), mx=(a.clientX+b.clientX)/2,my=(a.clientY+b.clientY)/2;
+    if(pinch){ zoomAt(mx,my,d/pinch.d); } pinch={d,mx,my};
+  }
+});
+function endPt(e){pts.delete(e.pointerId);if(pts.size<2)pinch=null}
+stage.addEventListener('pointerup',endPt);stage.addEventListener('pointercancel',endPt);
+
+/* ---- jump to a combo ---- */
+function jump(c){
+  setPage(c.page);
+  const r=c.rect; if(!r) return;
+  // zoom so the cell is ~55% of stage width
+  const b=stageBox();
+  scale=Math.max(0.1,Math.min(8,(b.width*0.62)/r.w));
+  const cxImg=r.x+r.w/2, cyImg=r.y+r.h/2;
+  tx=b.width/2 - cxImg*scale; ty=b.height/2 - cyImg*scale + 20; apply();
+  const hl=document.getElementById('hlite');
+  hl.style.left=r.x+'px'; hl.style.top=r.y+'px'; hl.style.width=r.w+'px'; hl.style.height=r.h+'px';
+  hl.style.display='block'; hl.style.opacity='1';
+}
+
+/* ---- search ---- */
+const q=document.getElementById('q'), drop=document.getElementById('drop'), clr=document.getElementById('clr');
+let selIdx=-1, cur=[];
+function positionDrop(){ const b=document.querySelector('.bar').getBoundingClientRect(); drop.style.top=(b.bottom+6)+'px'; }
+function esc(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
+function runSearch(){
+  const term=q.value.trim(); clr.style.display=term?'block':'none';
+  if(!term){drop.style.display='none';return}
+  const nt=norm(term);
+  cur=COMBOS.filter(c=>norm(c.name).includes(nt)).slice(0,40);
+  if(!cur.length){drop.innerHTML='<div class="ritem"><span class="nm" style="color:var(--muted)">No band combo matches “'+esc(term)+'”.</span></div>';drop.style.display='block';positionDrop();return}
+  drop.innerHTML=cur.map((c,i)=>'<div class="ritem'+(i===0?' sel':'')+'" data-i="'+i+'"><span class="nm">'+esc(c.name)+'</span><span class="pg">page '+c.page+'</span></div>').join('');
+  selIdx=0; drop.style.display='block'; positionDrop();
+  [...drop.querySelectorAll('.ritem')].forEach(el=>{ if(el.dataset.i!==undefined) el.onclick=()=>choose(+el.dataset.i); });
+}
+function choose(i){ const c=cur[i]; if(!c)return; drop.style.display='none'; q.blur(); jump(c); }
+q.addEventListener('input',runSearch);
+q.addEventListener('keydown',e=>{
+  if(drop.style.display==='none')return;
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();selIdx=(selIdx+(e.key==='ArrowDown'?1:-1)+cur.length)%cur.length;
+    [...drop.querySelectorAll('.ritem')].forEach((el,i)=>el.classList.toggle('sel',i===selIdx));}
+  else if(e.key==='Enter'){e.preventDefault();choose(selIdx)}
+  else if(e.key==='Escape'){drop.style.display='none'}
+});
+clr.onclick=()=>{q.value='';runSearch();q.focus()};
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>setPage(+t.dataset.pg));
+addEventListener('resize',()=>{ if(document.getElementById('hlite').style.display==='none') fit(); });
+
+/* init after images load */
+let loaded=0; [img1,img2].forEach(im=>{ if(im.complete)ready(); else im.onload=ready; });
+function ready(){ if(++loaded>=1 && !window.__init){ window.__init=true; setPage(1); } }
+</script>
+</body>
+</html>

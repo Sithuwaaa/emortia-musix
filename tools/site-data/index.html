@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#16203a">
+<title>Site Data Lookup</title>
+<link rel="icon" href="../gin-extractor/icon-192.png">
+<link rel="stylesheet" href="../_lib/lookup.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+<header class="hdr">
+  <div class="logo">D</div>
+  <h1>Site Data Lookup</h1>
+  <span class="pill" id="pill">loading…</span>
+  <button class="theme" id="themeBtn" aria-label="Toggle theme">☾</button>
+</header>
+<main>
+  <div class="searchwrap">
+    <span class="ic">⌕</span>
+    <input id="q" type="search" autocomplete="off" spellcheck="false"
+      placeholder="Search site ID, name, district, vendor…" aria-label="Search sites">
+    <button class="clr" id="clr" aria-label="Clear">×</button>
+  </div>
+  <div class="hint" id="hint"></div>
+  <div id="view"></div>
+</main>
+<div class="toast" id="toast"></div>
+<input type="file" id="file" accept=".xlsx,.xls">
+<script>
+window.LOOKUP_CONFIG = {
+  dataUrl:'data.json', idbName:'site_data_db', idbStore:'ds', sheetName:'Site Data',
+  unit:'sites', unitSingular:'site', source:'DNS Operational Site list · Site Data sheet',
+  homeIcon:'🗼', homeText:n=>'Search '+n.toLocaleString()+' sites for full technical data — TX, tower, power, equipment.<br>All data stays on your device.',
+  idCol:'Site_Id', nameCol:'Site_Name', metaCol:'District',
+  latCol:'Lat', lngCol:'Lng', telCol:'Site_Owner_Contact',
+  searchCols:['Site_Id','Site_Name','District','Province','Region','Depot','Address','Vendor','TX_Technology','Owner'],
+  labels:{
+    Site_Id:'Site ID', Site_Name:'Site name', Status:'Status',
+    TX_Type:'TX type', TX_Technology:'TX technology', Address:'Address',
+    District:'District', Province:'Province', Region:'Region', Depot:'Depot',
+    DS_Division:'DS division', GS_Division:'GS division', Local_Authority:'Local authority', Police_Station:'Police station',
+    Lat:'Latitude', Lng:'Longitude', Elevation:'Elevation (m)',
+    Owner:'Owner', Site_Owner_Name:'Owner name', Site_Owner_Contact:'Owner contact',
+    Access_24_7:'24/7 access', Night_Time_Access:'Night-time access', Weekday_Holiday_Access:'Weekday / holiday access',
+    Tower_Type:'Tower type', Tower_Height:'Tower height (m)', Building_Height:'Building height (m)', Cabinet_Type:'Cabinet type',
+    Vendor:'Vendor', Final_Rank:'Final rank', Self_Tx_Traffic:'Self TX traffic', Agg_Tx_Traffic:'Aggregate TX traffic',
+    Gen_Availability:'Generator', PG_Allowed:'PG allowed', Site_DC_Load:'DC load', Solar_Availability:'Solar',
+    Tx_Antenna_Count:'TX antennas', RRU_Count:'RRUs', AP_Antenna_Count:'AP antennas',
+    CSR_Count:'CSRs', AIU_Count:'AIUs', WiBAS_Ant_Count:'WiBAS antennas'
+  },
+  groups:[
+    {h:'Identity', f:['Site_Id','Site_Name','Status']},
+    {h:'Transmission', f:['TX_Type','TX_Technology','Vendor','Final_Rank','Self_Tx_Traffic','Agg_Tx_Traffic']},
+    {h:'Location', f:['Address','District','Province','Region','Depot','DS_Division','GS_Division','Local_Authority','Police_Station','Lat','Lng','Elevation']},
+    {h:'Owner & access', f:['Owner','Site_Owner_Name','Site_Owner_Contact','Access_24_7','Night_Time_Access','Weekday_Holiday_Access']},
+    {h:'Tower & cabinet', f:['Tower_Type','Tower_Height','Building_Height','Cabinet_Type']},
+    {h:'Power', f:['Gen_Availability','PG_Allowed','Site_DC_Load','Solar_Availability']},
+    {h:'Equipment count', f:['Tx_Antenna_Count','RRU_Count','AP_Antenna_Count','CSR_Count','AIU_Count','WiBAS_Ant_Count']}
+  ],
+  full:['Site_Name','Address'],
+  mono:['Site_Id','Lat','Lng','Site_Owner_Contact','Elevation','Tower_Height','Building_Height'],
+  badges:(r,v)=>{
+    const out=[]; const st=v(r,'Status'); const acc=v(r,'Access_24_7');
+    if(st&&st!=='Unknown') out.push({text:st,kind:/live/i.test(st)?'ok':'info'});
+    if(/^y(es)?$/i.test(acc)) out.push({text:'✓ 24/7 access',kind:'ok'});
+    else if(/^n(o)?$/i.test(acc)) out.push({text:'⏱ Access restricted',kind:'warn'});
+    return out;
+  },
+  subBits:(r,v)=>[ v(r,'TX_Technology'), v(r,'Region'), v(r,'District') ]
+};
+</script>
+<script src="../_lib/lookup.js"></script>
+</body>
+</html>

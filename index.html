@@ -1380,6 +1380,12 @@ class Component extends DCLogic {
     return {
       isHome:s.page==='home', isMusic:s.page==='music', isDash:s.page==='dash', isBlog:s.page==='blog', isNotes:s.page==='notes', isTools:s.page==='tools', isAbout:s.page==='about', isContact:s.page==='contact',
       tools:[
+        {name:'Site Access Lookup', initial:'S', tag:'Dialog · site list', href:'tools/site-access/',
+         desc:'Search 5,880 Dialog sites by ID, name or district and get depot, contact, tower and access-permission details instantly. Works offline.'},
+        {name:'Site Data Lookup', initial:'D', tag:'Dialog · technical', href:'tools/site-data/',
+         desc:'Full technical profile for 13,000+ sites — TX technology, tower, power, generator, solar and equipment counts. Search and go.'},
+        {name:'RF Jumper Colour Codes', initial:'R', tag:'Huawei · Dialog', href:'tools/rf-jumper/',
+         desc:'The official RF jumper labelling chart for Dialog sites. Search any band combination and jump straight to its colour code per sector.'},
         {name:'GIN Extractor', initial:'G', tag:'Dialog Axiata · SAP', href:'tools/gin-extractor/',
          desc:'Drop SAP Goods Issue Note PDFs and pull every material line into one clean Excel sheet. Runs entirely on your device, works offline, nothing is uploaded.'},
       ],

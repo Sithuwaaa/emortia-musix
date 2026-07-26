@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#16203a">
+<title>Site Access Lookup</title>
+<link rel="icon" href="../gin-extractor/icon-192.png">
+<link rel="stylesheet" href="../_lib/lookup.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+<header class="hdr">
+  <div class="logo">S</div>
+  <h1>Site Access Lookup</h1>
+  <span class="pill" id="pill">loading…</span>
+  <button class="theme" id="themeBtn" aria-label="Toggle theme">☾</button>
+</header>
+<main>
+  <div class="searchwrap">
+    <span class="ic">⌕</span>
+    <input id="q" type="search" autocomplete="off" spellcheck="false"
+      placeholder="Search site ID, name, district…" aria-label="Search sites">
+    <button class="clr" id="clr" aria-label="Clear">×</button>
+  </div>
+  <div class="hint" id="hint"></div>
+  <div id="view"></div>
+</main>
+<div class="toast" id="toast"></div>
+<input type="file" id="file" accept=".xlsx,.xls">
+<script>
+window.LOOKUP_CONFIG = {
+  dataUrl:'data.json', idbName:'site_access_db', idbStore:'ds', sheetName:'Sheet1',
+  unit:'sites', unitSingular:'site', source:'DNS Operational Site list · Sheet1',
+  homeIcon:'📡', homeText:n=>'Search '+n.toLocaleString()+' Dialog sites by ID, name, district or address.<br>All data stays on your device.',
+  idCol:'Site_ID', nameCol:'Site_Name', metaCol:'District',
+  latCol:'Latitude', lngCol:'Longitude', telCol:'Depot_Contact',
+  searchCols:['Site_ID','Other_Site_IDS','Site_Name','District','New_Region','Depot','Additional_data-Site_Address'],
+  labels:{
+    Site_ID:'Site ID', Other_Site_IDS:'Other IDs', Site_Name:'Site name',
+    New_Region:'Region', District:'District', Depot:'Depot',
+    'Depot_officer(FME_ID)':'Depot officer', Depot_Contact:'Depot contact',
+    Latitude:'Latitude', Longitude:'Longitude',
+    Tower_Category:'Tower category', Tower_Type:'Tower type',
+    Access_Permission_providing_Party:'Permission from', Tower_Owner:'Tower owner',
+    Permission_arrangement_final:'Permission arrangement', Time_restricted_reason:'Restriction reason',
+    Week_Days_Access_Restricted_time:'Weekday restricted', 'Week_ends/Holydays_Access_Restricted_time':'Weekend / holiday restricted',
+    Time_Restrictions_final:'Time restrictions', 'Additional_data-Site_Address':'Site address'
+  },
+  groups:[
+    {h:'Identity', f:['Site_ID','Other_Site_IDS','Site_Name']},
+    {h:'Location', f:['New_Region','District','Latitude','Longitude','Additional_data-Site_Address']},
+    {h:'Depot & contact', f:['Depot','Depot_officer(FME_ID)','Depot_Contact']},
+    {h:'Tower', f:['Tower_Category','Tower_Type','Tower_Owner']},
+    {h:'Access & permission', f:['Access_Permission_providing_Party','Permission_arrangement_final','Time_restricted_reason','Time_Restrictions_final','Week_Days_Access_Restricted_time','Week_ends/Holydays_Access_Restricted_time']}
+  ],
+  full:['Site_Name','Additional_data-Site_Address','Permission_arrangement_final','Time_restricted_reason','Time_Restrictions_final'],
+  mono:['Site_ID','Other_Site_IDS','Latitude','Longitude','Depot_Contact','Depot_officer(FME_ID)'],
+  badges:(r,v)=>{
+    const t=v(r,'Time_Restrictions_final');
+    if(!t) return [];
+    return /no\s*(time\s*)?restrict/i.test(t) ? [{text:'✓ '+t,kind:'ok'}] : [{text:'⏱ '+t,kind:'warn'}];
+  },
+  subBits:(r,v)=>{ const o=v(r,'Other_Site_IDS'), id=v(r,'Site_ID'); return [ (o&&o!==id)?'also '+o:'', v(r,'New_Region'), v(r,'District') ]; }
+};
+</script>
+<script src="../_lib/lookup.js"></script>
+</body>
+</html>
