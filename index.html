@@ -43,6 +43,10 @@ body{background:var(--bg);}
 @keyframes fadeUp{from{transform:translateY(14px);}to{transform:none;}}
 @keyframes glow{0%,100%{box-shadow:0 0 0 0 var(--glow);}50%{box-shadow:0 0 0 16px var(--glow0);}}
 input,textarea,button{font-family:inherit;}
+/* Sinhala poem fonts */
+@font-face{font-family:'UN-Agni';src:url('fonts/UN-Agni.ttf') format('truetype');font-display:swap;}
+@font-face{font-family:'UN-Alakamanda';src:url('fonts/UN-Alakamanda-4-95.ttf') format('truetype');font-display:swap;}
+@font-face{font-family:'UN-Isiwara';src:url('fonts/UN-Isiwara.ttf') format('truetype');font-display:swap;}
 /* ---- responsive ---- */
 .nav-toggle{display:none;align-items:center;justify-content:center;}
 @media (max-width:940px){
@@ -1003,12 +1007,12 @@ class Component extends DCLogic {
     }
     const rows=s.poems.map((p,i)=>{
       const open=s.openPoem===i;
-      const dateCol=React.createElement('div',{style:{fontFamily:"'Space Mono',monospace",fontSize:'12px',color:'var(--mute)',letterSpacing:'0.06em'}}, p.date||'');
+      const dateCol=React.createElement('div',{style:{fontFamily:"'UN-Isiwara',serif",fontSize:'16px',color:'var(--mute)',letterSpacing:'0.02em',lineHeight:1.5}}, p.date||'');
       const caret=React.createElement('span',{style:{fontSize:'18px',color:'var(--accent)',display:'inline-block',transform:open?'rotate(90deg)':'none',transition:'transform .2s ease'}},'›');
-      const title=React.createElement('div',{style:{fontFamily:"'Bricolage Grotesque',sans-serif",fontWeight:700,fontSize:'clamp(22px,3vw,30px)',letterSpacing:'-0.02em',lineHeight:1.15,display:'flex',alignItems:'center',gap:'12px'}}, p.title, caret);
+      const title=React.createElement('div',{style:{fontFamily:"'UN-Agni',serif",fontWeight:400,fontSize:'clamp(28px,3.6vw,40px)',lineHeight:1.25,display:'flex',alignItems:'center',gap:'12px'}}, p.title, caret);
       const detail=open
-        ? React.createElement('div',{style:{whiteSpace:'pre-wrap',color:'var(--text2)',fontSize:'16px',lineHeight:1.8,margin:'16px 0 0',maxWidth:'620px'}}, p.body)
-        : React.createElement('div',{style:{color:'var(--dim)',fontSize:'15.5px',lineHeight:1.55,margin:'10px 0 0',maxWidth:'560px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}, this.poemPreview(p.body));
+        ? React.createElement('div',{style:{fontFamily:"'UN-Alakamanda',serif",whiteSpace:'pre-wrap',color:'var(--text2)',fontSize:'21px',lineHeight:1.85,margin:'16px 0 0',maxWidth:'640px'}}, p.body)
+        : React.createElement('div',{style:{fontFamily:"'UN-Alakamanda',serif",color:'var(--dim)',fontSize:'19px',lineHeight:1.5,margin:'10px 0 0',maxWidth:'560px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}, this.poemPreview(p.body));
       return React.createElement('div',{key:i, onClick:()=>this.setState(st=>({openPoem:st.openPoem===i?null:i})), className:'post-row',
         style:{display:'grid',gridTemplateColumns:'140px 1fr',gap:'24px',padding:'26px 0',borderTop:'1px solid var(--line)',cursor:'pointer'}},
         dateCol, React.createElement('div',null, title, detail));
