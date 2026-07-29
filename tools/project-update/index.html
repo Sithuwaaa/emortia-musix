@@ -336,6 +336,43 @@ function modSites(){
   return { list: out, checked, known };
 }
 
+/* ---------- district from the Site ID prefix ----------
+   Site IDs start with a two-letter district code (MU, MA, VA, GM, CM…).
+   Rather than hard-coding the codes we learn them from the Site Access
+   list: for each prefix, the district most of its sites sit in. Unknown
+   prefixes simply show the code itself. */
+let DIST_MAP = null;
+function districtMap(){
+  if (DIST_MAP) return DIST_MAP;
+  DIST_MAP = {};
+  if (!SITEACCESS) return DIST_MAP;
+  const ci = n => SITEACCESS.cols.indexOf(n);
+  const iId = ci('Site_ID'), iD = ci('District');
+  if (iId < 0 || iD < 0) return DIST_MAP;
+  const tally = {};
+  SITEACCESS.rows.forEach(r => {
+    const id = String(r[iId] || '').trim().toUpperCase();
+    const p = id.slice(0, 2);
+    if (!/^[A-Z]{2}$/.test(p)) return;
+    const d = String(r[iD] || '').trim();
+    if (!d || /^unknown$/i.test(d)) return;
+    const key = d.toLowerCase();
+    const t = (tally[p] = tally[p] || {});
+    if (!t[key]) t[key] = { n: 0, label: d };
+    t[key].n++;
+  });
+  Object.keys(tally).forEach(p => {
+    const best = Object.values(tally[p]).sort((a, b) => b.n - a.n)[0];
+    if (best) DIST_MAP[p] = best.label;
+  });
+  return DIST_MAP;
+}
+function districtOf(siteId){
+  const code = String(siteId || '').trim().toUpperCase().slice(0, 2);
+  if (!/^[A-Z]{2}$/.test(code)) return { code: '—', name: 'Unknown' };
+  return { code, name: districtMap()[code] || code };
+}
+
 /* ---------- dashboard ---------- */
 function colIdx(cols, ...names){
   const norm = s => String(s).toLowerCase().replace(/[\s_]+/g, '');
@@ -410,6 +447,39 @@ function renderDashboard(){
     if (b === 'onAir') o.onAir++; else if (b === 'hold') o.hold++;
     else if (b === 'wip' || b === 'commissioning' || b === 'airPending') o.wip++;
   });
+  /* by district, derived from the Site ID prefix */
+  const iSite = colIdx(cols, 'Site ID', 'Site  ID', 'SiteID');
+  const dist = new Map();
+  rows.forEach(r => {
+    const d = districtOf(iSite >= 0 ? r[iSite] : '');
+    const key = d.code;
+    if (!dist.has(key)) dist.set(key, { code: d.code, name: d.name, total: 0, onAir: 0, wip: 0, hold: 0 });
+    const o = dist.get(key); o.total++;
+    const b = bucketOf(r[iStatus]);
+    if (b === 'onAir') o.onAir++;
+    else if (b === 'hold') o.hold++;
+    else if (b === 'wip' || b === 'commissioning' || b === 'airPending') o.wip++;
+  });
+  const dl = [...dist.values()].sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+  const maxD = dl.length ? dl[0].total : 0;
+  h += '<div class="panel"><h2><span class="dot"></span>By district' +
+       '<span class="tag">' + dl.length + ' districts · from Site ID</span></h2>' +
+       '<div class="bars" style="margin-bottom:14px">' + dl.map(d => {
+         const pct = maxD ? Math.round(d.total / maxD * 100) : 0;
+         return '<div class="barrow"><span class="lb" title="' + esc(d.name) + '">' +
+           '<b style="font-family:\'Space Mono\',monospace;color:var(--accentB)">' + esc(d.code) + '</b> ' + esc(d.name) + '</span>' +
+           '<span class="bartrack"><span class="barfill" style="--w:' + pct + '%;--b:var(--accent)"></span></span>' +
+           '<span class="n">' + d.total + '</span></div>';
+       }).join('') + '</div>' +
+       '<div class="gridwrap" style="max-height:none"><table><thead><tr><th>Code</th><th>District</th><th>Sites</th>' +
+       '<th>On air</th><th>In progress</th><th>On hold</th><th>Done</th></tr></thead><tbody>' +
+       dl.map(d => {
+         const p = d.total ? Math.round(d.onAir / d.total * 100) : 0;
+         return '<tr><td style="font-family:\'Space Mono\',monospace;font-weight:700;color:var(--accentB)">' + esc(d.code) + '</td>' +
+                '<td style="font-weight:600">' + esc(d.name) + '</td><td>' + d.total + '</td><td>' + d.onAir +
+                '</td><td>' + d.wip + '</td><td>' + d.hold + '</td><td>' + p + '%</td></tr>';
+       }).join('') + '</tbody></table></div></div>';
+
   h += '<div class="panel"><h2><span class="dot"></span>By team</h2><div class="gridwrap" style="max-height:none">' +
        '<table><thead><tr><th>Team</th><th>Sites</th><th>On air</th><th>In progress</th><th>On hold</th><th>Done</th></tr></thead><tbody>' +
        [...teams.entries()].sort((a,b) => b[1].total - a[1].total).map(([t, o]) => {
