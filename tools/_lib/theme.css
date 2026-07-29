@@ -1,0 +1,179 @@
+/* ============================================================
+   Emortia terminal skin for the office tools.
+   Loaded AFTER each tool's own stylesheet: it re-points the shared
+   CSS variables the tools already use, then layers on the terminal
+   chrome and animations from the main site.
+   ============================================================ */
+
+/* --- palette: same variable names the tools already reference --- */
+:root,
+html[data-theme="dark"]{
+  --navy:#1c0f13;  --navy-2:#2b171e;
+  --accent:#b03a56; --accentB:#d15873; --accentD:#87213c; --accent-ink:#fff0f4;
+  --ok:#34c98b;    --warn:#f0523f;     --err:#f0523f;
+  --bg:#170d10;    --card:#241419;     --card-2:#1c0f13;
+  --line:#352027;  --line3:#51313c;
+  --text:#f7edf0;  --muted:#a98d96;
+  --glow:rgba(176,58,86,.5); --glowSoft:rgba(176,58,86,.28);
+}
+html[data-theme="light"]{
+  --navy:#2b171e;  --navy-2:#3a1f28;
+  --accent:#a82f4d; --accentB:#c4415f; --accent-ink:#fff0f4;
+  --bg:#f6eff1;    --card:#ffffff;     --card-2:#f7eef1;
+  --line:#e6d3d9;  --line3:#d8bcc5;
+  --text:#24141a;  --muted:#8a6b74;
+}
+
+*{ -webkit-tap-highlight-color:transparent; }
+html,body{
+  font-family:'Hanken Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+}
+
+/* --- ambient dust drifting behind everything (injected by theme.js) --- */
+.dust-layer{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
+.dust{position:absolute;bottom:-12px;border-radius:50%;
+  background:radial-gradient(circle,var(--accentB),transparent 70%);
+  will-change:transform,opacity;animation:tDustRise linear infinite;}
+@keyframes tDustRise{
+  0%{transform:translateY(0) translateX(0);opacity:0;}
+  14%{opacity:.65;}
+  100%{transform:translateY(-106vh) translateX(3vw);opacity:0;}
+}
+/* Keep real content above the dust. Only `main` is statically positioned, so it
+   needs position:relative for z-index to apply; .stage/.bar/.drop are already
+   absolute/fixed and must keep their own positioning. */
+main{position:relative;z-index:1;}
+.stage,.bar,.drop{z-index:1;}
+
+/* --- header: terminal panel with a scrolling grid and a live LED --- */
+.hdr{
+  background:linear-gradient(180deg,var(--navy-2),var(--navy)) !important;
+  border-bottom:1px solid var(--line3);
+  box-shadow:0 6px 26px rgba(0,0,0,.5) !important;
+  overflow:hidden;
+}
+.hdr::before{
+  content:'';position:absolute;inset:-24px 0;pointer-events:none;opacity:.5;
+  background-image:linear-gradient(rgba(176,58,86,.10) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(176,58,86,.07) 1px,transparent 1px);
+  background-size:24px 24px;animation:tGrid 2.8s linear infinite;
+}
+@keyframes tGrid{ to{ transform:translateY(24px); } }
+.hdr > *{position:relative;z-index:1;}
+.hdr .logo{
+  border-radius:50% !important;
+  background:linear-gradient(150deg,var(--accentB),var(--accentD)) !important;
+  color:#fff0f4 !important;
+  box-shadow:0 0 18px var(--glow) !important;
+  animation:tLogoFloat 4.5s ease-in-out infinite;
+}
+@keyframes tLogoFloat{ 0%,100%{transform:translateY(0);} 50%{transform:translateY(-3px);} }
+.hdr h1{
+  font-family:'Bricolage Grotesque','Hanken Grotesk',sans-serif;
+  letter-spacing:-.01em;
+}
+.hdr h1::after{
+  content:'\2588';color:var(--accentB);font-weight:400;margin-left:6px;
+  animation:tCaret 1s steps(1,end) infinite;
+}
+@keyframes tCaret{ 0%,49%{opacity:1;} 50%,100%{opacity:0;} }
+.pill{
+  font-family:'Space Mono',ui-monospace,monospace;
+  background:rgba(0,0,0,.32) !important;border-color:var(--line3) !important;
+  display:inline-flex;align-items:center;gap:7px;
+}
+.pill::before{
+  content:'';width:7px;height:7px;border-radius:50%;background:var(--accentB);
+  flex-shrink:0;animation:tLed 1.6s ease-in-out infinite;
+}
+@keyframes tLed{ 0%,100%{opacity:.35;} 50%{opacity:1;} }
+.pill b{color:var(--accentB) !important;}
+.theme{border-color:var(--line3) !important;transition:border-color .2s ease,transform .2s ease;}
+.theme:hover{border-color:var(--accentB) !important;transform:scale(1.06);}
+
+/* --- search --- */
+#q{
+  font-family:'Space Mono',ui-monospace,monospace;font-size:15.5px;
+  transition:border-color .2s ease,box-shadow .2s ease;
+}
+#q:focus{border-color:var(--accent) !important;box-shadow:0 0 0 3px var(--glowSoft);}
+.searchwrap .ic{color:var(--accentB);}
+
+/* --- result rows: stagger in --- */
+@keyframes tRise{ 0%{opacity:0;transform:translateY(10px);} 100%{opacity:1;transform:none;} }
+.rrow,.drop .ritem{animation:tRise .32s ease both;transition:border-color .18s ease,transform .18s ease,background .18s ease;}
+.rrow:nth-child(1){animation-delay:.01s}.rrow:nth-child(2){animation-delay:.04s}
+.rrow:nth-child(3){animation-delay:.07s}.rrow:nth-child(4){animation-delay:.10s}
+.rrow:nth-child(5){animation-delay:.13s}.rrow:nth-child(6){animation-delay:.16s}
+.rrow:nth-child(7){animation-delay:.19s}.rrow:nth-child(8){animation-delay:.22s}
+.rrow:nth-child(n+9){animation-delay:.25s}
+.rrow:hover{border-color:var(--accent) !important;transform:translateY(-2px);
+  box-shadow:0 10px 24px rgba(0,0,0,.4);}
+.rrow .id{font-family:'Space Mono',ui-monospace,monospace;color:var(--accentB);}
+.rrow mark,.drop mark{background:var(--glowSoft) !important;color:var(--text);}
+
+/* --- detail panel --- */
+.detail{animation:tRise .4s ease both;box-shadow:0 16px 40px rgba(0,0,0,.45) !important;}
+.dhead{background:linear-gradient(160deg,var(--card),var(--card-2)) !important;position:relative;overflow:hidden;}
+.dhead::before{
+  content:'';position:absolute;inset:-24px 0;pointer-events:none;opacity:.35;
+  background-image:linear-gradient(rgba(176,58,86,.09) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(176,58,86,.06) 1px,transparent 1px);
+  background-size:24px 24px;animation:tGrid 3.4s linear infinite;
+}
+.dhead > *{position:relative;z-index:1;}
+.dhead .id{font-family:'Space Mono',ui-monospace,monospace;color:var(--accentB);}
+.dhead .nm{font-family:'Bricolage Grotesque',sans-serif;}
+.group h3{font-family:'Space Mono',ui-monospace,monospace;color:var(--accentB) !important;}
+.act{transition:border-color .18s ease,transform .18s ease,background .18s ease;}
+.act:hover{transform:translateY(-2px);border-color:var(--accent);}
+.act.primary{box-shadow:0 8px 20px var(--glowSoft);}
+.act.primary:hover{background:var(--accentB);}
+.f .v a{color:var(--accentB);}
+
+/* --- empty state --- */
+.empty .big{animation:tFloat 5s ease-in-out infinite;}
+@keyframes tFloat{ 0%,100%{transform:translateY(0);} 50%{transform:translateY(-6px);} }
+
+/* --- toast --- */
+.toast{background:var(--navy-2) !important;border:1px solid var(--line3);
+  font-family:'Space Mono',ui-monospace,monospace;font-size:12.5px !important;}
+
+/* --- footer --- */
+footer{font-family:'Space Mono',ui-monospace,monospace;font-size:11.5px !important;}
+footer a{color:var(--accentB);}
+
+/* --- rf-jumper specifics --- */
+.tab{transition:transform .15s ease,border-color .15s ease;}
+.tab:hover{transform:translateY(-1px);border-color:var(--accent);}
+.tab.on{background:var(--accent) !important;color:var(--accent-ink) !important;
+  box-shadow:0 6px 16px var(--glowSoft);}
+.zb{transition:transform .15s ease,border-color .15s ease;}
+.zb:hover{transform:translateY(-1px);border-color:var(--accent);}
+.hlite{border-color:var(--accentB) !important;
+  box-shadow:0 0 0 3px var(--glowSoft),0 0 26px 6px var(--glow) !important;
+  animation:tPulse 1.6s ease-in-out infinite;}
+@keyframes tPulse{ 0%,100%{box-shadow:0 0 0 3px var(--glowSoft),0 0 22px 5px var(--glow);}
+                   50%{box-shadow:0 0 0 5px var(--glowSoft),0 0 34px 9px var(--glow);} }
+.hint{background:var(--navy-2) !important;color:var(--muted) !important;
+  border:1px solid var(--line3);font-family:'Space Mono',ui-monospace,monospace;}
+
+/* --- gin-extractor specifics --- */
+#drop{transition:border-color .2s ease,background .2s ease;position:relative;overflow:hidden;}
+#drop:hover,#drop.over{border-color:var(--accent) !important;background:var(--card) !important;}
+#drop .big{font-family:'Bricolage Grotesque',sans-serif;}
+.card{box-shadow:0 12px 30px rgba(0,0,0,.35) !important;}
+.bar h2{font-family:'Bricolage Grotesque',sans-serif;}
+button.btn{transition:transform .15s ease,background .15s ease;}
+button.btn:hover:not(:disabled){transform:translateY(-2px);}
+.primary{box-shadow:0 8px 20px var(--glowSoft);}
+th{font-family:'Space Mono',ui-monospace,monospace;color:var(--accentB) !important;}
+td.mono,td.num,td.sn{font-family:'Space Mono',ui-monospace,monospace;}
+.frow{animation:tRise .3s ease both;}
+
+@media (prefers-reduced-motion:reduce){
+  .dust-layer *,.hdr::before,.dhead::before,.hdr .logo,.hdr h1::after,
+  .pill::before,.rrow,.drop .ritem,.detail,.empty .big,.hlite,.frow{
+    animation:none !important;
+  }
+}

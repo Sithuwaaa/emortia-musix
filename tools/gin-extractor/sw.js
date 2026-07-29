@@ -1,11 +1,13 @@
 /* GIN Extractor service worker — bump CACHE_VERSION on every deployment */
-const CACHE_VERSION = 'gin-v6';
+const CACHE_VERSION = 'gin-v7';
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png',
+  '../_lib/theme.css',
+  '../_lib/theme.js',
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
