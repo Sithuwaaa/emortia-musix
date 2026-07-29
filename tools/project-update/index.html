@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#170d10">
+<title>Project Update</title>
+<link rel="icon" href="../gin-extractor/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --navy:#1c0f13;--navy-2:#2b171e;--accent:#b03a56;--accentB:#d15873;--accent-ink:#fff0f4;
+    --bg:#170d10;--card:#241419;--card-2:#1c0f13;--line:#352027;--line3:#51313c;
+    --text:#f7edf0;--muted:#a98d96;
+    --ok:#34c98b;--warn:#f0523f;--info:#5b8cff;--wip:#d15873;--idle:#8d6a75;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);
+    font-family:'Hanken Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;line-height:1.5}
+
+  /* header */
+  .hdr{position:sticky;top:0;z-index:30;background:linear-gradient(180deg,var(--navy-2),var(--navy));
+    color:#fff;padding:calc(env(safe-area-inset-top) + 12px) 16px 12px;display:flex;align-items:center;gap:10px;
+    border-bottom:1px solid var(--line3);box-shadow:0 6px 26px rgba(0,0,0,.5);overflow:hidden}
+  .hdr::before{content:'';position:absolute;inset:-24px 0;pointer-events:none;opacity:.5;
+    background-image:linear-gradient(rgba(176,58,86,.10) 1px,transparent 1px),linear-gradient(90deg,rgba(176,58,86,.07) 1px,transparent 1px);
+    background-size:24px 24px;animation:tGrid 2.8s linear infinite}
+  @keyframes tGrid{to{transform:translateY(24px)}}
+  .hdr>*{position:relative;z-index:1}
+  .hdr .logo{width:30px;height:30px;border-radius:50%;background:linear-gradient(150deg,var(--accentB),var(--accentD,#87213c));
+    display:grid;place-items:center;font-weight:800;color:#fff0f4;font-size:14px;flex-shrink:0;
+    box-shadow:0 0 18px rgba(176,58,86,.5);animation:tFloat 4.5s ease-in-out infinite}
+  @keyframes tFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+  .hdr h1{font-family:'Bricolage Grotesque',sans-serif;font-size:18px;font-weight:700;margin-right:auto;white-space:nowrap}
+  .hdr h1::after{content:'\2588';color:var(--accentB);margin-left:6px;animation:tCaret 1s steps(1,end) infinite}
+  @keyframes tCaret{0%,49%{opacity:1}50%,100%{opacity:0}}
+  .pill{font-family:'Space Mono',monospace;font-size:11.5px;background:rgba(0,0,0,.32);border:1px solid var(--line3);
+    color:#e3cbd2;border-radius:999px;padding:5px 12px;white-space:nowrap;display:inline-flex;align-items:center;gap:7px}
+  .pill::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--accentB);animation:tLed 1.6s ease-in-out infinite}
+  @keyframes tLed{0%,100%{opacity:.35}50%{opacity:1}}
+  .pill b{color:var(--accentB)}
+
+  /* tabs */
+  .tabs{position:sticky;top:55px;z-index:25;display:flex;gap:4px;overflow-x:auto;padding:10px 14px;
+    background:rgba(23,13,16,.94);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{flex-shrink:0;border:1px solid var(--line);background:var(--card-2);color:var(--muted);border-radius:9px;
+    padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;
+    transition:transform .15s ease,border-color .15s ease,color .15s ease}
+  .tab:hover{transform:translateY(-1px);border-color:var(--accent);color:var(--text)}
+  .tab.on{background:var(--accent);color:var(--accent-ink);border-color:transparent;box-shadow:0 6px 16px rgba(176,58,86,.28)}
+
+  main{max-width:1500px;margin:0 auto;padding:18px 14px calc(env(safe-area-inset-bottom) + 40px)}
+  @keyframes rise{0%{opacity:0;transform:translateY(12px)}100%{opacity:1;transform:none}}
+
+  /* ---- dashboard ---- */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px;margin-bottom:22px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px 16px;
+    position:relative;overflow:hidden;animation:rise .4s ease both}
+  .kpi::after{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--k,var(--accent))}
+  .kpi .k{font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .kpi .v{font-family:'Bricolage Grotesque',sans-serif;font-size:34px;font-weight:800;line-height:1.1;margin-top:4px;color:var(--k,var(--text))}
+  .kpi .s{font-size:12px;color:var(--muted);margin-top:2px}
+
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px;animation:rise .45s ease both}
+  .panel h2{font-family:'Bricolage Grotesque',sans-serif;font-size:17px;margin-bottom:14px;display:flex;align-items:center;gap:9px}
+  .panel h2 .dot{width:7px;height:7px;border-radius:50%;background:var(--accentB)}
+  .cols2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+
+  .bars{display:flex;flex-direction:column;gap:9px}
+  .barrow{display:grid;grid-template-columns:132px 1fr 44px;gap:10px;align-items:center;font-size:13px}
+  .barrow .lb{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bartrack{height:9px;border-radius:999px;background:var(--card-2);overflow:hidden}
+  .barfill{height:100%;border-radius:999px;background:var(--b,var(--accent));width:0;
+    animation:grow .8s cubic-bezier(.22,.9,.3,1) forwards}
+  @keyframes grow{to{width:var(--w)}}
+  .barrow .n{font-family:'Space Mono',monospace;font-size:12.5px;text-align:right;color:var(--text)}
+
+  /* ---- excel-like grid ---- */
+  .toolbar{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+  .search{position:relative;flex:1;min-width:200px;max-width:420px}
+  .search input{width:100%;font-family:'Space Mono',monospace;font-size:14px;padding:10px 34px 10px 34px;
+    border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text);outline:none;
+    transition:border-color .2s ease,box-shadow .2s ease}
+  .search input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(176,58,86,.28)}
+  .search .ic{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--accentB)}
+  .btn{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:9px;padding:9px 13px;
+    font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;transition:transform .15s ease,border-color .15s ease}
+  .btn:hover{transform:translateY(-1px);border-color:var(--accent)}
+  .btn.on{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+  .count{font-family:'Space Mono',monospace;font-size:12px;color:var(--muted);margin-left:auto}
+
+  .gridwrap{overflow:auto;max-height:calc(100vh - 260px);border:1px solid var(--line);border-radius:12px;background:var(--card-2)}
+  table{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%;font-size:13px}
+  thead th{position:sticky;top:0;z-index:3;background:var(--navy-2);color:var(--accentB);
+    font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;
+    text-align:left;padding:10px 12px;border-bottom:1px solid var(--line3);border-right:1px solid var(--line);
+    white-space:nowrap;font-weight:700}
+  tbody td{padding:9px 12px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);
+    vertical-align:top;max-width:280px}
+  tbody tr:nth-child(even){background:rgba(255,255,255,.018)}
+  tbody tr:hover{background:rgba(176,58,86,.09)}
+  .nowrap tbody td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .wrap tbody td{white-space:pre-wrap;word-break:break-word}
+  th.rn,td.rn{position:sticky;left:0;z-index:2;background:var(--navy-2);color:var(--muted);
+    font-family:'Space Mono',monospace;font-size:11px;text-align:center;width:46px;min-width:46px;padding:9px 6px}
+  thead th.rn{z-index:4}
+  tbody td.k1{position:sticky;left:46px;z-index:2;background:var(--card);font-family:'Space Mono',monospace;
+    font-weight:700;color:var(--accentB);white-space:nowrap}
+  thead th.k1{left:46px;z-index:4}
+  tbody tr:hover td.k1{background:#2e1a20}
+  .chip{display:inline-block;font-size:11.5px;font-weight:700;border-radius:999px;padding:3px 10px;white-space:nowrap;
+    border:1px solid var(--c);color:var(--c);background:color-mix(in oklab,var(--c) 15%,transparent)}
+  .dim{color:var(--muted)}
+  .empty{padding:50px 20px;text-align:center;color:var(--muted)}
+  .empty .big{font-size:42px;margin-bottom:10px;animation:tFloat 5s ease-in-out infinite}
+  .err{border:1px solid var(--warn);background:rgba(240,82,63,.08);color:var(--text);
+    border-radius:12px;padding:18px;line-height:1.6}
+  .err code{font-family:'Space Mono',monospace;background:rgba(0,0,0,.35);padding:2px 6px;border-radius:5px}
+  footer{color:var(--muted);font-family:'Space Mono',monospace;font-size:11.5px;text-align:center;padding:22px 0 8px}
+  @media (prefers-reduced-motion:reduce){*{animation:none !important}}
+</style>
+</head>
+<body>
+<header class="hdr">
+  <div class="logo">P</div>
+  <h1>Project Update</h1>
+  <span class="pill" id="pill">loading…</span>
+</header>
+<div class="tabs" id="tabs"></div>
+<main id="view"><div class="empty"><div class="big">📊</div>Reading the workbook…</div></main>
+<script src="../_lib/theme.js" defer></script>
+<script>
+/* ============================================================
+   Project Update viewer — reads the workbook straight from this
+   folder, so whatever .xlsm is committed here is what shows.
+   To point at a different file, change SOURCE below.
+   ============================================================ */
+const SOURCE = 'Lamp Pole Update NEW.xlsm';
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let BOOK = null;      // { sheetName: {cols, rows} }
+let ACTIVE = 'Dashboard';
+let QUERY = '';
+let WRAP = false;
+
+/* ---------- parsing ---------- */
+const isNum = s => /^-?[\d.,]+%?$/.test(String(s).trim());
+
+function parseSheet(arr) {
+  // header = first row with >=3 mostly-text cells (skips banner/title rows)
+  let h = 0;
+  for (let i = 0; i < Math.min(arr.length, 8); i++) {
+    const cells = (arr[i] || []).map(c => String(c).trim()).filter(Boolean);
+    if (cells.length >= 3 && cells.filter(c => !isNum(c)).length >= Math.ceil(cells.length * 0.6)) { h = i; break; }
+  }
+  const cols = (arr[h] || []).map(c => String(c).trim());
+  let start = h + 1;
+  // the sheets carry a formula count row under the header — skip it
+  const nxt = (arr[start] || []).map(c => String(c).trim()).filter(Boolean);
+  if (nxt.length >= 3 && nxt.every(isNum)) start++;
+  const rows = arr.slice(start)
+    .map(r => { const o = []; for (let i = 0; i < cols.length; i++) o[i] = String(r[i] == null ? '' : r[i]).trim(); return o; })
+    .filter(r => r.some(Boolean));
+  return { cols, rows };
+}
+
+async function load() {
+  let buf;
+  try {
+    const res = await fetch(SOURCE);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    buf = await res.arrayBuffer();
+  } catch (e) {
+    $('view').innerHTML = '<div class="err"><b>Could not open the workbook.</b><br>' +
+      'Expected <code>' + esc(SOURCE) + '</code> in this folder (<code>tools/project-update/</code>).<br>' +
+      'If the file was renamed, update the <code>SOURCE</code> line at the top of this page’s script.</div>';
+    $('pill').textContent = 'no file';
+    return;
+  }
+  const wb = XLSX.read(buf, { type: 'array' });
+  BOOK = {};
+  wb.SheetNames.forEach(n => {
+    const arr = XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, defval: '', raw: false });
+    BOOK[n] = parseSheet(arr);
+  });
+  const plan = BOOK['Full Plan'];
+  $('pill').innerHTML = '<b>' + (plan ? plan.rows.length : 0) + '</b> sites';
+  buildTabs(wb.SheetNames);
+  render();
+}
+
+function buildTabs(names) {
+  const sheets = names.filter(n => n !== 'Dashboard');
+  const all = ['Dashboard'].concat(sheets);
+  $('tabs').innerHTML = all.map(n =>
+    '<button class="tab' + (n === ACTIVE ? ' on' : '') + '" data-t="' + esc(n) + '">' + esc(n) + '</button>').join('');
+  [...$('tabs').children].forEach(b => b.onclick = () => { ACTIVE = b.dataset.t; QUERY = ''; buildTabs(names); render(); });
+}
+
+/* ---------- status handling ---------- */
+function bucketOf(status) {
+  const s = String(status || '').toLowerCase();
+  if (!s) return 'other';
+  if (/on hold|hold/.test(s)) return 'hold';
+  if (/tx pending/.test(s)) return 'tx';
+  if (/on air pending/.test(s)) return 'airPending';
+  if (/on air/.test(s)) return 'onAir';                      // incl. "Partially On Air"
+  if (/installation completed|commissioning/.test(s)) return 'commissioning';
+  if (/te wip|partially completed|wip/.test(s)) return 'wip';
+  if (/mobili/.test(s)) return 'mobilize';
+  return 'other';
+}
+const BUCKETS = [
+  { k: 'onAir',        label: 'On Air',           sub: 'live',          c: 'var(--ok)' },
+  { k: 'airPending',   label: 'On Air Pending',   sub: 'nearly done',   c: '#e8a13c' },
+  { k: 'commissioning',label: 'Commissioning',    sub: 'install done',  c: 'var(--info)' },
+  { k: 'wip',          label: 'TE WIP',           sub: 'in progress',   c: 'var(--wip)' },
+  { k: 'mobilize',     label: 'To be Mobilized',  sub: 'not started',   c: 'var(--idle)' },
+  { k: 'hold',         label: 'On Hold',          sub: 'blocked',       c: 'var(--warn)' },
+  { k: 'tx',           label: 'Tx Pending',       sub: 'tx blocked',    c: 'var(--warn)' },
+  { k: 'other',        label: 'Unclassified',     sub: 'no status',     c: 'var(--muted)' }
+];
+const statusColour = s => (BUCKETS.find(b => b.k === bucketOf(s)) || {}).c || 'var(--muted)';
+
+/* ---------- dashboard ---------- */
+function colIdx(cols, ...names) {
+  const norm = s => String(s).toLowerCase().replace(/[\s_]+/g, '');
+  for (const n of names) { const i = cols.findIndex(c => norm(c) === norm(n)); if (i >= 0) return i; }
+  return -1;
+}
+function tally(rows, i) {
+  const m = new Map();
+  rows.forEach(r => { const v = (i >= 0 ? r[i] : '') || '—'; m.set(v, (m.get(v) || 0) + 1); });
+  return [...m.entries()].sort((a, b) => b[1] - a[1]);
+}
+function barBlock(pairs, total, colourFn) {
+  return '<div class="bars">' + pairs.map(([label, n]) => {
+    const pct = total ? Math.round(n / total * 100) : 0;
+    return '<div class="barrow"><span class="lb" title="' + esc(label) + '">' + esc(label) + '</span>' +
+      '<span class="bartrack"><span class="barfill" style="--w:' + pct + '%;--b:' + (colourFn ? colourFn(label) : 'var(--accent)') + '"></span></span>' +
+      '<span class="n">' + n + '</span></div>';
+  }).join('') + '</div>';
+}
+
+function renderDashboard() {
+  const plan = BOOK['Full Plan'];
+  if (!plan) return '<div class="empty">No “Full Plan” sheet found.</div>';
+  const { cols, rows } = plan;
+  const iStatus = colIdx(cols, 'Site Status');
+  const iRegion = colIdx(cols, 'Operation Region', 'Region');
+  const iTeam   = colIdx(cols, 'Team');
+  const iTx     = colIdx(cols, 'Tx plan', 'Tx Plan');
+
+  const counts = {}; BUCKETS.forEach(b => counts[b.k] = 0);
+  rows.forEach(r => counts[bucketOf(r[iStatus])]++);
+  const total = rows.length;
+  const done = counts.onAir;
+  const pct = total ? Math.round(done / total * 100) : 0;
+
+  let h = '<div class="kpis">';
+  h += '<div class="kpi" style="--k:var(--accentB)"><div class="k">Total sites</div><div class="v">' + total + '</div><div class="s">in this plan</div></div>';
+  BUCKETS.forEach(b => {
+    if (b.k === 'other' && !counts.other) return;
+    h += '<div class="kpi" style="--k:' + b.c + '"><div class="k">' + esc(b.label) + '</div><div class="v">' +
+         counts[b.k] + '</div><div class="s">' + esc(b.sub) + '</div></div>';
+  });
+  h += '</div>';
+
+  // overall completion bar
+  h += '<div class="panel"><h2><span class="dot"></span>Overall completion</h2>' +
+       '<div class="barrow" style="grid-template-columns:132px 1fr 44px"><span class="lb">On air</span>' +
+       '<span class="bartrack" style="height:14px"><span class="barfill" style="--w:' + pct + '%;--b:var(--ok)"></span></span>' +
+       '<span class="n">' + pct + '%</span></div></div>';
+
+  h += '<div class="cols2">';
+  h += '<div class="panel"><h2><span class="dot"></span>By status</h2>' +
+       barBlock(tally(rows, iStatus), total, statusColour) + '</div>';
+  h += '<div class="panel"><h2><span class="dot"></span>By region</h2>' +
+       barBlock(tally(rows, iRegion), total) + '</div>';
+  h += '<div class="panel"><h2><span class="dot"></span>By Tx plan</h2>' +
+       barBlock(tally(rows, iTx), total) + '</div>';
+
+  // team table, computed live from Full Plan
+  const teams = new Map();
+  rows.forEach(r => {
+    const t = (iTeam >= 0 ? r[iTeam] : '') || 'Unassigned';
+    if (!teams.has(t)) teams.set(t, { total: 0, onAir: 0, hold: 0, wip: 0 });
+    const o = teams.get(t); o.total++;
+    const b = bucketOf(r[iStatus]);
+    if (b === 'onAir') o.onAir++; else if (b === 'hold') o.hold++;
+    else if (b === 'wip' || b === 'commissioning' || b === 'airPending') o.wip++;
+  });
+  const teamRows = [...teams.entries()].sort((a, b) => b[1].total - a[1].total);
+  h += '<div class="panel"><h2><span class="dot"></span>By team</h2><div class="gridwrap" style="max-height:none">' +
+       '<table><thead><tr><th>Team</th><th>Sites</th><th>On air</th><th>In progress</th><th>On hold</th><th>Done</th></tr></thead><tbody>' +
+       teamRows.map(([t, o]) => {
+         const p = o.total ? Math.round(o.onAir / o.total * 100) : 0;
+         return '<tr><td style="font-weight:600">' + esc(t) + '</td><td>' + o.total + '</td><td>' + o.onAir +
+                '</td><td>' + o.wip + '</td><td>' + o.hold + '</td><td>' + p + '%</td></tr>';
+       }).join('') + '</tbody></table></div></div>';
+  h += '</div>';
+  return h;
+}
+
+/* ---------- grid ---------- */
+function renderGrid(name) {
+  const sh = BOOK[name];
+  if (!sh || !sh.rows.length) return '<div class="empty"><div class="big">📄</div>This sheet has no data rows.</div>';
+  const { cols, rows } = sh;
+  const q = QUERY.trim().toLowerCase();
+  const parts = q ? q.split(/\s+/) : [];
+  const shown = parts.length
+    ? rows.filter(r => { const blob = r.join(' ').toLowerCase(); return parts.every(p => blob.includes(p)); })
+    : rows;
+  const iStatus = cols.findIndex(c => /site status|^status$/i.test(c));
+
+  let h = '<div class="toolbar">' +
+    '<div class="search"><span class="ic">⌕</span>' +
+    '<input id="q" type="search" placeholder="Filter rows…" value="' + esc(QUERY) + '" autocomplete="off" spellcheck="false"></div>' +
+    '<button class="btn' + (WRAP ? ' on' : '') + '" id="wrapBtn">Wrap text</button>' +
+    '<button class="btn" id="csvBtn">Export CSV</button>' +
+    '<span class="count">' + shown.length + ' of ' + rows.length + ' rows · ' + cols.filter(Boolean).length + ' cols</span></div>';
+
+  h += '<div class="gridwrap"><table class="' + (WRAP ? 'wrap' : 'nowrap') + '"><thead><tr>' +
+       '<th class="rn">#</th>' +
+       cols.map((c, i) => '<th' + (i === 0 ? ' class="k1"' : '') + '>' + esc(c || XLSX.utils.encode_col(i)) + '</th>').join('') +
+       '</tr></thead><tbody>';
+
+  shown.forEach((r, n) => {
+    h += '<tr><td class="rn">' + (n + 1) + '</td>';
+    for (let i = 0; i < cols.length; i++) {
+      const v = r[i] || '';
+      let cell;
+      if (i === iStatus && v) cell = '<span class="chip" style="--c:' + statusColour(v) + '">' + esc(v) + '</span>';
+      else if (!v) cell = '<span class="dim">—</span>';
+      else cell = esc(v);
+      h += '<td' + (i === 0 ? ' class="k1"' : '') + ' title="' + esc(v) + '">' + cell + '</td>';
+    }
+    h += '</tr>';
+  });
+  h += '</tbody></table></div>';
+  if (!shown.length) h += '<div class="empty">Nothing matches “' + esc(QUERY) + '”.</div>';
+  return h;
+}
+
+function toCsv(name) {
+  const { cols, rows } = BOOK[name];
+  const q = c => /[",\n]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c;
+  return [cols.map(q).join(',')].concat(rows.map(r => cols.map((_, i) => q(r[i] || '')).join(','))).join('\r\n');
+}
+
+/* ---------- render + events ---------- */
+function render() {
+  $('view').innerHTML = ACTIVE === 'Dashboard' ? renderDashboard() : renderGrid(ACTIVE);
+  const q = $('q');
+  if (q) {
+    let t;
+    q.addEventListener('input', e => {
+      clearTimeout(t);
+      const v = e.target.value;
+      t = setTimeout(() => { QUERY = v; render(); const n = $('q'); if (n) { n.focus(); n.setSelectionRange(n.value.length, n.value.length); } }, 140);
+    });
+  }
+  const w = $('wrapBtn'); if (w) w.onclick = () => { WRAP = !WRAP; render(); };
+  const c = $('csvBtn');
+  if (c) c.onclick = () => {
+    const blob = new Blob([toCsv(ACTIVE)], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = ACTIVE.replace(/[^\w]+/g, '_') + '_' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1200);
+  };
+}
+
+load();
+</script>
+<footer>Reads <span id="srcName"></span> straight from this folder · nothing is uploaded anywhere</footer>
+<script>document.getElementById('srcName').textContent = SOURCE;</script>
+</body>
+</html>
