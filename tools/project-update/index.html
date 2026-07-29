@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#170d10">
+<meta name="theme-color" content="#0c1619">
 <title>Project Update</title>
 <link rel="icon" href="../gin-extractor/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,16 +14,18 @@
 <script src="../_lib/owner.js"></script>
 <style>
   :root{
-    --navy:#1c0f13;--navy-2:#2b171e;--accent:#b03a56;--accentB:#d15873;--accentD:#87213c;--accent-ink:#fff0f4;
-    --bg:#170d10;--card:#241419;--card-2:#1c0f13;--line:#352027;--line3:#51313c;
-    --text:#f7edf0;--muted:#a98d96;--zebra:rgba(255,255,255,.018);--rowhover:rgba(176,58,86,.09);
-    --ok:#34c98b;--warn:#f0523f;--info:#5b8cff;--wip:#d15873;--idle:#8d6a75;
+    /* teal — the site's Tools colour; this is the flagship tool */
+    --navy:#0f2126;--navy-2:#16323a;--accent:#1f97a8;--accentB:#3fbdd0;--accentD:#12707e;--accent-ink:#04191d;
+    --bg:#0c1619;--card:#142428;--card-2:#0f1d21;--line:#1e363c;--line3:#2c4c54;
+    --text:#e9f4f6;--muted:#8fa8ad;--zebra:rgba(255,255,255,.018);--rowhover:rgba(31,151,168,.10);
+    /* status hues, each clearly distinct from the teal chrome */
+    --ok:#34c98b;--warn:#f2764a;--info:#4f9bf0;--wip:#9a8bf2;--idle:#7f979d;
   }
   html[data-theme="light"]{
-    --navy:#2b171e;--navy-2:#3a1f28;--accent:#a82f4d;--accentB:#c4415f;--accentD:#8d2540;--accent-ink:#fff0f4;
-    --bg:#f6eff1;--card:#ffffff;--card-2:#faf4f6;--line:#e6d3d9;--line3:#d8bcc5;
-    --text:#24141a;--muted:#8a6b74;--zebra:rgba(0,0,0,.022);--rowhover:rgba(168,47,77,.08);
-    --ok:#1f9a68;--warn:#c63a2a;--info:#3f6ad6;--wip:#a82f4d;--idle:#8a6b74;
+    --navy:#12262b;--navy-2:#16323a;--accent:#147d8d;--accentB:#1f97a8;--accentD:#0f616e;--accent-ink:#ffffff;
+    --bg:#eef5f6;--card:#ffffff;--card-2:#f4fafb;--line:#d5e5e8;--line3:#bcd4d9;
+    --text:#10262b;--muted:#5f7b81;--zebra:rgba(0,0,0,.022);--rowhover:rgba(20,125,141,.09);
+    --ok:#1f9a68;--warn:#c2542c;--info:#2f6fd0;--wip:#5a49c6;--idle:#5f7b81;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{background:var(--bg);color:var(--text);
@@ -33,19 +35,19 @@
     color:#fff;padding:calc(env(safe-area-inset-top) + 12px) 16px 12px;display:flex;align-items:center;gap:10px;
     border-bottom:1px solid var(--line3);box-shadow:0 6px 26px rgba(0,0,0,.5);overflow:hidden}
   .hdr::before{content:'';position:absolute;inset:-24px 0;pointer-events:none;opacity:.5;
-    background-image:linear-gradient(rgba(176,58,86,.10) 1px,transparent 1px),linear-gradient(90deg,rgba(176,58,86,.07) 1px,transparent 1px);
+    background-image:linear-gradient(rgba(63,189,208,.10) 1px,transparent 1px),linear-gradient(90deg,rgba(63,189,208,.07) 1px,transparent 1px);
     background-size:24px 24px;animation:tGrid 2.8s linear infinite}
   @keyframes tGrid{to{transform:translateY(24px)}}
   .hdr>*{position:relative;z-index:1}
   .hdr .logo{width:30px;height:30px;border-radius:50%;background:linear-gradient(150deg,var(--accentB),var(--accentD));
-    display:grid;place-items:center;font-weight:800;color:#fff0f4;font-size:14px;flex-shrink:0;
-    box-shadow:0 0 18px rgba(176,58,86,.5);animation:tFloat 4.5s ease-in-out infinite}
+    display:grid;place-items:center;font-weight:800;color:#f2fbfd;font-size:14px;flex-shrink:0;
+    box-shadow:0 0 18px rgba(31,151,168,.5);animation:tFloat 4.5s ease-in-out infinite}
   @keyframes tFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
   .hdr h1{font-family:'Bricolage Grotesque',sans-serif;font-size:18px;font-weight:700;margin-right:auto;white-space:nowrap;color:#fff}
   .hdr h1::after{content:'\2588';color:var(--accentB);margin-left:6px;animation:tCaret 1s steps(1,end) infinite}
   @keyframes tCaret{0%,49%{opacity:1}50%,100%{opacity:0}}
   .pill{font-family:'Space Mono',monospace;font-size:11.5px;background:rgba(0,0,0,.32);border:1px solid var(--line3);
-    color:#e3cbd2;border-radius:999px;padding:5px 12px;white-space:nowrap;display:inline-flex;align-items:center;gap:7px}
+    color:#cfe4e8;border-radius:999px;padding:5px 12px;white-space:nowrap;display:inline-flex;align-items:center;gap:7px}
   .pill::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--accentB);animation:tLed 1.6s ease-in-out infinite}
   @keyframes tLed{0%,100%{opacity:.35}50%{opacity:1}}
   .pill b{color:var(--accentB)}
@@ -60,7 +62,7 @@
     padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;
     transition:transform .15s ease,border-color .15s ease,color .15s ease}
   .tab:hover{transform:translateY(-1px);border-color:var(--accent);color:var(--text)}
-  .tab.on{background:var(--accent);color:var(--accent-ink);border-color:transparent;box-shadow:0 6px 16px rgba(176,58,86,.28)}
+  .tab.on{background:var(--accent);color:var(--accent-ink);border-color:transparent;box-shadow:0 6px 16px rgba(31,151,168,.28)}
 
   main{max-width:1500px;margin:0 auto;padding:18px 14px calc(env(safe-area-inset-bottom) + 40px)}
   @keyframes rise{0%{opacity:0;transform:translateY(12px)}100%{opacity:1;transform:none}}
@@ -104,7 +106,7 @@
   .search input{width:100%;font-family:'Space Mono',monospace;font-size:14px;padding:10px 14px 10px 34px;
     border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text);outline:none;
     transition:border-color .2s ease,box-shadow .2s ease}
-  .search input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(176,58,86,.28)}
+  .search input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(31,151,168,.28)}
   .search .ic{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--accentB)}
   .btn{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:9px;padding:9px 13px;
     font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;transition:transform .15s ease,border-color .15s ease}

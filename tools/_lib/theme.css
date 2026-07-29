@@ -5,23 +5,28 @@
    chrome and animations from the main site.
    ============================================================ */
 
-/* --- palette: same variable names the tools already reference --- */
+/* --- palette: same variable names the tools already reference ---
+   The site's Tools section is teal, so the tools carry that identity.
+   Each tool then overrides --accent* with its own hue (see the small
+   block in each tool's page) so you can tell them apart at a glance. */
 :root,
 html[data-theme="dark"]{
-  --navy:#1c0f13;  --navy-2:#2b171e;
-  --accent:#b03a56; --accentB:#d15873; --accentD:#87213c; --accent-ink:#fff0f4;
-  --ok:#34c98b;    --warn:#f0523f;     --err:#f0523f;
-  --bg:#170d10;    --card:#241419;     --card-2:#1c0f13;
-  --line:#352027;  --line3:#51313c;
-  --text:#f7edf0;  --muted:#a98d96;
-  --glow:rgba(176,58,86,.5); --glowSoft:rgba(176,58,86,.28);
+  --navy:#0f2126;  --navy-2:#16323a;
+  --accent:#1f97a8; --accentB:#3fbdd0; --accentD:#12707e; --accent-ink:#04191d;
+  --ok:#34c98b;    --warn:#f2764a;     --err:#f2764a;   --info:#4f9bf0;
+  --bg:#0c1619;    --card:#142428;     --card-2:#0f1d21;
+  --line:#1e363c;  --line3:#2c4c54;
+  --text:#e9f4f6;  --muted:#8fa8ad;
+  --glow:rgba(31,151,168,.5); --glowSoft:rgba(31,151,168,.28);
 }
 html[data-theme="light"]{
-  --navy:#2b171e;  --navy-2:#3a1f28;
-  --accent:#a82f4d; --accentB:#c4415f; --accent-ink:#fff0f4;
-  --bg:#f6eff1;    --card:#ffffff;     --card-2:#f7eef1;
-  --line:#e6d3d9;  --line3:#d8bcc5;
-  --text:#24141a;  --muted:#8a6b74;
+  --navy:#12262b;  --navy-2:#16323a;
+  --accent:#147d8d; --accentB:#1f97a8; --accentD:#0f616e; --accent-ink:#ffffff;
+  --ok:#1f9a68;    --warn:#c2542c;     --err:#c2542c;   --info:#2f6fd0;
+  --bg:#eef5f6;    --card:#ffffff;     --card-2:#f4fafb;
+  --line:#d5e5e8;  --line3:#bcd4d9;
+  --text:#10262b;  --muted:#5f7b81;
+  --glow:rgba(20,125,141,.4); --glowSoft:rgba(20,125,141,.22);
 }
 
 *{ -webkit-tap-highlight-color:transparent; }
@@ -54,8 +59,8 @@ main{position:relative;z-index:1;}
 }
 .hdr::before{
   content:'';position:absolute;inset:-24px 0;pointer-events:none;opacity:.5;
-  background-image:linear-gradient(rgba(176,58,86,.10) 1px,transparent 1px),
-                   linear-gradient(90deg,rgba(176,58,86,.07) 1px,transparent 1px);
+  background-image:linear-gradient(rgba(63,189,208,.10) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(63,189,208,.07) 1px,transparent 1px);
   background-size:24px 24px;animation:tGrid 2.8s linear infinite;
 }
 @keyframes tGrid{ to{ transform:translateY(24px); } }
@@ -63,7 +68,7 @@ main{position:relative;z-index:1;}
 .hdr .logo{
   border-radius:50% !important;
   background:linear-gradient(150deg,var(--accentB),var(--accentD)) !important;
-  color:#fff0f4 !important;
+  color:#f2fbfd !important;
   box-shadow:0 0 18px var(--glow) !important;
   animation:tLogoFloat 4.5s ease-in-out infinite;
 }
@@ -117,8 +122,8 @@ main{position:relative;z-index:1;}
 .dhead{background:linear-gradient(160deg,var(--card),var(--card-2)) !important;position:relative;overflow:hidden;}
 .dhead::before{
   content:'';position:absolute;inset:-24px 0;pointer-events:none;opacity:.35;
-  background-image:linear-gradient(rgba(176,58,86,.09) 1px,transparent 1px),
-                   linear-gradient(90deg,rgba(176,58,86,.06) 1px,transparent 1px);
+  background-image:linear-gradient(rgba(63,189,208,.09) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(63,189,208,.06) 1px,transparent 1px);
   background-size:24px 24px;animation:tGrid 3.4s linear infinite;
 }
 .dhead > *{position:relative;z-index:1;}
