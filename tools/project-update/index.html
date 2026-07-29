@@ -55,7 +55,21 @@
     font-size:15px;cursor:pointer;flex-shrink:0;transition:border-color .2s ease,transform .2s ease}
   .theme:hover{border-color:var(--accentB);transform:scale(1.06)}
 
-  .tabs{position:sticky;top:55px;z-index:25;display:flex;gap:4px;overflow-x:auto;padding:10px 14px;
+  /* dataset switcher — the first thing on the page */
+  .dsbar{position:sticky;top:55px;z-index:26;display:flex;gap:8px;padding:12px 14px 10px;
+    background:var(--bg);border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .dsbtn{flex:1;min-width:160px;text-align:left;border:1px solid var(--line);background:var(--card);
+    color:var(--muted);border-radius:12px;padding:11px 14px;cursor:pointer;font-size:14px;font-weight:700;
+    font-family:'Bricolage Grotesque',sans-serif;display:flex;flex-direction:column;gap:2px;
+    transition:transform .15s ease,border-color .15s ease,color .15s ease,background .15s ease}
+  .dsbtn em{font-style:normal;font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:.04em;
+    color:var(--muted);font-weight:400}
+  .dsbtn:hover{transform:translateY(-1px);border-color:var(--accent);color:var(--text)}
+  .dsbtn.on{background:var(--accent);color:var(--accent-ink);border-color:transparent;
+    box-shadow:0 6px 18px var(--glowSoft)}
+  .dsbtn.on em{color:var(--accent-ink);opacity:.75}
+
+  .tabs{position:sticky;top:120px;z-index:25;display:flex;gap:4px;overflow-x:auto;padding:10px 14px;
     background:var(--bg);border-bottom:1px solid var(--line);scrollbar-width:none}
   .tabs::-webkit-scrollbar{display:none}
   .tab{flex-shrink:0;border:1px solid var(--line);background:var(--card-2);color:var(--muted);border-radius:9px;
@@ -158,6 +172,7 @@
   <span class="pill" id="pill">loading…</span>
   <button class="theme" id="themeBtn" aria-label="Toggle theme">☾</button>
 </header>
+<div class="dsbar" id="dsbar"></div>
 <div class="tabs" id="tabs"></div>
 <main id="view"><div class="empty"><div class="big">📊</div>Reading the workbook…</div></main>
 <div class="toast" id="toast"></div>
@@ -170,7 +185,21 @@
    mode a new workbook can be uploaded, which replaces the whole
    stored database (kept in IndexedDB, same pattern as Site Access).
    ============================================================ */
-const SOURCE = 'Lamp Pole Update NEW.xlsm';
+/* Two datasets, switched from the bar at the top of the page.
+   Each keeps its own stored copy, so uploading one never touches the other.
+   `files` lists the workbook names to try in this folder — the first that
+   loads wins, so a committed file keeps working if it gets renamed. */
+const DATASETS = [
+  { key:'ongoing', label:'Ongoing', hint:'current batch in progress',
+    files:['Ongoing Lamp Pole Update.xlsm','Lamp Pole Update NEW.xlsm'] },
+  { key:'master',  label:'Master',  hint:'everything completed to date',
+    files:['Master Lamp Pole Update.xlsm','Master Lamp Pole Update NEW.xlsm'] }
+];
+const DS_KEY = 'project_update_dataset';
+let DSK = (() => { try { return localStorage.getItem(DS_KEY) || 'ongoing'; } catch(e){ return 'ongoing'; } })();
+const ds = () => DATASETS.find(d => d.key === DSK) || DATASETS[0];
+const bookKey = () => 'book:' + DSK;
+let SOURCE = ds().files[0];          // updated to whichever file actually loaded
 const DB = 'project_update_db', STORE = 'ds';
 /* sheets we don't surface */
 const HIDDEN = ['Dashboard', 'Temp Sheet', 'New Site Locations'];
@@ -237,30 +266,49 @@ async function loadSiteAccess(){
   try { SITEACCESS = await (await fetch('../site-access/data.json')).json(); } catch(e){ SITEACCESS = null; }
 }
 async function load(){
-  const saved = await idbGet(DB, STORE, 'book');
+  BOOK = null; ORDER = []; SAVED = '';
+  buildSwitcher();
+  const saved = await idbGet(DB, STORE, bookKey());
   if (saved && saved.sheets){ BOOK = saved.sheets; ORDER = saved.order; SAVED = saved.savedAt || ''; }
   else {
-    let buf;
-    try {
-      const res = await fetch(SOURCE);
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      buf = await res.arrayBuffer();
-    } catch(e){
-      $('view').innerHTML = '<div class="err"><b>Could not open the workbook.</b><br>' +
-        'Expected <code>' + esc(SOURCE) + '</code> in <code>tools/project-update/</code>.<br>' +
-        (window.IS_OWNER ? 'You can also upload one with the link at the bottom of this page.'
-                         : 'If it was renamed, update the <code>SOURCE</code> line in this page’s script.') + '</div>';
-      $('pill').textContent = 'no file';
-      buildTabs(); return;
+    let buf = null;
+    for (const name of ds().files){          // first candidate that loads wins
+      try {
+        const res = await fetch(name);
+        if (!res.ok) continue;
+        buf = await res.arrayBuffer(); SOURCE = name; break;
+      } catch(e){ /* try the next name */ }
+    }
+    if (!buf){
+      $('view').innerHTML = '<div class="err"><b>No “' + esc(ds().label) + '” workbook yet.</b><br>' +
+        'Looked for ' + ds().files.map(f => '<code>' + esc(f) + '</code>').join(' or ') +
+        ' in <code>tools/project-update/</code>.<br>' +
+        (window.IS_OWNER ? 'Upload one with the link at the bottom of this page — it will be stored for this dataset.'
+                         : 'Ask the owner to add it.') + '</div>';
+      $('pill').innerHTML = '<b>—</b> no workbook';
+      buildTabs(); renderFooter(); return;
     }
     const p = parseWorkbook(buf); BOOK = p.sheets; ORDER = p.order; SAVED = '';
   }
   await loadSiteAccess();
   refreshPill(); buildTabs(); render();
 }
+function buildSwitcher(){
+  $('dsbar').innerHTML = DATASETS.map(d =>
+    '<button class="dsbtn' + (d.key === DSK ? ' on' : '') + '" data-d="' + d.key + '">' +
+    esc(d.label) + '<em>' + esc(d.hint) + '</em></button>').join('');
+  [...$('dsbar').children].forEach(b => b.onclick = () => {
+    if (b.dataset.d === DSK) return;
+    DSK = b.dataset.d;
+    try { localStorage.setItem(DS_KEY, DSK); } catch(e){}
+    ACTIVE = 'Dashboard'; QUERY = ''; DIST_MAP = null;
+    $('view').innerHTML = '<div class="empty"><div class="big">📊</div>Reading the workbook…</div>';
+    load();
+  });
+}
 function refreshPill(){
   const plan = BOOK && BOOK['Full Plan'];
-  $('pill').innerHTML = '<b>' + (plan ? plan.rows.length : 0) + '</b> sites' + (SAVED ? ' · updated ' + SAVED : '');
+  $('pill').innerHTML = '<b>' + (plan ? plan.rows.length : 0) + '</b> sites · ' + ds().label + (SAVED ? ' · updated ' + SAVED : '');
 }
 function visibleSheets(){ return ORDER.filter(n => !HIDDEN.includes(n) && BOOK[n] && BOOK[n].rows.length); }
 function buildTabs(){
@@ -532,22 +580,22 @@ $('file').addEventListener('change', async e => {
     const p = parseWorkbook(await f.arrayBuffer());
     if (!p.sheets['Full Plan']) { toast('That workbook has no “Full Plan” sheet'); return; }
     SAVED = new Date().toISOString().slice(0, 10);
-    await idbSet(DB, STORE, 'book', { sheets: p.sheets, order: p.order, savedAt: SAVED });
+    await idbSet(DB, STORE, bookKey(), { sheets: p.sheets, order: p.order, savedAt: SAVED });
     BOOK = p.sheets; ORDER = p.order;
     refreshPill(); buildTabs(); render();
-    toast('Database updated · ' + p.sheets['Full Plan'].rows.length + ' sites');
+    toast(ds().label + ' updated · ' + p.sheets['Full Plan'].rows.length + ' sites');
   } catch (err){ console.error(err); toast('Could not read that file: ' + err.message); }
 });
 
 function renderFooter(){
-  const bits = ['Reads <b>' + esc(SOURCE) + '</b> from this folder · nothing is uploaded anywhere'];
+  const bits = ['<b>' + esc(ds().label) + '</b> · reads <b>' + esc(SOURCE) + '</b> from this folder · nothing is uploaded anywhere'];
   if (window.IS_OWNER)
-    bits.push('<a href="#" id="upBtn">Update database from Excel…</a>' +
+    bits.push('<a href="#" id="upBtn">Update ' + esc(ds().label) + ' from Excel…</a>' +
               (SAVED ? ' · <a href="#" id="resetBtn" style="color:var(--muted)">reset to bundled</a>' : ''));
   document.querySelector('footer').innerHTML = bits.join('<br>');
   const u = $('upBtn'); if (u) u.onclick = e => { e.preventDefault(); $('file').click(); };
   const r = $('resetBtn'); if (r) r.onclick = async e => { e.preventDefault();
-    await idbSet(DB, STORE, 'book', null); location.reload(); };
+    await idbSet(DB, STORE, bookKey(), null); location.reload(); };
 }
 
 /* ---------- render ---------- */
