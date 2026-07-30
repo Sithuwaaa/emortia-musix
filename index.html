@@ -169,6 +169,8 @@ input,textarea,button{font-family:inherit;}
 @keyframes vinylSpin{to{transform:rotate(360deg);}}
 @keyframes sheenSweep{0%{transform:translateX(-130%);}100%{transform:translateX(560%);}}
 @keyframes armRock{0%,100%{transform:rotate(-3deg);}50%{transform:rotate(1.6deg);}}
+@keyframes discFlipA{0%{transform:rotateY(92deg) scale(.9);opacity:0;}100%{transform:rotateY(0deg) scale(1);opacity:1;}}
+@keyframes discFlipB{0%{transform:rotateY(92deg) scale(.9);opacity:0;}100%{transform:rotateY(0deg) scale(1);opacity:1;}}
 @keyframes heroBloom{0%,100%{opacity:.38;transform:scale(1);}50%{opacity:.76;transform:scale(1.12);}}
 @keyframes heroPetalDrop{0%{transform:translateY(-50px) rotate(0deg);}100%{transform:translateY(520px) rotate(330deg);}}
 @keyframes heroPetalSide{0%{transform:translateX(-13px);}100%{transform:translateX(13px);}}
@@ -251,15 +253,16 @@ input,textarea,button{font-family:inherit;}
           {{ heroPetals }}
         </div>
         <div style="position:relative;display:flex;align-items:center;gap:clamp(22px,4vw,48px);flex-wrap:wrap;">
-          <div style="position:relative;width:clamp(180px,25vw,286px);height:clamp(180px,25vw,286px);flex-shrink:0;">
-            <div style="position:absolute;inset:0;border-radius:50%;background:repeating-radial-gradient(circle at 50% 50%,var(--surface2) 0 2px,var(--surface) 2px 4px);box-shadow:0 22px 52px rgba(0,0,0,.6),inset 0 0 60px rgba(0,0,0,.62);animation:vinylSpin 7s linear infinite;">
+          <div style="position:relative;width:clamp(180px,25vw,286px);height:clamp(180px,25vw,286px);flex-shrink:0;perspective:900px;">
+            <div style="position:absolute;inset:0;transform-style:preserve-3d;animation:{{ flipAnim }} 0.8s cubic-bezier(.4,0,.2,1) both;"><div style="position:absolute;inset:0;border-radius:50%;background:repeating-radial-gradient(circle at 50% 50%,var(--surface2) 0 2px,var(--surface) 2px 4px);box-shadow:0 22px 52px rgba(0,0,0,.6),inset 0 0 60px rgba(0,0,0,.62);animation:vinylSpin 7s linear infinite;animation-play-state:{{ spinState }};">
               <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:34%;height:34%;border-radius:50%;background:linear-gradient(150deg,var(--accentB),var(--accentD));"></div>
               <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:7%;height:7%;border-radius:50%;background:var(--bg);"></div>
             </div>
             <div style="position:absolute;inset:0;border-radius:50%;overflow:hidden;pointer-events:none;">
-              <div style="position:absolute;top:-10%;bottom:-10%;width:18%;background:linear-gradient(90deg,transparent,rgba(247,237,240,.16),transparent);transform:rotate(16deg);animation:sheenSweep 4.8s ease-in-out infinite;"></div>
+              <div style="position:absolute;top:-10%;bottom:-10%;width:18%;background:linear-gradient(90deg,transparent,rgba(247,237,240,.16),transparent);transform:rotate(16deg);animation:sheenSweep 4.8s ease-in-out infinite;animation-play-state:{{ spinState }};"></div>
             </div>
-            <div style="position:absolute;right:-3%;top:4%;width:54%;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--line3),var(--dim));transform-origin:right center;animation:armRock 6s ease-in-out infinite;box-shadow:0 4px 10px rgba(0,0,0,.55);"></div>
+            </div>
+            <div style="position:absolute;right:-3%;top:4%;width:54%;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--line3),var(--dim));transform-origin:right center;transform:rotate({{ armAngle }}deg);transition:transform .75s cubic-bezier(.34,1.28,.5,1);box-shadow:0 4px 10px rgba(0,0,0,.55);"></div>
           </div>
           <div style="min-width:240px;flex:1;">
             <div style="font-family:'Space Mono',monospace;font-size:clamp(11px,1.3vw,13px);letter-spacing:0.24em;color:var(--accent);text-transform:uppercase;margin-bottom:14px;animation:riseIn .8s ease both;">Put the headphones on</div>
@@ -1313,7 +1316,7 @@ class Component extends DCLogic {
       curTitle:t.t, curArtist:t.a, curInitial:t.initial, curTone:t.tone, curDur:t.durLabel, curTime:this.fmt(s.progress),
       curArt:t.img||'', curHasArt:!!t.img, curNoArt:!t.img,
       pct, pctLabel: pct.toFixed(2)+'%',
-      playing:s.playing, paused:!s.playing, spinState: s.playing?'running':'paused',
+      playing:s.playing, paused:!s.playing, spinState: s.playing?'running':'paused', flipAnim: (s.idx%2===0)?'discFlipA':'discFlipB', armAngle: s.playing?-1:-15,
       audioMissing:!!s.audioMissing, notMissing:!s.audioMissing,
       musicBgClass: (s.page==='music' && s.playing) ? 'music-bg on' : 'music-bg',
       musicScene: s.page==='music' ? this.renderMusicBg() : null,
