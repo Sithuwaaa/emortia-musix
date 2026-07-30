@@ -99,8 +99,13 @@
   .barrow{display:grid;grid-template-columns:132px 1fr 44px;gap:10px;align-items:center;font-size:13px}
   .barrow .lb{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .bartrack{height:9px;border-radius:999px;background:var(--card-2);overflow:hidden;border:1px solid var(--line)}
-  .barfill{height:100%;border-radius:999px;background:var(--b,var(--accent));width:0;animation:grow .8s cubic-bezier(.22,.9,.3,1) forwards}
-  @keyframes grow{to{width:var(--w)}}
+  /* display:block matters — as a span it stays inline, and then width/height are ignored.
+     The real width is the base style, not the animation's end state: if animations are
+     throttled (background tab, reduced motion) the bar must still show the right fill. */
+  .barfill{display:block;height:100%;border-radius:999px;background:var(--b,var(--accent));width:var(--w,0);
+    animation:grow .8s cubic-bezier(.22,.9,.3,1)}
+  @keyframes grow{from{width:0}}
+  @media (prefers-reduced-motion:reduce){.barfill{animation:none}}
   .barrow .n{font-family:'Space Mono',monospace;font-size:12.5px;text-align:right;color:var(--text)}
 
   /* MOD permission cards */
@@ -459,9 +464,24 @@ function renderDashboard(){
     h += '<div class="kpi" style="--k:' + b.c + '"><div class="k">' + esc(b.label) + '</div><div class="v">' + counts[b.k] + '</div><div class="s">' + esc(b.sub) + '</div></div>'; });
   h += '</div>';
 
-  h += '<div class="panel"><h2><span class="dot"></span>Overall completion</h2>' +
-       '<div class="barrow"><span class="lb">On air</span><span class="bartrack" style="height:14px">' +
-       '<span class="barfill" style="--w:' + pct + '%;--b:var(--ok)"></span></span><span class="n">' + pct + '%</span></div></div>';
+  /* Overall completion — a site part-way through still counts for something,
+     so the green bar is weighted by how far each stage has got. "On air" is
+     shown underneath as the strict figure. */
+  const WEIGHT = { onAir:1, airPending:.9, commissioning:.75, wip:.5, tx:.25, mobilize:.1, hold:0, other:0 };
+  const earned = BUCKETS.reduce((s, b) => s + counts[b.k] * (WEIGHT[b.k] || 0), 0);
+  const wpct = total ? Math.round(earned / total * 100) : 0;
+  const partOf = BUCKETS.filter(b => counts[b.k] && WEIGHT[b.k] > 0 && b.k !== 'onAir')
+                        .map(b => counts[b.k] + ' ' + b.label.toLowerCase());
+  h += '<div class="panel"><h2><span class="dot" style="background:var(--ok)"></span>Overall completion' +
+       '<span class="tag">weighted by stage</span></h2>' +
+       '<div class="barrow"><span class="lb">Progress</span><span class="bartrack" style="height:16px">' +
+       '<span class="barfill" style="--w:' + wpct + '%;--b:linear-gradient(90deg,var(--accentD),var(--ok))"></span>' +
+       '</span><span class="n" style="color:var(--ok);font-weight:700">' + wpct + '%</span></div>' +
+       '<div class="barrow" style="margin-top:9px"><span class="lb">On air</span>' +
+       '<span class="bartrack"><span class="barfill" style="--w:' + pct + '%;--b:var(--ok)"></span></span>' +
+       '<span class="n">' + pct + '%</span></div>' +
+       '<div class="note" style="margin-top:11px">' + counts.onAir + ' of ' + total + ' sites fully on air' +
+       (partOf.length ? '; part credit for ' + partOf.join(', ') : '') + '.</div></div>';
 
   /* MOD permission panel */
   const mod = modSites();
