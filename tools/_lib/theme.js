@@ -1,4 +1,4 @@
-/* Emortia terminal skin — injects the ambient dust layer used across the site.
+/* Emortia terminal skin – injects the ambient dust layer used across the site.
    Pairs with theme.css. Safe to load on any tool page. */
 (function () {
   function addDust() {

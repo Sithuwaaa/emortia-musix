@@ -106,7 +106,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../_lib/theme.css">
 <style>
-  /* GIN Extractor — green. Pulls documents into a sheet. */
+  /* GIN Extractor – green. Pulls documents into a sheet. */
   :root,html[data-theme="dark"]{--accent:#2fa877;--accentB:#4cc294;--accentD:#1f8059;--accent-ink:#04160f;
     --glow:rgba(47,168,119,.5);--glowSoft:rgba(47,168,119,.28)}
   html[data-theme="light"]{--accent:#1f8059;--accentB:#2fa877;--accentD:#166344;--accent-ink:#ffffff;
@@ -263,7 +263,7 @@ function setStatus(entry, status, cls) {
 }
 
 /* ==================================================================
-   PDF PARSING — column-aware, verified against real Dialog GINs.
+   PDF PARSING – column-aware, verified against real Dialog GINs.
    Fragments are assigned to table columns by x-position; page
    footers ("Page No", timestamps, "GIN :") are filtered out.
    ================================================================== */
@@ -459,7 +459,7 @@ function parsePageItems(frags, prevCols, carryItem) {
     if (cells.sn.length)   cur.snToks.push(...cells.sn.join(' ').split(/\s+/));
     if (cells.loc.length)  cur.locFrags.push(...cells.loc);
   }
-  // Do NOT push `cur` here — it may continue on the next page. Return it as "open".
+  // Do NOT push `cur` here – it may continue on the next page. Return it as "open".
   return { items, cols, open: cur };
 }
 
@@ -469,7 +469,7 @@ function render() {
   pill.innerHTML = `<b>${rows.length}</b> material${rows.length === 1 ? '' : 's'} saved`;
   exportBtn.disabled = clearBtn.disabled = rows.length === 0;
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="9" class="empty">No data yet — add some GIN PDFs above.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="empty">No data yet – add some GIN PDFs above.</td></tr>';
     return;
   }
   tbody.innerHTML = '';

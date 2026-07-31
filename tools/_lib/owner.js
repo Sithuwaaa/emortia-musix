@@ -1,6 +1,6 @@
 /* Soft owner-mode gate.
    NOTE: this is a convenience lock, not real security. A static site can't
-   enforce authentication — a determined person can bypass any client-side
+   enforce authentication – a determined person can bypass any client-side
    check. The only hard boundary is who can commit to the GitHub repo (you),
    which is what actually protects the published/shared data. This module just
    hides edit controls from ordinary viewers and reveals them to you after you
@@ -24,8 +24,8 @@
     if (h === '#lock') { window.ownerLock(); return; }
     if (h === '#setpass') {
       history.replaceState(null, '', location.pathname + location.search);
-      var p = prompt('Choose an owner passphrase.\n\nIt will show you a hash — paste that into tools/_lib/owner-config.js (OWNER_HASH) and commit.\nThe passphrase itself is never stored or sent.');
-      if (p) { var hx = await sha256(p); window.prompt('OWNER_HASH — copy this whole line into owner-config.js:', hx); }
+      var p = prompt('Choose an owner passphrase.\n\nIt will show you a hash – paste that into tools/_lib/owner-config.js (OWNER_HASH) and commit.\nThe passphrase itself is never stored or sent.');
+      if (p) { var hx = await sha256(p); window.prompt('OWNER_HASH – copy this whole line into owner-config.js:', hx); }
       return;
     }
     if (h === '#owner') {

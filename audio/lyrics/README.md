@@ -14,12 +14,12 @@ The player looks for a file named after the song's slug:
 | Napuru Hitha      | `napuru-hitha.lrc` |
 | Suwanda Vitharayi | `suwanda-vitharayi.lrc` |
 
-(The slug is the title, lowercased, with spaces turned into hyphens —
+(The slug is the title, lowercased, with spaces turned into hyphens –
 the same rule used for the audio and art filenames.)
 
 ## Two kinds of file
 
-**Synced (recommended)** — standard LRC, exactly what Musixmatch exports.
+**Synced (recommended)** – standard LRC, exactly what Musixmatch exports.
 Each line starts with a `[mm:ss.xx]` timestamp:
 
 ```
@@ -32,7 +32,7 @@ Each line starts with a `[mm:ss.xx]` timestamp:
 When timestamps are present the line highlights and scrolls in time with
 the music, and lines become clickable to seek.
 
-**Plain (no timing)** — just the lyric lines, one per line, no `[mm:ss]`.
+**Plain (no timing)** – just the lyric lines, one per line, no `[mm:ss]`.
 These are shown statically (no highlight/scroll). The three files here
 start out this way so lyrics appear right now; replace each with a synced
 version whenever you're ready.
@@ -46,18 +46,18 @@ of the URL, e.g.
 https://sithuwaaa.github.io/emortia-musix/#sync
 ```
 
-A **Time-sync** drawer opens on the right (only for you — it is hidden
+A **Time-sync** drawer opens on the right (only for you – it is hidden
 unless `#sync` is in the URL). It loads the song's current timings, so
 you can either sync from scratch or fine-tune an existing file.
 
-**Rough pass — tap it in**
+**Rough pass – tap it in**
 
 1. Go to the Music tab, pick the song, press play.
 2. Press **Space** at the moment each line starts. The next line to be
    tapped is outlined, and the live playhead is shown at the top.
 3. **Backspace** clears the last tap if you were late.
 
-**Fine pass — nudge it exact**
+**Fine pass – nudge it exact**
 
 Each line has its own row:
 
@@ -69,7 +69,7 @@ Each line has its own row:
 | `›` `»` | +0.1s / +1s |
 | `▶`     | play the song from this line |
 
-`shift all −0.1 / +0.1` moves every line at once — use it when the whole
+`shift all −0.1 / +0.1` moves every line at once – use it when the whole
 file is consistently early or late.
 
 The lyrics on the page behind the drawer update **live** as you edit, so
@@ -89,6 +89,6 @@ away and reloads whatever is committed.
 ## Notes
 
 - Metadata tags like `[ar:...]`, `[ti:...]`, `[by:...]` are ignored safely.
-- Enhanced (word-level) LRC works too — the inline `<mm:ss.xx>` word marks
+- Enhanced (word-level) LRC works too – the inline `<mm:ss.xx>` word marks
   are stripped and the line-level timing is used.
 - Save the file, commit, and it goes live automatically.

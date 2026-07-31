@@ -14,7 +14,7 @@
 <script src="../_lib/owner.js"></script>
 <style>
   :root{
-    /* teal — the site's Tools colour; this is the flagship tool */
+    /* teal – the site's Tools colour; this is the flagship tool */
     --navy:#0f2126;--navy-2:#16323a;--accent:#1f97a8;--accentB:#3fbdd0;--accentD:#12707e;--accent-ink:#04191d;
     --bg:#0c1619;--card:#142428;--card-2:#0f1d21;--line:#1e363c;--line3:#2c4c54;
     --text:#e9f4f6;--muted:#8fa8ad;--zebra:rgba(255,255,255,.018);--rowhover:rgba(31,151,168,.10);
@@ -55,7 +55,7 @@
     font-size:15px;cursor:pointer;flex-shrink:0;transition:border-color .2s ease,transform .2s ease}
   .theme:hover{border-color:var(--accentB);transform:scale(1.06)}
 
-  /* dataset switcher — the first thing on the page */
+  /* dataset switcher – the first thing on the page */
   .dsbar{position:sticky;top:55px;z-index:26;display:flex;gap:8px;padding:12px 14px 10px;
     background:var(--bg);border-bottom:1px solid var(--line);flex-wrap:wrap}
   .dsbtn{flex:1;min-width:160px;text-align:left;border:1px solid var(--line);background:var(--card);
@@ -99,7 +99,7 @@
   .barrow{display:grid;grid-template-columns:132px 1fr 44px;gap:10px;align-items:center;font-size:13px}
   .barrow .lb{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .bartrack{height:9px;border-radius:999px;background:var(--card-2);overflow:hidden;border:1px solid var(--line)}
-  /* display:block matters — as a span it stays inline, and then width/height are ignored.
+  /* display:block matters – as a span it stays inline, and then width/height are ignored.
      The real width is the base style, not the animation's end state: if animations are
      throttled (background tab, reduced motion) the bar must still show the right fill. */
   .barfill{display:block;height:100%;border-radius:999px;background:var(--b,var(--accent));width:var(--w,0);
@@ -185,14 +185,14 @@
 <script src="../_lib/theme.js" defer></script>
 <script>
 /* ============================================================
-   Project Update — dashboard + Excel-style viewer.
+   Project Update – dashboard + Excel-style viewer.
    Data comes from the workbook committed in this folder; in owner
    mode a new workbook can be uploaded, which replaces the whole
    stored database (kept in IndexedDB, same pattern as Site Access).
    ============================================================ */
 /* Two datasets, switched from the bar at the top of the page.
    Each keeps its own stored copy, so uploading one never touches the other.
-   `files` lists the workbook names to try in this folder — the first that
+   `files` lists the workbook names to try in this folder – the first that
    loads wins, so a committed file keeps working if it gets renamed. */
 const DATASETS = [
   { key:'ongoing', label:'Ongoing', hint:'current batch in progress',
@@ -288,7 +288,7 @@ async function load(){
       $('view').innerHTML = '<div class="err"><b>No “' + esc(ds().label) + '” workbook yet.</b><br>' +
         'Looked for ' + ds().files.map(f => '<code>' + esc(f) + '</code>').join(' or ') +
         ' in <code>tools/project-update/</code>.<br>' +
-        (window.IS_OWNER ? 'Upload one with the link at the bottom of this page — it will be stored for this dataset.'
+        (window.IS_OWNER ? 'Upload one with the link at the bottom of this page – it will be stored for this dataset.'
                          : 'Ask the owner to add it.') + '</div>';
       $('pill').innerHTML = '<b>—</b> no workbook';
       buildTabs(); renderFooter(); return;
@@ -464,7 +464,7 @@ function renderDashboard(){
     h += '<div class="kpi" style="--k:' + b.c + '"><div class="k">' + esc(b.label) + '</div><div class="v">' + counts[b.k] + '</div><div class="s">' + esc(b.sub) + '</div></div>'; });
   h += '</div>';
 
-  /* Overall completion — a site part-way through still counts for something,
+  /* Overall completion – a site part-way through still counts for something,
      so the green bar is weighted by how far each stage has got. "On air" is
      shown underneath as the strict figure. */
   const WEIGHT = { onAir:1, airPending:.9, commissioning:.75, wip:.5, tx:.25, mobilize:.1, hold:0, other:0 };
@@ -489,10 +489,10 @@ function renderDashboard(){
        (mod ? '<span class="tag">' + mod.known + ' of ' + mod.checked + ' hubs checked</span>' : '') + '</h2>';
   if (!mod) h += '<div class="note">Couldn’t reach the Site Access data to check permissions.</div>';
   else if (!mod.list.length)
-    h += '<div class="note">No defence-permission hubs found. This checks each MW hop’s far-end (hub) site against the Site Access list — ' +
+    h += '<div class="note">No defence-permission hubs found. This checks each MW hop’s far-end (hub) site against the Site Access list – ' +
          'the new lamp sites themselves aren’t in that list yet, so the hubs they connect to are what gets checked.</div>';
   else {
-    h += '<div class="note" style="margin-bottom:12px">These hop far-end sites need defence clearance before access — plan lead time for the sites they serve.</div><div class="modlist">';
+    h += '<div class="note" style="margin-bottom:12px">These hop far-end sites need defence clearance before access – plan lead time for the sites they serve.</div><div class="modlist">';
     mod.list.forEach(m => {
       h += '<div class="modcard"><div class="id">' + esc(m.id) + '</div><div class="nm">' + esc(m.name) + '</div>' +
            '<span class="perm">🛡 ' + esc(m.perm) + '</span>' +

@@ -1,4 +1,4 @@
-/* GIN Extractor service worker — bump CACHE_VERSION on every deployment */
+/* GIN Extractor service worker – bump CACHE_VERSION on every deployment */
 const CACHE_VERSION = 'gin-v7';
 const APP_SHELL = [
   './',

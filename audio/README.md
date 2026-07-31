@@ -10,11 +10,11 @@ Each entry looks like:
 {t:'Static Bloom', a:'Emortia', d:222, tone:'var(--artA)'},
 ```
 
-- `t` — track title (shown in the UI)
-- `a` — artist name (shown in the UI)
-- `d` — fallback duration in seconds (used only until the real file loads
+- `t` – track title (shown in the UI)
+- `a` – artist name (shown in the UI)
+- `d` – fallback duration in seconds (used only until the real file loads
   and its actual duration is read automatically)
-- `tone` — background color for the track's placeholder art tile
+- `tone` – background color for the track's placeholder art tile
 
 By default the player looks for the file at:
 

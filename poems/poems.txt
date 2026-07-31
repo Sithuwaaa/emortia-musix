@@ -9,11 +9,11 @@ To publish a new poem, copy a block below and change the words:
     First line of the poem.
     Second line.
 
-    A blank line makes a stanza break — it is kept exactly as you type it.
+    A blank line makes a stanza break – it is kept exactly as you type it.
 
 Rules:
   - "@title:" starts a new poem (this is required).
-  - "@date:" is optional — write anything you like.
+  - "@date:" is optional – write anything you like.
   - Newest poem at the top shows first on the site.
   - Save the file, commit, and it appears on the Journal page automatically.
 
