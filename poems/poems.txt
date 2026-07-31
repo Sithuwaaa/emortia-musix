@@ -13,6 +13,7 @@ To publish a new poem, copy a block below and change the words:
 
 Rules:
   - "@title:" starts a new poem (this is required).
+  - "@track:" is optional – name a song and the page gets a play button.
   - "@date:" is optional – write anything you like.
   - Newest poem at the top shows first on the site.
   - Save the file, commit, and it appears on the Journal page automatically.
@@ -41,6 +42,7 @@ Rules:
 
 @title: සුවඳ විතරයි
 @date: නොවැම්බර් 29, 2025
+@track: Suwanda Vitharayi
 තිගැස්සී මගෙ දෑස ඇරුනා හිස් කමින් පිරි ඝනදුරේ
 මතක් වී මට ඉන්න හිතුනා ඔයාගේ ඔය පපුතුරේ
 හිතද්දී අපෙ ආලේ හරියට ඔයා දුන් මේ මල් වගේ
@@ -48,6 +50,7 @@ Rules:
 
 @title: නපුරු හිත
 @date: නොවැම්බර් 21, 2025
+@track: Napuru Hitha
 හිටියා නුඹ මේ නපුරු හිත ලඟ
 ආදරෙන් පපුවට තුරුළු කර
 නැතිවා දෝ මට බය වුනේ නුඹ
@@ -55,6 +58,7 @@ Rules:
 
 @title: හාරනා හිත
 @date: නොවැම්බර් 01, 2025
+@track: Harana Hitha
 හාරනා හිත පාරනා වග දැනෙන මුත් මම අහනවා
 කාරණා ගතු වාරණා වන තෙක්ම හිස්තැන් සොයනවා
 රූරනා නෙතු නෑසෙනා තුරු ලඟම හිඳිමින් පිහිනවා
