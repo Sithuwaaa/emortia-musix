@@ -213,38 +213,15 @@ input,textarea,button{font-family:inherit;}
 .poem-line{animation:poemInk .5s ease both;}
 /* The verse size lives here, not in an inline style: the fitter clears the
    element's own font-size to re-measure, which would otherwise wipe the base
-   value and leave the type at the inherited 16px. Its leading is the ruling
-   pitch, so every line of the poem sits on a rule. */
-.bk-verse{font-size:clamp(16px,2.05vw,27px);line-height:var(--rule,32px);width:100%;}
-.bk-verse.single{font-size:clamp(15px,4.6vw,22px);}
-/* Ruled paper. --rule is set on the stage from its height so both pages of a
-   spread share one grid and the lines run straight across the gutter. */
-.bk-paper{
-  background-image:
-    repeating-linear-gradient(180deg,transparent 0,transparent calc(var(--rule,32px) - 1px),
-      rgba(116,84,42,.26) calc(var(--rule,32px) - 1px),rgba(116,84,42,.26) var(--rule,32px)),
-    radial-gradient(circle at 76% 20%,rgba(158,116,58,.09),transparent 44%),
-    repeating-linear-gradient(89deg,rgba(126,94,48,.028) 0 2px,transparent 2px 7px),
-    linear-gradient(#f3e8cf,#e5d4b2);
-}
-.bk-paper.l{
-  background-image:
-    repeating-linear-gradient(180deg,transparent 0,transparent calc(var(--rule,32px) - 1px),
-      rgba(116,84,42,.26) calc(var(--rule,32px) - 1px),rgba(116,84,42,.26) var(--rule,32px)),
-    radial-gradient(circle at 22% 24%,rgba(158,116,58,.10),transparent 44%),
-    repeating-linear-gradient(91deg,rgba(126,94,48,.03) 0 2px,transparent 2px 7px),
-    linear-gradient(#f1e6cc,#e3d2ae);
-}
+   value and leave the type at the inherited 16px. */
+.bk-verse{font-size:clamp(16px,2.05vw,27px);line-height:1.85;width:100%;}
+.bk-verse.single{font-size:clamp(15px,4.6vw,22px);line-height:1.75;}
+/* Plain paper: a warm wash and one soft highlight, nothing else. */
+.bk-paper{background-image:radial-gradient(circle at 76% 20%,rgba(158,116,58,.09),transparent 44%),linear-gradient(#f3e8cf,#e5d4b2);}
+.bk-paper.l{background-image:radial-gradient(circle at 22% 24%,rgba(158,116,58,.10),transparent 44%),linear-gradient(#f1e6cc,#e3d2ae);}
 .bk-endpaper{background:linear-gradient(150deg,#e2cfa8,#cfb98e);}
-.bk-entry{transition:background .18s ease;height:var(--rule,32px);line-height:var(--rule,32px);}
+.bk-entry{transition:background .18s ease;}
 .bk-entry:hover{background:rgba(138,48,73,.10) !important;}
-/* Everything written on ruled paper is measured in whole rules: one row, two
-   rows, or a blank row. Blocks marked bk-snap are then dropped onto the
-   nearest rule by the fitter, so the writing sits on the lines. */
-.bk-rule1{line-height:var(--rule,32px);}
-.bk-rule2{line-height:calc(var(--rule,32px) * 2);height:calc(var(--rule,32px) * 2);}
-.bk-gap{height:var(--rule,32px);flex-shrink:0;}
-.bk-pillrow{height:calc(var(--rule,32px) * 2);display:flex;align-items:center;flex-shrink:0;}
 @media (hover:none){.bk-curl,.bk-curlsh{opacity:.6;transform:scale(.62);}}
 @media (prefers-reduced-motion:reduce){.poem-line{animation:none;}.bk-curl,.bk-curlsh{transition:none;}}
 /* ---- journal: vinyl-room paper stack ---- */
@@ -1043,24 +1020,6 @@ class Component extends DCLogic {
   /* Verses run from four lines to a dozen, so a single type size either
      overflows the page or wastes it. Shrink each one until it fits the paper. */
   bkFitVerses(){
-    const stage=this._bkStage;
-    if(stage){
-      // One ruling pitch for the whole stage, so the lines meet across the
-      // gutter. It also has to be fine enough for the index to land inside the
-      // page: two rules for its heading, one blank, one per poem, one for the
-      // folio — otherwise the last few titles fall off the bottom.
-      const h=stage.getBoundingClientRect().height;
-      const page=stage.querySelector('.bk-paper');
-      let contentH=h*0.78;
-      if(page){
-        const pcs=getComputedStyle(page);
-        const inner=page.clientHeight-parseFloat(pcs.paddingTop||0)-parseFloat(pcs.paddingBottom||0);
-        if(inner>0) contentH=inner;
-      }
-      const n=this.state.poems.length;
-      if(h) stage.style.setProperty('--rule',
-        Math.max(16, Math.min(42, h/16, contentH/(n+4))).toFixed(2)+'px');
-    }
     const els=document.querySelectorAll('.bk-verse');
     for(let i=0;i<els.length;i++){
       const el=els[i], box=el.parentElement;
@@ -1073,21 +1032,6 @@ class Component extends DCLogic {
         size-=0.5;
         el.style.fontSize=size.toFixed(2)+'px';
       }
-    }
-    // Drop every written block onto the nearest rule. offsetTop is layout-based
-    // — so it reads correctly even on the leaf that is mid-turn — but it counts
-    // from the page's *border* box, while the ruling gradient starts at the
-    // padding box, so the page's top padding has to come off first.
-    const snaps=document.querySelectorAll('.bk-snap');
-    for(let i=0;i<snaps.length;i++){
-      const el=snaps[i], par=el.offsetParent;
-      const pitch=parseFloat(getComputedStyle(el).getPropertyValue('--rule'));
-      if(!(pitch>0) || !par) continue;
-      const padTop=parseFloat(getComputedStyle(par).paddingTop)||0;
-      const rel=el.offsetTop-padTop;
-      let shift=-(((rel % pitch)+pitch)%pitch);
-      if(Math.abs(shift+pitch)<Math.abs(shift)) shift+=pitch;
-      el.style.transform = Math.abs(shift)>0.05 ? 'translateY('+shift.toFixed(2)+'px)' : '';
     }
   }
   poemLines(body, key){
@@ -1107,24 +1051,21 @@ class Component extends DCLogic {
   }
   bkFolio(folio, align){
     if(folio==null) return null;
-    return React.createElement('div',{key:'f', className:'bk-snap bk-rule1',
+    return React.createElement('div',{key:'f',
       style:{marginTop:'auto',fontFamily:"'EB Garamond',serif",fontStyle:'italic',
         fontSize:'clamp(11px,1.3vw,15px)',color:'#9c8259',textAlign:align||'left'}}, folio);
   }
-  /* left page of a poem spread: title, date, and the song it became.
-     Two rules for the title, a blank rule, one for the date, two for the pill —
-     whole rules throughout, so the block stays on the grid once snapped. */
+  /* left page of a poem spread: title, date, and the song it became */
   bkMetaPage(p, folio, single){
     if(!p) return null;
     return React.createElement(React.Fragment,null,
-      React.createElement('div',{key:'m', className:'bk-snap',
-        style:{display:'flex',flexDirection:'column',flexShrink:0}},
-        React.createElement('div',{className:'bk-rule2',style:{fontFamily:"'UN-Agni',serif",
+      React.createElement('div',{key:'m',style:{display:'flex',flexDirection:'column',flexShrink:0}},
+        React.createElement('div',{style:{fontFamily:"'UN-Agni',serif",lineHeight:1.24,
           fontSize:single?'clamp(20px,5.4vw,28px)':'clamp(22px,2.8vw,36px)',color:'#33241c'}}, p.title),
-        React.createElement('div',{className:'bk-gap'}),
-        React.createElement('div',{className:'bk-rule1',style:{fontFamily:"'UN-Isiwara',serif",
+        React.createElement('div',{style:{width:'36%',height:'1px',background:'rgba(160,124,72,.5)',margin:'6% 0 7%'}}),
+        React.createElement('div',{style:{fontFamily:"'UN-Isiwara',serif",lineHeight:1.5,
           fontSize:'clamp(13px,1.7vw,19px)',color:'#7d6647'}}, p.date||''),
-        React.createElement('div',{className:'bk-pillrow'}, this.bkPlayPill(p))),
+        React.createElement('div',{style:{marginTop:'8%',display:'flex'}}, this.bkPlayPill(p))),
       single?null:this.bkFolio(folio,'left'));
   }
   /* right page of a poem spread: nothing but the verse */
@@ -1132,24 +1073,23 @@ class Component extends DCLogic {
     if(!p) return null;
     return React.createElement(React.Fragment,null,
       React.createElement('div',{key:'b',style:{flex:1,display:'flex',alignItems:'center',minHeight:0,overflow:'hidden'}},
-        React.createElement('div',{className:'bk-verse bk-snap'+(single?' single':''), key:inkKey,
+        React.createElement('div',{className:'bk-verse'+(single?' single':''), key:inkKey,
           style:{fontFamily:"'UN-Alakamanda',serif",color:'#2f2118',textShadow:'0 0 1px rgba(47,33,24,.28)'}},
           this.poemLines(p.body, inkKey))),
       this.bkFolio(folio,'right'));
   }
-  /* the index — the first page after the cover, and nowhere else. One rule per
-     entry, so the list reads as if it were written onto the ruling. */
+  /* the index — the first page after the cover, and nowhere else */
   bkIndexPage(L, idx, single){
     const n=L.length;
     return React.createElement(React.Fragment,null,
-      React.createElement('div',{key:'h', className:'bk-snap',
+      React.createElement('div',{key:'h',
         style:{display:'flex',flexDirection:'column',flex:1,minHeight:0,overflow:'hidden'}},
-        React.createElement('div',{className:'bk-rule2',style:{fontFamily:"'UN-Agni',serif",
+        React.createElement('div',{style:{fontFamily:"'UN-Agni',serif",lineHeight:1.24,
           fontSize:single?'clamp(21px,5.4vw,28px)':'clamp(23px,2.8vw,36px)',color:'#33241c'}},'පටුන'),
-        React.createElement('div',{className:'bk-gap'}),
+        React.createElement('div',{style:{width:'34%',height:'1px',background:'rgba(160,124,72,.5)',margin:'5% 0 7%'}}),
         L.map((p,i)=>React.createElement('div',{key:'e'+i, className:'bk-entry', onClick:this.bkGoTo(i+1),
-          style:{display:'flex',alignItems:'center',gap:'8px',cursor:'pointer',padding:'0 5px',borderRadius:'3px',
-            flexShrink:0,background:(i+1)===idx?'rgba(138,48,73,.10)':'transparent'}},
+          style:{display:'flex',alignItems:'baseline',gap:'8px',cursor:'pointer',padding:'3px 5px',borderRadius:'3px',
+            flexShrink:0,lineHeight:1.35,background:(i+1)===idx?'rgba(138,48,73,.10)':'transparent'}},
           React.createElement('div',{style:{fontFamily:"'EB Garamond',serif",fontSize:'clamp(10px,1.15vw,14px)',color:'#a08760',minWidth:'1.7em'}}, (i+1)+'.'),
           React.createElement('div',{style:{fontFamily:"'UN-Alakamanda',serif",
             fontSize:n>12?'clamp(12px,1.25vw,16px)':'clamp(13px,1.45vw,19px)',
@@ -1269,7 +1209,7 @@ class Component extends DCLogic {
         boxShadow:'6px 10px 34px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,240,212,.34)',
         display:'flex',alignItems:'center',justifyContent:'center',padding:'8%'}},
       React.createElement('div',{style:{position:'absolute',inset:0,borderRadius:'3px 8px 8px 3px',pointerEvents:'none',
-        background:'radial-gradient(ellipse at 28% 18%,rgba(255,238,206,.36),transparent 62%),repeating-linear-gradient(64deg,rgba(120,84,42,.045) 0 2px,transparent 2px 5px),repeating-linear-gradient(154deg,rgba(120,84,42,.035) 0 3px,transparent 3px 7px)'}}),
+        background:'radial-gradient(ellipse at 28% 18%,rgba(255,238,206,.34),transparent 62%),radial-gradient(ellipse at 74% 82%,rgba(96,62,26,.16),transparent 58%)'}}),
       React.createElement('div',{style:{position:'absolute',inset:'5.5% 6%',border:'1px solid rgba(122,84,40,.28)',borderRadius:'2px'}}),
       React.createElement('div',{style:{position:'relative',display:'flex',flexDirection:'column',alignItems:'center',gap:'5%',textAlign:'center'}},
         React.createElement('div',{style:{fontFamily:"'Space Mono',monospace",fontSize:'clamp(9px,1.1vw,11px)',letterSpacing:'0.42em',textTransform:'uppercase',color:'rgba(88,58,24,.72)',textShadow:'0 1px 0 rgba(255,240,210,.5)'}},'Emortia'),
