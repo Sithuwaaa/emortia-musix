@@ -185,31 +185,25 @@ input,textarea,button{font-family:inherit;}
    properties, so `transform` here stays a constant string that React never has
    to rewrite mid-drag. Everything else is plain CSS so hovering a corner costs
    no re-render. */
-.bk-leaf{transform-style:preserve-3d;transform:rotateY(var(--a,0deg)) rotate(var(--tz,0deg));
+.bk-leaf{transform-style:preserve-3d;
+  transform:rotateY(var(--a,0deg)) translateZ(var(--lift,0px)) rotate(var(--tz,0deg));
   box-shadow:var(--sx,0px) 14px 44px rgba(0,0,0,var(--so,0));will-change:transform;}
 .bk-face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden;}
 .bk-shade{position:absolute;inset:0;pointer-events:none;background:#1b0f04;}
 /* The hit area is clipped to the same triangle as the fold, so the grab zone
    claims only the corner itself and the table of contents underneath stays
    clickable right up to it. */
-.bk-corner{position:absolute;z-index:9;touch-action:none;cursor:grab;-webkit-tap-highlight-color:transparent;}
-.bk-corner:active{cursor:grabbing;}
+.bk-corner{position:absolute;z-index:9;cursor:pointer;-webkit-tap-highlight-color:transparent;}
 .bk-corner.br{clip-path:polygon(100% 0,100% 100%,0 100%);}
-.bk-corner.tr{clip-path:polygon(0 0,100% 0,100% 100%);}
 .bk-corner.bl{clip-path:polygon(0 0,0 100%,100% 100%);}
-.bk-corner.tl{clip-path:polygon(0 0,100% 0,0 100%);}
 /* the folded triangle that lifts when you bring the pointer to a corner */
 .bk-curl{position:absolute;width:100%;height:100%;opacity:0;transform:scale(.28);
   transition:opacity .22s ease,transform .32s cubic-bezier(.3,.9,.3,1);pointer-events:none;}
 .bk-corner:hover .bk-curl,.bk-corner:active .bk-curl{opacity:1;transform:scale(1);}
 .bk-curl.br{transform-origin:100% 100%;clip-path:polygon(100% 0,100% 100%,0 100%);
   background:linear-gradient(315deg,#f4ead0,#dcc9a0 46%,#a98d58 72%,#5d4a29);}
-.bk-curl.tr{transform-origin:100% 0;clip-path:polygon(0 0,100% 0,100% 100%);
-  background:linear-gradient(225deg,#f4ead0,#dcc9a0 46%,#a98d58 72%,#5d4a29);}
 .bk-curl.bl{transform-origin:0 100%;clip-path:polygon(0 0,0 100%,100% 100%);
   background:linear-gradient(45deg,#f4ead0,#dcc9a0 46%,#a98d58 72%,#5d4a29);}
-.bk-curl.tl{transform-origin:0 0;clip-path:polygon(0 0,100% 0,0 100%);
-  background:linear-gradient(135deg,#f4ead0,#dcc9a0 46%,#a98d58 72%,#5d4a29);}
 /* the shadow the fold drops onto the page underneath */
 .bk-curlsh{position:absolute;inset:0;opacity:0;transform:scale(.28);pointer-events:none;
   transition:opacity .22s ease,transform .32s cubic-bezier(.3,.9,.3,1);
@@ -217,6 +211,11 @@ input,textarea,button{font-family:inherit;}
 .bk-corner:hover .bk-curlsh,.bk-corner:active .bk-curlsh{opacity:1;transform:scale(1.25);}
 @keyframes poemInk{0%{opacity:0;transform:translateY(7px);}100%{opacity:1;transform:none;}}
 .poem-line{animation:poemInk .5s ease both;}
+/* The verse size lives here, not in an inline style: the fitter clears the
+   element's own font-size to re-measure, which would otherwise wipe the base
+   value and leave the type at the inherited 16px. */
+.bk-verse{font-size:clamp(16px,2.05vw,27px);line-height:1.85;width:100%;}
+.bk-verse.single{font-size:clamp(15px,4.6vw,22px);line-height:1.75;}
 .bk-entry{transition:background .18s ease;}
 .bk-entry:hover{background:rgba(138,48,73,.10) !important;}
 @media (hover:none){.bk-curl,.bk-curlsh{opacity:.6;transform:scale(.62);}}
@@ -413,7 +412,7 @@ input,textarea,button{font-family:inherit;}
     <section style="animation:fadeUp 0.5s ease;padding:40px 0 60px;">
       <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:0.2em;color:var(--accent);text-transform:uppercase;">Poems & writing</div>
       <h2 style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(40px,6vw,68px);letter-spacing:-0.03em;margin:6px 0 6px;">Journal</h2>
-      <p style="color:var(--dim);font-size:14px;margin:0 0 22px;">A bound book. Take hold of a page corner and turn it.</p>
+      <p style="color:var(--dim);font-size:14px;margin:0 0 22px;">A wire-bound book. Click a bottom corner to roll the page over.</p>
       {{ journalContent }}
     </section>
     </sc-if>
@@ -806,12 +805,28 @@ class Component extends DCLogic {
       if(this._bkMq.addEventListener) this._bkMq.addEventListener('change', this._onBkMq);
       else this._bkMq.addListener(this._onBkMq);
     }
+    // the verse is fitted to the paper after layout, so it has to be redone
+    // whenever the page box changes size
+    this._onBkResize=()=>{
+      clearTimeout(this._bkFitT);
+      this._bkFitT=setTimeout(()=>{
+        const single=this.bkIsSingle();
+        if(single!==this.state.bkSingle) this.setState({bkSingle:single});   // re-render, then refit
+        else this.bkFitVerses();
+      }, 120);
+    };
+    window.addEventListener('resize', this._onBkResize);
+    // the Sinhala faces load late, and they change the measurement completely
+    if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>this.bkFitVerses());
     fetch('poems/poems.txt').then(r=>r.ok?r.text():Promise.reject()).then(t=>{
       this.setState({poems:this.parsePoems(t), poemsLoaded:true});
     }).catch(()=>this.setState({poems:[], poemsLoaded:true}));
   }
+  componentDidUpdate(){ this.bkFitVerses(); }
   componentWillUnmount(){
     this.audio.pause();
+    if(this._onBkResize) window.removeEventListener('resize', this._onBkResize);
+    clearTimeout(this._bkFitT);
     if(this._onKey) window.removeEventListener('keydown', this._onKey);
     if(this._checkHash) window.removeEventListener('hashchange', this._checkHash);
     if(this._onWheel) window.removeEventListener('wheel', this._onWheel);
@@ -905,31 +920,33 @@ class Component extends DCLogic {
     this._heroPetals=React.createElement(React.Fragment,null,arr);
     return this._heroPetals;
   }
-  /* ================= journal: the bound book =================
-     One leaf turns at a time and it is dragged, not clicked: take hold of any
-     outer corner of either page and the paper follows the pointer. Let go past
-     halfway, or with a flick, and it completes; otherwise it falls back. A
-     plain tap on a corner turns it too, which is what a touch screen wants. */
+  /* ================= journal: the wire-bound book =================
+     Spread s shows the verso of sheet s-1 on the left and the recto of sheet
+     s on the right. Sheet 0's recto is the index, so s=0 is the index page and
+     s>=1 is poem s-1: its title, date and song on the left, the verse facing
+     it on the right. Turning is a click on a bottom corner — the leaf rolls
+     off the wire on its own arc rather than chasing the pointer. */
+  bkCount(){ return this.state.poems.length + 1; }          // index page + a sheet per poem
+  bkIsSingle(){ return (window.innerWidth||0) <= 700; }     // one page per leaf on a phone
   bkGeo(){
     const el=this._bkStage; if(!el) return null;
     const r=el.getBoundingClientRect();
     return r.width ? r : null;
   }
-  /* 0 = leaf lying flat on the right, 1 = flat on the left. The free corner
-     tracks the pointer right across the width of the open book. */
-  bkU(x, r){ return Math.max(0, Math.min(1, (r.right - x) / r.width)); }
-  bkPaint(u, tz){
+  /* 0 = leaf lying flat on the right, 1 = flat on the left */
+  bkPaint(u){
     const el=this._bkLeaf; if(!el) return;
-    const lift=Math.sin(Math.PI*Math.max(0,Math.min(1,u)));   // peaks upright at 90°
-    el.style.setProperty('--a', (-180*u).toFixed(2)+'deg');
-    el.style.setProperty('--tz', (tz||0).toFixed(2)+'deg');
-    el.style.setProperty('--so', (0.52*lift).toFixed(3));
-    el.style.setProperty('--sx', ((u<0.5?-1:1)*34*lift).toFixed(1)+'px');
-    if(this._bkFrontShade) this._bkFrontShade.style.opacity=(0.85*u).toFixed(3);
-    if(this._bkBackShade)  this._bkBackShade.style.opacity=Math.max(0,(1-u)*0.9).toFixed(3);
+    const t=Math.max(0,Math.min(1,u)), arc=Math.sin(Math.PI*t);
+    el.style.setProperty('--a', (-180*t).toFixed(2)+'deg');
+    el.style.setProperty('--lift', (13*arc).toFixed(2)+'px');   // bows off the wire
+    el.style.setProperty('--tz', (2.6*arc).toFixed(2)+'deg');   // and twists a little
+    el.style.setProperty('--so', (0.5*arc).toFixed(3));
+    el.style.setProperty('--sx', ((t<0.5?-1:1)*30*arc).toFixed(1)+'px');
+    if(this._bkFrontShade) this._bkFrontShade.style.opacity=(0.8*t).toFixed(3);
+    if(this._bkBackShade)  this._bkBackShade.style.opacity=Math.max(0,(1-t)*0.85).toFixed(3);
   }
   bkAnimate(from, to, ms, done){
-    const tz=this._bk?this._bk.tz:0, t0=performance.now();
+    const t0=performance.now();
     let ended=false;
     const end=()=>{
       if(ended) return;
@@ -937,13 +954,15 @@ class Component extends DCLogic {
       if(this._bkRaf) cancelAnimationFrame(this._bkRaf);
       clearTimeout(this._bkGuard);
       this._bkRaf=null; this._bkGuard=null;
-      this.bkPaint(to, tz);
+      this.bkPaint(to);
       done();
     };
     const step=()=>{
       if(ended) return;
       const p=Math.min(1,(performance.now()-t0)/ms);
-      this.bkPaint(from+(to-from)*(1-Math.pow(1-p,3)), tz);
+      // eased at both ends, the way a sheet leaves the hand and settles
+      const e=p<0.5 ? 4*p*p*p : 1-Math.pow(-2*p+2,3)/2;
+      this.bkPaint(from+(to-from)*e);
       if(p<1) this._bkRaf=requestAnimationFrame(step); else end();
     };
     this._bkRaf=requestAnimationFrame(step);
@@ -951,91 +970,31 @@ class Component extends DCLogic {
     // hidden would hang forever. Timers still fire (clamped), so land it anyway.
     this._bkGuard=setTimeout(end, ms+400);
   }
-  bkSettle(commit){
-    const b=this._bk; if(!b) return;
-    const finish=()=>{
-      this._bk=null; this._bkBusy=false;
-      if(!commit){ this.setState(st=>({bkDrag:null, bkSpread:st.bkOpen})); return; }
-      if(b.kind==='cover'){
-        const open=(b.toU===1);
-        this.setState(st=>({bkOpen:open, bkSpread:open, bkDrag:null, bkInk:st.bkInk+1}));
-      } else {
-        this.setState(st=>({bkIdx:b.to, bkDrag:null, bkInk:st.bkInk+1}));
-      }
-    };
-    const target=commit?b.toU:b.fromU;
-    this._bkBusy=true;
-    if(this.reducedMotion() || !this._bkLeaf){ finish(); return; }
-    this.bkAnimate(b.u, target, Math.max(240, Math.round(640*Math.abs(target-b.u))), finish);
-  }
-  /* kind 'cover' turns the front board; 'page' turns a leaf.
+  /* kind 'cover' swings the front board, 'page' rolls a leaf.
      dir +1 goes further into the book, -1 comes back out. */
-  bkGrab(kind, dir){
-    return (e)=>{
-      if(this._bkBusy || this._bk) return;
-      const r=this.bkGeo(); if(!r) return;
-      const st=this.state, n=st.poems.length;
-      let from=st.bkIdx, to=st.bkIdx, fromU, toU;
-      if(kind==='cover'){
-        if(st.bkOpen){ fromU=1; toU=0; } else { fromU=0; toU=1; }
-      } else if(dir>0){
-        if(from>=n-1) return; to=from+1; fromU=0; toU=1;
-      } else {
-        if(from<=0) return; to=from-1; fromU=1; toU=0;
-      }
-      if(e.preventDefault) e.preventDefault();
-      const cy=r.top+r.height/2;
-      const tzOf=(y)=>Math.max(-1,Math.min(1,(y-cy)/(r.height/2)))*5;
-      this._bk={r, kind, dir, from, to, fromU, toU, u:fromU, tz:tzOf(e.clientY),
-                moved:false, lastX:e.clientX, lastT:performance.now(), v:0};
-      const move=(ev)=>{
-        const b=this._bk; if(!b) return;
-        const now=performance.now(), u=this.bkU(ev.clientX, b.r);
-        b.v=(ev.clientX-b.lastX)/Math.max(1, now-b.lastT);      // px per ms
-        b.lastX=ev.clientX; b.lastT=now;
-        if(Math.abs(u-b.fromU)>0.02) b.moved=true;
-        b.u=u; b.tz=tzOf(ev.clientY);
-        this.bkPaint(u, b.tz);
-      };
-      const up=(ev)=>{
-        window.removeEventListener('pointermove',move);
-        window.removeEventListener('pointerup',up);
-        window.removeEventListener('pointercancel',up);
-        this._bkUp=null;
-        const b=this._bk; if(!b) return;
-        // the release can land further along than the last move reported
-        if(ev && typeof ev.clientX==='number' && ev.type==='pointerup'){
-          const u=this.bkU(ev.clientX, b.r);
-          if(Math.abs(u-b.u)>0.001){ b.moved=true; b.u=u; this.bkPaint(u, b.tz); }
-        }
-        let commit;
-        if(!b.moved) commit=true;                                // a tap turns it
-        else if(b.toU>b.fromU) commit=(b.u>0.5 || b.v<-0.55);    // flicked left
-        else commit=(b.u<0.5 || b.v>0.55);
-        this.bkSettle(commit);
-      };
-      this._bkUp=up;
-      this.setState({bkDrag:{kind, dir, from, to}, bkSpread:true}, ()=>{
-        this.bkPaint(fromU, this._bk?this._bk.tz:0);
-        window.addEventListener('pointermove',move);
-        window.addEventListener('pointerup',up);
-        window.addEventListener('pointercancel',up);
-      });
-    };
-  }
-  /* run the same turn with no pointer: a keyboard arrow, or a contents entry */
-  bkTap(kind, dir, target){
+  bkTurn(kind, dir, target){
     if(this._bkBusy || this._bk) return;
-    const r=this.bkGeo(); if(!r) return;
-    const st=this.state, n=st.poems.length;
+    if(!this.bkGeo()) return;
+    const st=this.state, last=this.bkCount()-1;
     let from=st.bkIdx, to=(target==null?st.bkIdx:target), fromU, toU;
     if(kind==='cover'){ if(st.bkOpen){ fromU=1; toU=0; } else { fromU=0; toU=1; } }
-    else if(dir>0){ if(target==null){ if(from>=n-1) return; to=from+1; } fromU=0; toU=1; }
+    else if(dir>0){ if(target==null){ if(from>=last) return; to=from+1; } fromU=0; toU=1; }
     else { if(target==null){ if(from<=0) return; to=from-1; } fromU=1; toU=0; }
-    this._bk={r, kind, dir, from, to, fromU, toU, u:fromU, tz:0, moved:true, v:0};
+    this._bk={kind, dir, from, to, fromU, toU};
+    this._bkBusy=true;
     this.setState({bkDrag:{kind, dir, from, to}, bkSpread:true}, ()=>{
-      this.bkPaint(fromU, 0);
-      this.bkSettle(true);
+      this.bkPaint(fromU);
+      const finish=()=>{
+        this._bk=null; this._bkBusy=false;
+        if(kind==='cover'){
+          const open=(toU===1);
+          this.setState(s2=>({bkOpen:open, bkSpread:open, bkDrag:null, bkInk:s2.bkInk+1}));
+        } else {
+          this.setState(s2=>({bkIdx:to, bkDrag:null, bkInk:s2.bkInk+1}));
+        }
+      };
+      if(this.reducedMotion()){ finish(); return; }
+      this.bkAnimate(fromU, toU, kind==='cover'?1000:880, finish);
     });
   }
   bkGoTo(i){
@@ -1043,51 +1002,128 @@ class Component extends DCLogic {
       if(e && e.stopPropagation) e.stopPropagation();
       const st=this.state;
       if(!st.bkOpen || i===st.bkIdx) return;
-      this.bkTap('page', i>st.bkIdx?1:-1, i);
+      this.bkTurn('page', i>st.bkIdx?1:-1, i);
     };
   }
   bkStep(dir){
     const st=this.state;
     if(!st.poems.length) return;
-    if(!st.bkOpen){ if(dir>0) this.bkTap('cover',1); return; }
-    if(dir<0 && st.bkIdx===0){ this.bkTap('cover',-1); return; }
-    this.bkTap('page', dir);
+    if(!st.bkOpen){ if(dir>0) this.bkTurn('cover',1); return; }
+    if(dir<0 && st.bkIdx===0){ this.bkTurn('cover',-1); return; }
+    this.bkTurn('page', dir);
+  }
+  reducedMotion(){ return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
+  /* Verses run from four lines to a dozen, so a single type size either
+     overflows the page or wastes it. Shrink each one until it fits the paper. */
+  bkFitVerses(){
+    const els=document.querySelectorAll('.bk-verse');
+    for(let i=0;i<els.length;i++){
+      const el=els[i], box=el.parentElement;
+      if(!box || !box.clientHeight) continue;
+      el.style.fontSize='';
+      let size=parseFloat(getComputedStyle(el).fontSize)||20;
+      const min=Math.max(9, size*0.5);
+      let guard=0;
+      while((el.scrollHeight>box.clientHeight+1 || el.scrollWidth>box.clientWidth+1) && size>min && guard++<60){
+        size-=0.5;
+        el.style.fontSize=size.toFixed(2)+'px';
+      }
+    }
   }
   poemLines(body, key){
     const reduce=this.reducedMotion();
     return String(body).split('\n').map((l,i)=>React.createElement('div',{key:key+'-'+i, className:'poem-line',
-      style:{minHeight:'1.1em', animationDelay: reduce?'0s':(i*0.055).toFixed(3)+'s'}}, l.trim()?l:' '));
+      style:{minHeight:'1.05em', animationDelay: reduce?'0s':(i*0.05).toFixed(3)+'s'}}, l.trim()?l:' '));
   }
-  reducedMotion(){ return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
-  /* the right-hand page: date, the song it became, and the verse */
-  bkRecto(p, idx, inkKey, live, single){
-    if(!p) return null;
+  bkPlayPill(p){
     const tk=this.findTrack(p.track);
+    if(!tk) return null;
+    return React.createElement('div',{title:'Play the song this poem became',
+      onClick:(e)=>{ e.stopPropagation(); this.loadTrack(tk.i,true); },
+      style:{display:'inline-flex',alignItems:'center',gap:'8px',alignSelf:'flex-start',border:'1px solid #b5966a',
+        borderRadius:'999px',padding:'6px 14px 6px 11px',fontFamily:"'Space Mono',monospace",fontSize:'10.5px',
+        letterSpacing:'0.12em',textTransform:'uppercase',color:'#6d5537',cursor:'pointer',whiteSpace:'nowrap'}},
+      React.createElement('span',{style:{color:'#8a3049',fontSize:'10px'}},'▶'), tk.t);
+  }
+  /* left page of a poem spread: title, date, and the song it became */
+  bkMetaPage(p, folio, single){
+    if(!p) return null;
     return React.createElement(React.Fragment,null,
-      // with no facing page to hold it, the title comes onto the verse page
-      single ? React.createElement('div',{key:'title',style:{fontFamily:"'UN-Agni',serif",
-        fontSize:'clamp(21px,6vw,32px)',lineHeight:1.2,color:'#33241c',marginBottom:'3%'}}, p.title) : null,
-      React.createElement('div',{key:'head',style:{display:'flex',alignItems:'center',justifyContent:'flex-end',gap:'10px',flexWrap:'wrap'}},
-        React.createElement('div',{style:{fontFamily:"'UN-Isiwara',serif",fontSize:'clamp(12px,1.5vw,17px)',color:'#7d6647'}}, p.date||''),
-        (tk && live) ? React.createElement('div',{title:'Play the song this poem became',
-            onClick:(e)=>{ e.stopPropagation(); this.loadTrack(tk.i,true); },
-            style:{display:'inline-flex',alignItems:'center',gap:'8px',border:'1px solid #b5966a',borderRadius:'999px',
-              padding:'5px 13px 5px 10px',fontFamily:"'Space Mono',monospace",fontSize:'10px',letterSpacing:'0.12em',
-              textTransform:'uppercase',color:'#6d5537',cursor:'pointer',whiteSpace:'nowrap'}},
-            React.createElement('span',{style:{color:'#8a3049',fontSize:'10px'}},'▶'), tk.t) : null),
-      React.createElement('div',{key:'body',style:{flex:1,display:'flex',alignItems:'center',minHeight:0,overflow:'hidden'}},
-        React.createElement('div',{style:{fontFamily:"'UN-Alakamanda',serif",
-          fontSize:single?'clamp(14px,4.2vw,20px)':'clamp(15px,2vw,26px)',lineHeight:single?1.6:1.95,
-          color:'#2f2118',textShadow:'0 0 1px rgba(47,33,24,.3)'}}, this.poemLines(p.body, inkKey))),
-      React.createElement('div',{key:'folio',style:{fontFamily:"'EB Garamond',serif",fontStyle:'italic',
-        fontSize:'clamp(11px,1.3vw,15px)',color:'#9c8259',textAlign:'right'}}, single ? idx+1 : idx*2+2));
+      React.createElement('div',{key:'t',style:{fontFamily:"'UN-Agni',serif",
+        fontSize:single?'clamp(21px,6vw,30px)':'clamp(23px,3vw,38px)',lineHeight:1.22,color:'#33241c'}}, p.title),
+      React.createElement('div',{key:'r',style:{width:'36%',height:'1px',background:'#b5966a',margin:'5% 0 6%'}}),
+      React.createElement('div',{key:'d',style:{fontFamily:"'UN-Isiwara',serif",
+        fontSize:'clamp(13px,1.7vw,19px)',color:'#7d6647'}}, p.date||''),
+      React.createElement('div',{key:'p',style:{marginTop:'7%',display:'flex'}}, this.bkPlayPill(p)),
+      single?null:React.createElement('div',{key:'f',style:{marginTop:'auto',fontFamily:"'EB Garamond',serif",
+        fontStyle:'italic',fontSize:'clamp(11px,1.3vw,15px)',color:'#9c8259'}}, folio));
+  }
+  /* right page of a poem spread: nothing but the verse */
+  bkVersePage(p, folio, inkKey, single){
+    if(!p) return null;
+    return React.createElement(React.Fragment,null,
+      React.createElement('div',{key:'b',style:{flex:1,display:'flex',alignItems:'center',minHeight:0,overflow:'hidden'}},
+        React.createElement('div',{className:'bk-verse'+(single?' single':''), key:inkKey,
+          style:{fontFamily:"'UN-Alakamanda',serif",color:'#2f2118',textShadow:'0 0 1px rgba(47,33,24,.28)'}},
+          this.poemLines(p.body, inkKey))),
+      React.createElement('div',{key:'f',style:{fontFamily:"'EB Garamond',serif",fontStyle:'italic',
+        fontSize:'clamp(11px,1.3vw,15px)',color:'#9c8259',textAlign:'right'}}, folio));
+  }
+  /* the index — the first page after the cover, and nowhere else */
+  bkIndexPage(L, idx, single){
+    const n=L.length;
+    return React.createElement(React.Fragment,null,
+      React.createElement('div',{key:'h',style:{fontFamily:"'UN-Agni',serif",
+        fontSize:single?'clamp(22px,6vw,30px)':'clamp(24px,3vw,38px)',lineHeight:1.2,color:'#33241c'}},'පටුන'),
+      React.createElement('div',{key:'r',style:{width:'34%',height:'1px',background:'#b5966a',margin:'4% 0 6%'}}),
+      React.createElement('div',{key:'l',style:{flex:1,minHeight:0,display:'flex',flexDirection:'column',
+        justifyContent:'flex-start',gap:n>12?'0':'2px',overflow:'hidden'}},
+        L.map((p,i)=>React.createElement('div',{key:'e'+i, className:'bk-entry', onClick:this.bkGoTo(i+1),
+          style:{display:'flex',alignItems:'baseline',gap:'8px',cursor:'pointer',padding:'3px 5px',borderRadius:'3px',
+            flexShrink:0,background:(i+1)===idx?'rgba(138,48,73,.10)':'transparent'}},
+          React.createElement('div',{style:{fontFamily:"'EB Garamond',serif",fontSize:'clamp(10px,1.15vw,14px)',color:'#a08760',minWidth:'1.7em'}}, (i+1)+'.'),
+          React.createElement('div',{style:{fontFamily:"'UN-Alakamanda',serif",
+            fontSize:n>12?'clamp(12px,1.25vw,16px)':'clamp(13px,1.45vw,19px)',lineHeight:1.3,
+            color:(i+1)===idx?'#8a3049':'#3a2a20',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}, p.title),
+          React.createElement('div',{style:{fontFamily:"'EB Garamond',serif",fontSize:'clamp(10px,1.15vw,14px)',color:'#a08760'}}, 2*i+3)))),
+      React.createElement('div',{key:'f',style:{fontFamily:"'EB Garamond',serif",fontStyle:'italic',
+        fontSize:'clamp(11px,1.3vw,15px)',color:'#9c8259',textAlign:'right'}},'1'));
+  }
+  /* one page's worth of content, by side and spread index */
+  bkSide(which, s, L, idx, single, inkKey){
+    if(s<0 || s>=this.bkCount()) return null;
+    if(single){
+      if(s===0) return this.bkIndexPage(L, idx, true);
+      const p=L[s-1];
+      return React.createElement(React.Fragment,null,
+        React.createElement('div',{key:'m',style:{display:'flex',flexDirection:'column'}}, this.bkMetaPage(p, null, true)),
+        this.bkVersePage(p, s+1, inkKey, true));
+    }
+    if(which==='L') return s===0 ? null : this.bkMetaPage(L[s-1], 2*s, false);
+    return s===0 ? this.bkIndexPage(L, idx, false) : this.bkVersePage(L[s-1], 2*s+1, inkKey, false);
+  }
+  /* the wire spiral running down the binding edge */
+  bkWire(single){
+    const rings=[];
+    for(let i=0;i<17;i++){
+      rings.push(React.createElement('div',{key:'w'+i, style:{position:'absolute',
+        left:single?'0':'50%', top:(3.4+i*5.7)+'%',
+        width:'clamp(20px,3.2vw,32px)', height:'clamp(7px,1.15vw,12px)',
+        transform:'translate(-50%,-50%) translateZ(11px) rotate(-7deg)',
+        borderRadius:'50%', borderStyle:'solid', borderWidth:'clamp(2px,.32vw,3.4px)',
+        borderColor:'#7a5230 #8a5f38 #3a2413 #6b4527',
+        boxShadow:'0 2px 4px rgba(0,0,0,.55), inset 0 -1px 2px rgba(255,214,168,.28)',
+        pointerEvents:'none', zIndex:8}}));
+    }
+    return rings;
   }
   bkCorner(pos, kind, dir, key){
-    const box={position:'absolute',width:'clamp(50px,14%,108px)',height:'clamp(50px,21%,128px)'};
-    box[pos[0]==='t'?'top':'bottom']=0;
+    const box={position:'absolute',width:'clamp(52px,15%,112px)',height:'clamp(52px,22%,132px)'};
+    box.bottom=0;
     box[pos[1]==='l'?'left':'right']=0;
-    return React.createElement('div',{key:key, className:'bk-corner '+pos, style:box, onPointerDown:this.bkGrab(kind, dir)},
-      React.createElement('div',{className:'bk-curlsh', style:{'--cx':pos[1]==='l'?'0%':'100%','--cy':pos[0]==='t'?'0%':'100%'}}),
+    return React.createElement('div',{key:key, className:'bk-corner '+pos, style:box,
+      title: dir>0?'Turn the page':'Turn back', onClick:()=>this.bkTurn(kind, dir)},
+      React.createElement('div',{className:'bk-curlsh', style:{'--cx':pos[1]==='l'?'0%':'100%','--cy':'100%'}}),
       React.createElement('div',{className:'bk-curl '+pos}));
   }
   renderJournal(){
@@ -1095,93 +1131,68 @@ class Component extends DCLogic {
     if(!s.poemsLoaded){
       return React.createElement('div',{style:{color:'var(--mute)',fontFamily:"'Space Mono',monospace",fontSize:'13px',padding:'20px 0'}},'Loading…');
     }
-    if(!s.poems.length){
+    const L=s.poems, n=L.length;
+    if(!n){
       return React.createElement('div',{style:{border:'1px dashed var(--line3)',borderRadius:'18px',background:'var(--panel)',padding:'48px 28px',textAlign:'center',color:'var(--dim)',fontSize:'15px',lineHeight:1.6}},
         React.createElement('div',{style:{fontFamily:"'Bricolage Grotesque',sans-serif",fontWeight:700,fontSize:'22px',color:'var(--text)',marginBottom:'8px'}},'No poems published yet'),
         'Add your first poem to poems/poems.txt and it will show up here.');
     }
-    const L=s.poems, n=L.length;
-    const idx=Math.min(s.bkIdx, n-1), drag=s.bkDrag, spread=s.bkSpread||s.bkOpen;
-    const cur=L[idx];
-    // while a leaf is mid-turn, the page underneath already shows the far side
-    const rectoIdx = drag && drag.kind==='page' ? (drag.dir>0 ? drag.to : drag.from) : idx;
-    const leafIdx  = drag && drag.kind==='page' ? (drag.dir>0 ? drag.from : drag.to) : idx;
-    const parchR='radial-gradient(circle at 76% 20%,rgba(158,116,58,.09),transparent 44%),repeating-linear-gradient(89deg,rgba(126,94,48,.028) 0 2px,transparent 2px 7px),linear-gradient(#f1e5c9,#e3d1ac)';
-    const parchL='radial-gradient(circle at 22% 24%,rgba(158,116,58,.10),transparent 44%),repeating-linear-gradient(91deg,rgba(126,94,48,.03) 0 2px,transparent 2px 7px),linear-gradient(#f0e4c7,#e2d0aa)';
-    const padR='8% 9% 6% 7%', padL='8% 7% 6% 9%';
-    const slide='1.2s cubic-bezier(.32,.04,.22,1) .18s';
+    const last=n;                                  // spreads run 0 (index) .. n
+    const idx=Math.max(0, Math.min(s.bkIdx, last));
+    const drag=s.bkDrag, spread=s.bkSpread||s.bkOpen;
+    // read live rather than trusting the stored flag: the media-query event is
+    // the thing that schedules a re-render, not the source of truth
+    const single = this.bkIsSingle();
+    const turning = !!(drag && drag.kind==='page');
     const coverTurning = !!(drag && drag.kind==='cover');
-    // On a phone the book is a single leaf: one page wide, and the index lives
-    // below the frame instead of on a facing page.
-    const single = !!s.bkSingle;
+    // A sheet has a recto and a verso, so a turn shows the near spread's right
+    // page on its front and the far spread's left page on its back, whichever
+    // way it is going.
+    const a = turning ? Math.min(drag.from, drag.to) : idx;
+    const b = turning ? Math.max(drag.from, drag.to) : idx;
+    const parchR='radial-gradient(circle at 76% 20%,rgba(158,116,58,.09),transparent 44%),repeating-linear-gradient(89deg,rgba(126,94,48,.028) 0 2px,transparent 2px 7px),linear-gradient(#f3e8cf,#e5d4b2)';
+    const parchL='radial-gradient(circle at 22% 24%,rgba(158,116,58,.10),transparent 44%),repeating-linear-gradient(91deg,rgba(126,94,48,.03) 0 2px,transparent 2px 7px),linear-gradient(#f1e6cc,#e3d2ae)';
+    const padR='8% 9% 6% 8%', padL='8% 8% 6% 9%';
+    const slide='1.1s cubic-bezier(.32,.04,.22,1) .16s';
     const pgLeft = single ? '0' : '50%';
     const pgWidth = single ? '100%' : '50%';
-    // the board only has to slide aside when there are two pages to uncover
-    const boardLeft = (single || spread) ? '-1.4%' : '50%';
-    const boardWidth = (single || spread) ? '102.8%' : '51.4%';
+    const boardLeft = (single || spread) ? '-1.6%' : '50%';
+    const boardWidth = (single || spread) ? '103.2%' : '51.6%';
     const kids=[];
 
-    // back board, spine, and the raised bands across it
-    kids.push(React.createElement('div',{key:'board', style:{position:'absolute',left:boardLeft,top:'-1.8%',
-      width:boardWidth,height:'104%',borderRadius:'6px 12px 12px 6px',
-      background:'linear-gradient(148deg,#4a2018,#2e1210 58%,#3f1a16)',
-      boxShadow:'0 40px 70px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,190,140,.08)',
+    // tan back board, a little proud of the paper on every side
+    kids.push(React.createElement('div',{key:'board', style:{position:'absolute',left:boardLeft,top:'-2%',
+      width:boardWidth,height:'104.6%',borderRadius:'7px',
+      background:'linear-gradient(152deg,#c9a476,#b08a5c 46%,#96733f 78%,#835f31)',
+      boxShadow:'0 38px 68px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,232,196,.22)',
       transition:'left '+slide+',width '+slide}}));
-    kids.push(React.createElement('div',{key:'spine', style:{position:'absolute',left:boardLeft,top:'-1.8%',
-      width:'26px',height:'104%',borderRadius:'6px 0 0 6px',
-      background:'linear-gradient(90deg,#1d0b09,#4a2018 42%,#31150f)',
-      boxShadow:'inset -6px 0 12px rgba(0,0,0,.5)',transition:'left '+slide}}));
-    [0,1,2,3].forEach(k=>kids.push(React.createElement('div',{key:'band'+k, style:{position:'absolute',
-      left:boardLeft,width:'26px',height:'9px',top:(14+k*22)+'%',
-      background:'linear-gradient(90deg,#25100c,#5a2a1e 44%,#2b120d)',
-      boxShadow:'0 1px 2px rgba(0,0,0,.5)',transition:'left '+slide}})));
 
     if(spread && !single){
-      kids.push(React.createElement('div',{key:'base', style:{position:'absolute',inset:0,borderRadius:'4px',
-        background:'linear-gradient(#efe2c4,#dcc9a2)',boxShadow:'inset 0 0 40px rgba(120,88,44,.24)'}}));
-      // left page: the poem's title and the table of contents. Held back while
-      // the board itself is swinging, so the cover lands on bare paper and the
-      // contents are what gets revealed.
+      kids.push(React.createElement('div',{key:'base', style:{position:'absolute',inset:0,borderRadius:'3px',
+        background:'linear-gradient(#f0e5cb,#ded0ab)',boxShadow:'inset 0 0 40px rgba(120,88,44,.22)'}}));
+      // left page — the inside of the cover at the index, the poem's title after
       if(!coverTurning)
       kids.push(React.createElement('div',{key:'left', style:{position:'absolute',left:0,top:0,width:'50%',height:'100%',
-        zIndex:2,padding:padL,borderRadius:'4px 0 0 4px',background:parchL,display:'flex',flexDirection:'column'}},
-        React.createElement('div',{key:'t'+s.bkInk, style:{fontFamily:"'UN-Agni',serif",fontSize:'clamp(24px,3.4vw,42px)',
-          lineHeight:1.2,color:'#33241c',animation:'poemInk .5s ease both'}}, cur.title),
-        React.createElement('div',{style:{width:'30%',height:'1px',background:'#b5966a',margin:'4% 0 7%'}}),
-        React.createElement('div',{style:{fontFamily:"'UN-Agni',serif",fontSize:'clamp(16px,2vw,24px)',lineHeight:1.3,
-          color:'#6d5537',marginBottom:'4%'}},'\u0db4\u0da7\u0dd4\u0db1'),
-        // the index has to fit the page, so it tightens as the book grows
-        React.createElement('div',{style:{flex:1,minHeight:0,display:'flex',flexDirection:'column',
-          justifyContent:'flex-start',gap:n>12?'0':'1px',overflow:'hidden'}},
-          L.map((p,i)=>React.createElement('div',{key:'e'+i, className:'bk-entry', onClick:this.bkGoTo(i),
-            style:{display:'flex',alignItems:'baseline',gap:'8px',cursor:'pointer',padding:(n>12?'1px':'2px')+' 4px',
-              borderRadius:'3px',flexShrink:0,background:i===idx?'rgba(138,48,73,.10)':'transparent'}},
-            React.createElement('div',{style:{fontFamily:"'EB Garamond',serif",fontSize:'clamp(9px,1.1vw,13px)',color:'#a08760',minWidth:'1.6em'}}, (i+1)+'.'),
-            React.createElement('div',{style:{fontFamily:"'UN-Alakamanda',serif",
-              fontSize:n>12?'clamp(11px,1.2vw,15px)':'clamp(12px,1.4vw,18px)',lineHeight:1.3,
-              color:i===idx?'#8a3049':'#3a2a20',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}, p.title),
-            React.createElement('div',{style:{fontFamily:"'EB Garamond',serif",fontSize:'clamp(9px,1.1vw,13px)',color:'#a08760'}}, i*2+2)))),
-        React.createElement('div',{style:{fontFamily:"'EB Garamond',serif",fontStyle:'italic',fontSize:'clamp(11px,1.3vw,15px)',color:'#9c8259'}}, idx*2+1)));
+        zIndex:2,padding:padL,borderRadius:'3px 0 0 3px',
+        background: a===0 ? 'linear-gradient(150deg,#e2cfa8,#cfb98e)' : parchL,
+        display:'flex',flexDirection:'column'}},
+        React.createElement('div',{key:'k'+a+'-'+s.bkInk, style:{display:'flex',flexDirection:'column',flex:1,minHeight:0,
+          animation:'poemInk .5s ease both'}}, this.bkSide('L', a, L, idx, false, 'l'+a+'-'+s.bkInk))));
     }
 
-    // the page carrying the verse
+    // the page carrying the verse (or, at spread 0, the index)
     kids.push(React.createElement('div',{key:'right', style:{position:'absolute',left:pgLeft,top:0,width:pgWidth,height:'100%',
-      zIndex:2,padding:padR,borderRadius:single?'4px':'0 4px 4px 0',background:parchR,display:'flex',flexDirection:'column'}},
-      this.bkRecto(L[rectoIdx], rectoIdx, 'r'+rectoIdx+'-'+s.bkInk, !drag, single)));
+      zIndex:2,padding:padR,borderRadius:single?'3px':'0 3px 3px 0',background:parchR,display:'flex',flexDirection:'column'}},
+      this.bkSide('R', b, L, idx, single, 'r'+b+'-'+s.bkInk)));
 
     if(spread && !single){
-      kids.push(React.createElement('div',{key:'gutter', style:{position:'absolute',left:'47.4%',top:0,width:'5.2%',height:'100%',
-        background:'linear-gradient(90deg,rgba(58,34,14,.02),rgba(58,34,14,.3) 42%,rgba(58,34,14,.36) 50%,rgba(58,34,14,.26) 58%,rgba(58,34,14,.02))',
+      kids.push(React.createElement('div',{key:'gutter', style:{position:'absolute',left:'46.6%',top:0,width:'6.8%',height:'100%',
+        background:'linear-gradient(90deg,rgba(58,34,14,.02),rgba(58,34,14,.26) 40%,rgba(58,34,14,.34) 50%,rgba(58,34,14,.22) 60%,rgba(58,34,14,.02))',
         pointerEvents:'none',zIndex:3}}));
     }
 
-    // Front board: shut it is the cover; open it lies flat beneath the left
-    // page. The stage is preserve-3d, where paint order comes from real depth
-    // rather than z-index, so the opened board is pushed back along Z (before
-    // the rotation, to keep it in the stage's own frame) instead of relying on
-    // a lower z-index, which a 3D context ignores.
-    // With one page there is no facing leaf to hide the opened board under, so
-    // it would hang off the left edge — drop it once it has finished swinging.
+    // Front board. With one page there is no facing leaf to hide it under, so
+    // it is dropped once it has finished swinging.
     if(!single || !s.bkOpen || coverTurning)
     kids.push(React.createElement('div',{key:'cover', className:coverTurning?'bk-leaf':'',
       ref:coverTurning?(el=>{this._bkLeaf=el;}):null,
@@ -1189,50 +1200,53 @@ class Component extends DCLogic {
         transformStyle:'preserve-3d', zIndex:coverTurning?7:(s.bkOpen?1:8),
         transform:coverTurning?undefined:(s.bkOpen?'translateZ(-8px) rotateY(-179.4deg)':'rotateY(0deg)'),
         transition:coverTurning?'none':'transform 1.1s cubic-bezier(.32,.04,.22,1)'}},
-      React.createElement('div',{className:'bk-face', style:{borderRadius:'0 10px 10px 0',
-        background:'linear-gradient(142deg,#5e2a1c,#3a1512 46%,#4d2019 78%,#2f100e)',
-        boxShadow:'6px 10px 34px rgba(0,0,0,.56),inset 0 1px 0 rgba(255,196,150,.1)',
+      React.createElement('div',{className:'bk-face', style:{borderRadius:'3px 8px 8px 3px',
+        background:'linear-gradient(154deg,#e3c096,#cda772 40%,#b78f57 72%,#a67f49)',
+        boxShadow:'6px 10px 34px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,240,212,.34)',
         display:'flex',alignItems:'center',justifyContent:'center',padding:'8%'}},
-        React.createElement('div',{style:{position:'absolute',inset:'5% 6%',border:'1px solid rgba(214,170,104,.34)',borderRadius:'3px'}}),
-        React.createElement('div',{style:{position:'absolute',inset:'7% 8%',border:'1px solid rgba(214,170,104,.16)',borderRadius:'2px'}}),
-        React.createElement('div',{style:{position:'absolute',inset:0,borderRadius:'0 10px 10px 0',pointerEvents:'none',
-          background:'radial-gradient(ellipse at 26% 22%,rgba(255,196,132,.14),transparent 58%),repeating-linear-gradient(58deg,rgba(0,0,0,.05) 0 2px,transparent 2px 5px)'}}),
-        React.createElement('div',{style:{position:'relative',display:'flex',flexDirection:'column',alignItems:'center',gap:'5%',textAlign:'center'}},
-          React.createElement('div',{style:{fontFamily:"'Space Mono',monospace",fontSize:'clamp(9px,1.1vw,11px)',letterSpacing:'0.42em',textTransform:'uppercase',color:'rgba(222,180,116,.72)'}},'Emortia'),
-          React.createElement('div',{style:{fontFamily:"'UN-Agni',serif",fontSize:'clamp(38px,6vw,72px)',lineHeight:1.12,color:'#e5bd7d',
-            textShadow:'0 1px 0 rgba(90,50,16,.9),0 0 26px rgba(226,176,102,.24)'}},'\u0da2\u0dbb\u0dca\u0db1\u0dbd\u0dba'),
-          React.createElement('div',{style:{width:'clamp(60px,10vw,110px)',height:'1px',background:'linear-gradient(90deg,transparent,rgba(222,180,116,.7),transparent)'}}),
-          React.createElement('div',{style:{fontFamily:"'EB Garamond',serif",fontStyle:'italic',fontSize:'clamp(13px,1.6vw,18px)',color:'rgba(214,170,104,.68)'}},'poems, kept by hand'),
-          React.createElement('div',{style:{fontFamily:"'Space Mono',monospace",fontSize:'clamp(8px,1vw,10px)',letterSpacing:'0.3em',textTransform:'uppercase',color:'rgba(222,180,116,.44)',marginTop:'6%'}}, n+(n===1?' poem':' poems'))),
-        coverTurning?React.createElement('div',{className:'bk-shade', ref:el=>{this._bkFrontShade=el;}, style:{opacity:0}}):null),
-      React.createElement('div',{className:'bk-face', style:{transform:'rotateY(180deg)',borderRadius:'10px 0 0 10px',
-        background:'linear-gradient(#e4d3ae,#d2bd94)',boxShadow:'inset 0 0 40px rgba(110,78,38,.3)'}},
+      React.createElement('div',{style:{position:'absolute',inset:0,borderRadius:'3px 8px 8px 3px',pointerEvents:'none',
+        background:'radial-gradient(ellipse at 28% 18%,rgba(255,238,206,.36),transparent 62%),repeating-linear-gradient(64deg,rgba(120,84,42,.045) 0 2px,transparent 2px 5px),repeating-linear-gradient(154deg,rgba(120,84,42,.035) 0 3px,transparent 3px 7px)'}}),
+      React.createElement('div',{style:{position:'absolute',inset:'5.5% 6%',border:'1px solid rgba(122,84,40,.28)',borderRadius:'2px'}}),
+      React.createElement('div',{style:{position:'relative',display:'flex',flexDirection:'column',alignItems:'center',gap:'5%',textAlign:'center'}},
+        React.createElement('div',{style:{fontFamily:"'Space Mono',monospace",fontSize:'clamp(9px,1.1vw,11px)',letterSpacing:'0.42em',textTransform:'uppercase',color:'rgba(88,58,24,.72)',textShadow:'0 1px 0 rgba(255,240,210,.5)'}},'Emortia'),
+        React.createElement('div',{style:{fontFamily:"'UN-Agni',serif",fontSize:'clamp(38px,6vw,70px)',lineHeight:1.12,color:'#5b3d1e',
+          textShadow:'0 1px 0 rgba(255,240,210,.6),0 -1px 1px rgba(80,50,16,.32)'}},'ජර්නලය'),
+        React.createElement('div',{style:{width:'clamp(60px,10vw,110px)',height:'1px',background:'linear-gradient(90deg,transparent,rgba(110,76,34,.6),transparent)'}}),
+        React.createElement('div',{style:{fontFamily:"'EB Garamond',serif",fontStyle:'italic',fontSize:'clamp(13px,1.6vw,18px)',color:'rgba(96,66,30,.8)'}},'poems, kept by hand'),
+        React.createElement('div',{style:{fontFamily:"'Space Mono',monospace",fontSize:'clamp(8px,1vw,10px)',letterSpacing:'0.3em',textTransform:'uppercase',color:'rgba(96,66,30,.55)',marginTop:'6%'}}, n+(n===1?' poem':' poems'))),
+      coverTurning?React.createElement('div',{className:'bk-shade', ref:el=>{this._bkFrontShade=el;}, style:{opacity:0}}):null),
+      React.createElement('div',{className:'bk-face', style:{transform:'rotateY(180deg)',borderRadius:'8px 3px 3px 8px',
+        background:'linear-gradient(150deg,#e2cfa8,#cfb98e)',boxShadow:'inset 0 0 40px rgba(110,78,38,.28)'}},
         coverTurning?React.createElement('div',{className:'bk-shade', ref:el=>{this._bkBackShade=el;}, style:{opacity:0}}):null)));
 
-    // the leaf that is mid-turn
-    if(drag && drag.kind==='page'){
+    // the leaf mid-roll: recto of the near spread, verso of the far one
+    if(turning){
       kids.push(React.createElement('div',{key:'leaf', className:'bk-leaf', ref:el=>{this._bkLeaf=el;},
         style:{position:'absolute',left:pgLeft,top:0,width:pgWidth,height:'100%',transformOrigin:'left center',zIndex:7}},
-        React.createElement('div',{className:'bk-face', style:{padding:padR,borderRadius:single?'4px':'0 4px 4px 0',background:parchR,display:'flex',flexDirection:'column'}},
-          this.bkRecto(L[leafIdx], leafIdx, 'lf'+leafIdx, false, single),
+        React.createElement('div',{className:'bk-face', style:{padding:padR,borderRadius:single?'3px':'0 3px 3px 0',
+          background:parchR,display:'flex',flexDirection:'column'}},
+          this.bkSide('R', a, L, idx, single, 'la'+a),
           React.createElement('div',{className:'bk-shade', ref:el=>{this._bkFrontShade=el;}, style:{opacity:0}})),
-        React.createElement('div',{className:'bk-face', style:{transform:'rotateY(180deg)',padding:padL,borderRadius:'4px 0 0 4px',
-          background:'radial-gradient(circle at 22% 24%,rgba(158,116,58,.10),transparent 44%),linear-gradient(#ece0c3,#decca6)'}},
+        React.createElement('div',{className:'bk-face', style:{transform:'rotateY(180deg)',padding:padL,
+          borderRadius:single?'3px':'3px 0 0 3px',
+          background: single ? parchR : (b===0?'linear-gradient(150deg,#e2cfa8,#cfb98e)':parchL),
+          display:'flex',flexDirection:'column'}},
+          single?null:this.bkSide('L', b, L, idx, false, 'lb'+b),
           React.createElement('div',{className:'bk-shade', ref:el=>{this._bkBackShade=el;}, style:{opacity:0}}))));
     }
 
-    kids.push(React.createElement('div',{key:'vig', style:{position:'absolute',inset:0,borderRadius:'4px',pointerEvents:'none',zIndex:4,
-      background:'radial-gradient(ellipse at 50% 46%,transparent 52%,rgba(40,22,8,.2) 88%)'}}));
+    // the wire sits on the binding edge whether the book is shut or open
+    kids.push.apply(kids, this.bkWire(single));
 
-    // the grab corners: the only way through the book
+    kids.push(React.createElement('div',{key:'vig', style:{position:'absolute',inset:0,borderRadius:'3px',pointerEvents:'none',zIndex:4,
+      background:'radial-gradient(ellipse at 50% 46%,transparent 54%,rgba(40,22,8,.18) 90%)'}}));
+
+    // the bottom corners — click either one to roll the page
     if(!drag){
-      if(!s.bkOpen){
-        kids.push(this.bkCorner('br','cover',1,'c-br'));
-        kids.push(this.bkCorner('tr','cover',1,'c-tr'));
-      } else {
-        if(idx<n-1){ kids.push(this.bkCorner('br','page',1,'p-br')); kids.push(this.bkCorner('tr','page',1,'p-tr')); }
-        if(idx>0){ kids.push(this.bkCorner('bl','page',-1,'p-bl')); kids.push(this.bkCorner('tl','page',-1,'p-tl')); }
-        else { kids.push(this.bkCorner('bl','cover',-1,'c-bl')); kids.push(this.bkCorner('tl','cover',-1,'c-tl')); }
+      if(!s.bkOpen){ kids.push(this.bkCorner('br','cover',1,'c-br')); }
+      else {
+        if(idx<last) kids.push(this.bkCorner('br','page',1,'p-br'));
+        kids.push(this.bkCorner('bl', idx>0?'page':'cover', -1, 'x-bl'));
       }
     }
 
@@ -1241,23 +1255,13 @@ class Component extends DCLogic {
       boxShadow:'inset 0 0 100px rgba(0,0,0,.66)',overflow:'hidden'}},
       React.createElement('div',{style:{perspective:'2600px',perspectiveOrigin:'50% 42%',display:'flex',justifyContent:'center'}},
         React.createElement('div',{ref:el=>{this._bkStage=el;}, style:{position:'relative',
-          width:single?'min(420px,100%)':'min(860px,100%)', aspectRatio:single?'420/540':'860/548',
+          width:single?'min(420px,100%)':'min(860px,100%)', aspectRatio:single?'420/560':'860/548',
           transformStyle:'preserve-3d',
           transform:(single||spread)?'none':'translateX(-25%)',transition:'transform '+slide}}, kids)),
       React.createElement('div',{style:{textAlign:'center',marginTop:'clamp(16px,2.5vw,26px)',fontFamily:"'Space Mono',monospace",
         fontSize:'11px',letterSpacing:'0.18em',textTransform:'uppercase',color:'#8c6f47'}},
-        s.bkOpen ? (idx+1)+' / '+n+' \u00b7 take a corner' : 'take a corner to open'),
-      // on a phone the index sits under the book rather than on a facing page
-      (single && s.bkOpen) ? React.createElement('div',{style:{marginTop:'clamp(18px,4vw,28px)',
-        borderTop:'1px solid rgba(214,170,104,.22)',paddingTop:'14px',display:'flex',flexDirection:'column',gap:'2px'}},
-        React.createElement('div',{style:{fontFamily:"'UN-Agni',serif",fontSize:'18px',color:'#c79a55',marginBottom:'6px'}},'\u0db4\u0da7\u0dd4\u0db1'),
-        L.map((p,i)=>React.createElement('div',{key:'m'+i, className:'bk-entry', onClick:this.bkGoTo(i),
-          style:{display:'flex',alignItems:'baseline',gap:'10px',cursor:'pointer',padding:'6px 8px',borderRadius:'6px',
-            background:i===idx?'rgba(214,170,104,.13)':'transparent'}},
-          React.createElement('div',{style:{fontFamily:"'Space Mono',monospace",fontSize:'11px',color:'#8c6f47',minWidth:'1.8em'}}, (i+1)+'.'),
-          React.createElement('div',{style:{fontFamily:"'UN-Alakamanda',serif",fontSize:'17px',lineHeight:1.35,
-            color:i===idx?'#e5bd7d':'#c2a888',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}, p.title),
-          React.createElement('div',{style:{fontFamily:"'UN-Isiwara',serif",fontSize:'12px',color:'#8c6f47'}}, p.date||''))) ) : null);
+        s.bkOpen ? (idx===0 ? 'Index · click a bottom corner' : idx+' / '+n+' · click a bottom corner')
+                 : 'click the corner to open'));
   }
 
   // ---- dreamy per-song background scene ----
