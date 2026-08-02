@@ -222,6 +222,22 @@ input,textarea,button{font-family:inherit;}
 .bk-endpaper{background:linear-gradient(150deg,#e2cfa8,#cfb98e);}
 .bk-entry{transition:background .18s ease;}
 .bk-entry:hover{background:rgba(138,48,73,.10) !important;}
+/* ---- the shelf ---- */
+.bk-shelf{display:flex;gap:clamp(18px,3vw,52px);justify-content:center;align-items:flex-start;
+  flex-wrap:wrap;padding:clamp(8px,2vw,22px) 0 clamp(4px,1vw,12px);}
+@keyframes bkVolIn{0%{opacity:0;transform:translateY(26px) rotateX(14deg);}100%{opacity:1;transform:none;}}
+.bk-vol{cursor:pointer;animation:bkVolIn .62s cubic-bezier(.2,.8,.28,1) both;}
+.bk-volcover{position:relative;width:clamp(132px,15vw,208px);aspect-ratio:430/548;overflow:hidden;
+  border-radius:3px 9px 9px 3px;box-shadow:6px 12px 30px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,232,196,.2);
+  transition:transform .34s cubic-bezier(.2,.8,.28,1),box-shadow .34s ease;}
+.bk-vol:hover .bk-volcover{transform:translateY(-14px) rotate(-1.2deg);
+  box-shadow:10px 26px 50px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,232,196,.28);}
+.bk-vol:active .bk-volcover{transform:translateY(-6px) scale(.985);}
+.bk-back{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;
+  color:#e2c69b;cursor:pointer;border:1px solid rgba(214,170,104,.34);border-radius:999px;
+  padding:8px 16px;background:rgba(24,13,6,.5);transition:border-color .2s ease,color .2s ease,transform .2s ease;}
+.bk-back:hover{border-color:#e5bd7d;color:#fff6e6;transform:translateY(-1px);}
+@media (prefers-reduced-motion:reduce){.bk-vol{animation:none;}.bk-volcover,.bk-back{transition:none;}}
 @media (hover:none){.bk-curl,.bk-curlsh{opacity:.6;transform:scale(.62);}}
 @media (prefers-reduced-motion:reduce){.poem-line{animation:none;}.bk-curl,.bk-curlsh{transition:none;}}
 /* ---- journal: vinyl-room paper stack ---- */
@@ -416,7 +432,7 @@ input,textarea,button{font-family:inherit;}
     <section style="animation:fadeUp 0.5s ease;padding:40px 0 60px;">
       <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:0.2em;color:var(--accent);text-transform:uppercase;">Poems & writing</div>
       <h2 style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(40px,6vw,68px);letter-spacing:-0.03em;margin:6px 0 6px;">Journal</h2>
-      <p style="color:var(--dim);font-size:14px;margin:0 0 22px;">A wire-bound book. Click a bottom corner to roll the page over.</p>
+      <p style="color:var(--dim);font-size:14px;margin:0 0 22px;">Three wire-bound books. Take one down, then click a bottom corner to roll the page over.</p>
       {{ journalContent }}
     </section>
     </sc-if>
@@ -635,7 +651,7 @@ class Component extends DCLogic {
     }));
     const pp=this.loadPlayerPrefs();
     this.state = { page:'home', theme:'burgundy', menuOpen:false, poems:[], poemsLoaded:false,
-      bkOpen:false, bkIdx:0, bkSpread:false, bkDrag:null, bkInk:0,
+      bkOpen:false, bkIdx:0, bkSpread:false, bkDrag:null, bkInk:0, bkVol:0, bkShelf:true,
       bkSingle:(window.matchMedia && window.matchMedia('(max-width:700px)').matches), playing:false, idx:0, progress:0, volume:pp.volume, muted:pp.muted, shuffle:pp.shuffle, repeat:pp.repeat, queueOpen:false, contact:{name:'',email:'',msg:''}, sent:false, audioMissing:false, syncTimes:[], lyricsOpen:false, fsOpen:false };
     this.PLAYER_KEY='emortia_player_v1';
     this._preMuteVol=pp.volume||0.78;
@@ -873,17 +889,20 @@ class Component extends DCLogic {
     const poems=[]; let cur=null;
     for(const line of lines){
       const tm=line.match(/^@title:\s*(.*)$/i);
-      if(tm){ cur={title:tm[1].trim(),date:'',track:'',body:[]}; poems.push(cur); continue; }
+      if(tm){ cur={title:tm[1].trim(),date:'',track:'',book:'',body:[]}; poems.push(cur); continue; }
       if(!cur) continue;
       const dm=line.match(/^@date:\s*(.*)$/i);
       if(dm){ cur.date=dm[1].trim(); continue; }
       const km=line.match(/^@track:\s*(.*)$/i);
       if(km){ cur.track=km[1].trim(); continue; }
+      const bm=line.match(/^@book:\s*(.*)$/i);
+      if(bm){ cur.book=bm[1].trim().toLowerCase(); continue; }
       cur.body.push(line);
     }
     return poems
       .filter(p=>p.title)
-      .map(p=>({title:p.title, date:p.date, track:p.track, body:p.body.join('\n').replace(/^\n+|\n+$/g,'')}));
+      .map(p=>({title:p.title, date:p.date, track:p.track, book:p.book,
+        body:p.body.join('\n').replace(/^\n+|\n+$/g,'')}));
   }
   /* a poem names the song it became with "@track:", matched on title or slug */
   findTrack(name){
@@ -930,8 +949,87 @@ class Component extends DCLogic {
      s>=1 is poem s-1: its title, date and song on the left, the verse facing
      it on the right. Turning is a click on a bottom corner — the leaf rolls
      off the wire on its own arc rather than chasing the pointer. */
-  bkCount(){ return this.state.poems.length + 1; }          // index page + a sheet per poem
+  /* The shelf. A poem picks its volume with "@book:" naming either the id or
+     the title; anything unmarked falls into the first one. */
+  bkVolumes(){ return [
+    {id:'kaviya', title:'කවිය', sub:'poems, kept by hand',
+     cover:'linear-gradient(154deg,#e3c096,#cda772 40%,#b78f57 72%,#a67f49)', ink:'#5b3d1e'},
+    {id:'corona', title:'කොරෝනා කාලේ ආතල්', sub:'written through the lockdown',
+     cover:'linear-gradient(154deg,#dfae98,#c98d73 40%,#ae7056 72%,#98604a)', ink:'#5a2f1e'},
+    {id:'satahan', title:'සටහන්', sub:'notes from the studio',
+     cover:'linear-gradient(154deg,#cbc79c,#adaa79 40%,#93905e 72%,#7d7a4d)', ink:'#3f3f1d'}
+  ]; }
+  bkVolIdx(){ const v=this.state.bkVol; return (v>=0 && v<this.bkVolumes().length) ? v : 0; }
+  bkPoemsIn(i){
+    const vols=this.bkVolumes(), v=vols[i];
+    if(!v) return [];
+    const known={}; vols.forEach(x=>{ known[x.id]=1; known[x.title.toLowerCase()]=1; });
+    return this.state.poems.filter(p=>{
+      const b=(p.book||'').trim().toLowerCase();
+      if(!b || !known[b]) return i===0;                    // unmarked, or a name we don't know
+      return b===v.id || b===v.title.toLowerCase();
+    });
+  }
+  bkList(){ return this.bkPoemsIn(this.bkVolIdx()); }
+  bkCount(){ return this.bkList().length + 1; }             // index page + a sheet per poem
   bkIsSingle(){ return (window.innerWidth||0) <= 700; }     // one page per leaf on a phone
+  /* Fly the book between its slot on the shelf and the reading stage: measure
+     both boxes, start the stage sitting exactly on the shelf slot, then let it
+     travel to its own place. The reverse on the way out. */
+  bkFly(fromRect, after){
+    const el=this._bkFlyEl;
+    if(!el || !fromRect || this.reducedMotion()){ if(after) after(); return; }
+    const to=el.getBoundingClientRect();
+    if(!to.width || !fromRect.width){ if(after) after(); return; }
+    const sx=fromRect.width/to.width, sy=fromRect.height/to.height;
+    const dx=(fromRect.left+fromRect.width/2)-(to.left+to.width/2);
+    const dy=(fromRect.top+fromRect.height/2)-(to.top+to.height/2);
+    el.style.transition='none';
+    el.style.transformOrigin='50% 50%';
+    el.style.transform='translate('+dx.toFixed(1)+'px,'+dy.toFixed(1)+'px) scale('+sx.toFixed(4)+','+sy.toFixed(4)+')';
+    el.style.opacity='0.25';
+    void el.offsetWidth;                                    // commit the start frame
+    el.style.transition='transform .78s cubic-bezier(.22,.72,.24,1),opacity .42s ease';
+    el.style.transform='none';
+    el.style.opacity='1';
+    clearTimeout(this._bkFlyT);
+    this._bkFlyT=setTimeout(()=>{ if(el) el.style.transition=''; if(after) after(); }, 820);
+  }
+  bkFlyOut(toRect, after){
+    const el=this._bkFlyEl;
+    if(!el || !toRect || this.reducedMotion()){ if(after) after(); return; }
+    const from=el.getBoundingClientRect();
+    if(!from.width || !toRect.width){ if(after) after(); return; }
+    const sx=toRect.width/from.width, sy=toRect.height/from.height;
+    const dx=(toRect.left+toRect.width/2)-(from.left+from.width/2);
+    const dy=(toRect.top+toRect.height/2)-(from.top+from.height/2);
+    el.style.transformOrigin='50% 50%';
+    el.style.transition='transform .66s cubic-bezier(.5,0,.3,1),opacity .5s ease .16s';
+    el.style.transform='translate('+dx.toFixed(1)+'px,'+dy.toFixed(1)+'px) scale('+sx.toFixed(4)+','+sy.toFixed(4)+')';
+    el.style.opacity='0.15';
+    clearTimeout(this._bkFlyT);
+    this._bkFlyT=setTimeout(()=>{
+      if(el){ el.style.transition=''; el.style.transform=''; el.style.opacity=''; }
+      if(after) after();
+    }, 700);
+  }
+  /* pull a volume off the shelf, then swing its cover open */
+  bkPickVolume(i, rect){
+    if(this._bkBusy || this._bk) return;
+    this._bkFromRect=rect;
+    this.setState({bkVol:i, bkShelf:false, bkOpen:false, bkSpread:false, bkIdx:0, bkDrag:null},
+      ()=>{
+        this.bkFly(this._bkFromRect, ()=>{
+          if(this.bkList().length) this.bkTurn('cover',1);
+        });
+      });
+  }
+  /* shut the cover, then set the book back in its slot */
+  bkToShelf(){
+    const slot=this._bkSlots && this._bkSlots[this.bkVolIdx()];
+    const rect=slot && slot.getBoundingClientRect ? slot.getBoundingClientRect() : this._bkFromRect;
+    this.bkFlyOut(rect, ()=>this.setState({bkShelf:true, bkOpen:false, bkSpread:false, bkIdx:0, bkDrag:null}));
+  }
   bkGeo(){
     const el=this._bkStage; if(!el) return null;
     const r=el.getBoundingClientRect();
@@ -992,7 +1090,8 @@ class Component extends DCLogic {
         this._bk=null; this._bkBusy=false;
         if(kind==='cover'){
           const open=(toU===1);
-          this.setState(s2=>({bkOpen:open, bkSpread:open, bkDrag:null, bkInk:s2.bkInk+1}));
+          this.setState(s2=>({bkOpen:open, bkSpread:open, bkDrag:null, bkInk:s2.bkInk+1}),
+            open?null:()=>this.bkToShelf());     // shut it, then set it back on the shelf
         } else {
           this.setState(s2=>({bkIdx:to, bkDrag:null, bkInk:s2.bkInk+1}));
         }
@@ -1011,7 +1110,7 @@ class Component extends DCLogic {
   }
   bkStep(dir){
     const st=this.state;
-    if(!st.poems.length) return;
+    if(st.bkShelf || !this.bkList().length) return;
     if(!st.bkOpen){ if(dir>0) this.bkTurn('cover',1); return; }
     if(dir<0 && st.bkIdx===0){ this.bkTurn('cover',-1); return; }
     this.bkTurn('page', dir);
@@ -1111,14 +1210,16 @@ class Component extends DCLogic {
     return s===0 ? this.bkIndexPage(L, idx, false) : this.bkVersePage(L[s-1], 2*s+1, inkKey, false);
   }
   /* the wire spiral running down the binding edge */
-  bkWire(single){
+  bkWire(single, small){
     const rings=[];
     for(let i=0;i<17;i++){
       rings.push(React.createElement('div',{key:'w'+i, style:{position:'absolute',
         left:single?'0':'50%', top:(3.4+i*5.7)+'%',
-        width:'clamp(20px,3.2vw,32px)', height:'clamp(7px,1.15vw,12px)',
+        width:small?'clamp(13px,1.8vw,19px)':'clamp(20px,3.2vw,32px)',
+        height:small?'clamp(5px,.7vw,7.5px)':'clamp(7px,1.15vw,12px)',
         transform:'translate(-50%,-50%) translateZ(11px) rotate(-7deg)',
-        borderRadius:'50%', borderStyle:'solid', borderWidth:'clamp(2px,.32vw,3.4px)',
+        borderRadius:'50%', borderStyle:'solid',
+        borderWidth:small?'clamp(1.4px,.2vw,2.2px)':'clamp(2px,.32vw,3.4px)',
         borderColor:'#7a5230 #8a5f38 #3a2413 #6b4527',
         boxShadow:'0 2px 4px rgba(0,0,0,.55), inset 0 -1px 2px rgba(255,214,168,.28)',
         pointerEvents:'none', zIndex:8}}));
@@ -1134,17 +1235,61 @@ class Component extends DCLogic {
       React.createElement('div',{className:'bk-curlsh', style:{'--cx':pos[1]==='l'?'0%':'100%','--cy':'100%'}}),
       React.createElement('div',{className:'bk-curl '+pos}));
   }
+  /* the shelf: one spine-on-the-left volume per book, waiting to be taken down */
+  bkRenderShelf(){
+    const vols=this.bkVolumes();
+    this._bkSlots=this._bkSlots||[];
+    return React.createElement('div',{className:'bk-shelf'},
+      vols.map((v,i)=>{
+        const cnt=this.bkPoemsIn(i).length;
+        return React.createElement('div',{key:v.id, className:'bk-vol', style:{animationDelay:(i*0.09).toFixed(2)+'s'},
+          onClick:(e)=>{
+            const slot=e.currentTarget.querySelector('.bk-volcover');
+            this.bkPickVolume(i, slot?slot.getBoundingClientRect():null);
+          }},
+          React.createElement('div',{className:'bk-volcover', ref:el=>{this._bkSlots[i]=el;},
+            style:{background:v.cover}},
+            React.createElement('div',{style:{position:'absolute',inset:0,pointerEvents:'none',
+              background:'radial-gradient(ellipse at 28% 18%,rgba(255,238,206,.34),transparent 62%),radial-gradient(ellipse at 74% 82%,rgba(96,62,26,.18),transparent 58%)'}}),
+            React.createElement('div',{style:{position:'absolute',inset:'6% 7%',border:'1px solid rgba(122,84,40,.3)',borderRadius:'2px'}}),
+            this.bkWire(true,true),
+            React.createElement('div',{style:{position:'relative',zIndex:9,display:'flex',flexDirection:'column',
+              alignItems:'center',justifyContent:'center',gap:'8%',height:'100%',padding:'12% 13% 12% 20%',textAlign:'center'}},
+              React.createElement('div',{style:{fontFamily:"'Space Mono',monospace",fontSize:'clamp(7px,.8vw,9px)',
+                letterSpacing:'0.34em',textTransform:'uppercase',color:'rgba(88,58,24,.7)',
+                textShadow:'0 1px 0 rgba(255,240,210,.45)'}},'Emortia'),
+              React.createElement('div',{style:{fontFamily:"'UN-Agni',serif",fontSize:'clamp(17px,2.1vw,27px)',
+                lineHeight:1.16,color:v.ink,textShadow:'0 1px 0 rgba(255,240,210,.55)'}}, v.title),
+              React.createElement('div',{style:{width:'54%',height:'1px',
+                background:'linear-gradient(90deg,transparent,rgba(110,76,34,.6),transparent)'}}))),
+          React.createElement('div',{style:{fontFamily:"'EB Garamond',serif",fontStyle:'italic',fontSize:'14px',
+            color:'rgba(214,170,104,.72)',marginTop:'13px',textAlign:'center'}}, v.sub),
+          React.createElement('div',{style:{fontFamily:"'Space Mono',monospace",fontSize:'9.5px',letterSpacing:'0.28em',
+            textTransform:'uppercase',color:cnt?'rgba(222,180,116,.5)':'rgba(222,180,116,.28)',marginTop:'6px',textAlign:'center'}},
+            cnt ? cnt+(cnt===1?' leaf':' leaves') : 'empty'));
+      }));
+  }
   renderJournal(){
     const s=this.state;
     if(!s.poemsLoaded){
       return React.createElement('div',{style:{color:'var(--mute)',fontFamily:"'Space Mono',monospace",fontSize:'13px',padding:'20px 0'}},'Loading…');
     }
-    const L=s.poems, n=L.length;
-    if(!n){
+    if(!s.poems.length){
       return React.createElement('div',{style:{border:'1px dashed var(--line3)',borderRadius:'18px',background:'var(--panel)',padding:'48px 28px',textAlign:'center',color:'var(--dim)',fontSize:'15px',lineHeight:1.6}},
         React.createElement('div',{style:{fontFamily:"'Bricolage Grotesque',sans-serif",fontWeight:700,fontSize:'22px',color:'var(--text)',marginBottom:'8px'}},'No poems published yet'),
         'Add your first poem to poems/poems.txt and it will show up here.');
     }
+    const shellStyle={borderRadius:'22px',padding:'clamp(24px,4vw,56px) clamp(16px,3vw,44px)',
+      background:'radial-gradient(ellipse at 50% 6%,#3b2413,#1e1108 52%,#0d0704 84%)',
+      boxShadow:'inset 0 0 100px rgba(0,0,0,.66)',overflow:'hidden'};
+    if(s.bkShelf){
+      return React.createElement('div',{style:shellStyle},
+        this.bkRenderShelf(),
+        React.createElement('div',{style:{textAlign:'center',marginTop:'clamp(18px,3vw,30px)',fontFamily:"'Space Mono',monospace",
+          fontSize:'11px',letterSpacing:'0.18em',textTransform:'uppercase',color:'#8c6f47'}},'take one down'));
+    }
+    const vol=this.bkVolumes()[this.bkVolIdx()];
+    const L=this.bkList(), n=L.length;
     const last=n;                                  // spreads run 0 (index) .. n
     const idx=Math.max(0, Math.min(s.bkIdx, last));
     const drag=s.bkDrag, spread=s.bkSpread||s.bkOpen;
@@ -1205,7 +1350,7 @@ class Component extends DCLogic {
         transform:coverTurning?undefined:(s.bkOpen?'translateZ(-8px) rotateY(-179.4deg)':'rotateY(0deg)'),
         transition:coverTurning?'none':'transform 1.1s cubic-bezier(.32,.04,.22,1)'}},
       React.createElement('div',{className:'bk-face', style:{borderRadius:'3px 8px 8px 3px',
-        background:'linear-gradient(154deg,#e3c096,#cda772 40%,#b78f57 72%,#a67f49)',
+        background:vol.cover,
         boxShadow:'6px 10px 34px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,240,212,.34)',
         display:'flex',alignItems:'center',justifyContent:'center',padding:'8%'}},
       React.createElement('div',{style:{position:'absolute',inset:0,borderRadius:'3px 8px 8px 3px',pointerEvents:'none',
@@ -1213,11 +1358,12 @@ class Component extends DCLogic {
       React.createElement('div',{style:{position:'absolute',inset:'5.5% 6%',border:'1px solid rgba(122,84,40,.28)',borderRadius:'2px'}}),
       React.createElement('div',{style:{position:'relative',display:'flex',flexDirection:'column',alignItems:'center',gap:'5%',textAlign:'center'}},
         React.createElement('div',{style:{fontFamily:"'Space Mono',monospace",fontSize:'clamp(9px,1.1vw,11px)',letterSpacing:'0.42em',textTransform:'uppercase',color:'rgba(88,58,24,.72)',textShadow:'0 1px 0 rgba(255,240,210,.5)'}},'Emortia'),
-        React.createElement('div',{style:{fontFamily:"'UN-Agni',serif",fontSize:'clamp(38px,6vw,70px)',lineHeight:1.12,color:'#5b3d1e',
-          textShadow:'0 1px 0 rgba(255,240,210,.6),0 -1px 1px rgba(80,50,16,.32)'}},'ජර්නලය'),
+        React.createElement('div',{style:{fontFamily:"'UN-Agni',serif",fontSize:'clamp(26px,4.4vw,56px)',lineHeight:1.14,color:vol.ink,
+          textShadow:'0 1px 0 rgba(255,240,210,.6),0 -1px 1px rgba(80,50,16,.32)'}}, vol.title),
         React.createElement('div',{style:{width:'clamp(60px,10vw,110px)',height:'1px',background:'linear-gradient(90deg,transparent,rgba(110,76,34,.6),transparent)'}}),
-        React.createElement('div',{style:{fontFamily:"'EB Garamond',serif",fontStyle:'italic',fontSize:'clamp(13px,1.6vw,18px)',color:'rgba(96,66,30,.8)'}},'poems, kept by hand'),
-        React.createElement('div',{style:{fontFamily:"'Space Mono',monospace",fontSize:'clamp(8px,1vw,10px)',letterSpacing:'0.3em',textTransform:'uppercase',color:'rgba(96,66,30,.55)',marginTop:'6%'}}, n+(n===1?' poem':' poems'))),
+        React.createElement('div',{style:{fontFamily:"'EB Garamond',serif",fontStyle:'italic',fontSize:'clamp(13px,1.6vw,18px)',color:'rgba(96,66,30,.8)'}}, vol.sub),
+        React.createElement('div',{style:{fontFamily:"'Space Mono',monospace",fontSize:'clamp(8px,1vw,10px)',letterSpacing:'0.3em',textTransform:'uppercase',color:'rgba(96,66,30,.55)',marginTop:'6%'}},
+          n ? n+(n===1?' poem':' poems') : 'awaiting the first')),
       coverTurning?React.createElement('div',{className:'bk-shade', ref:el=>{this._bkFrontShade=el;}, style:{opacity:0}}):null),
       React.createElement('div',{className:'bk-face', style:{transform:'rotateY(180deg)',borderRadius:'8px 3px 3px 8px',
         background:'linear-gradient(150deg,#e2cfa8,#cfb98e)',boxShadow:'inset 0 0 40px rgba(110,78,38,.28)'}},
@@ -1245,25 +1391,29 @@ class Component extends DCLogic {
 
     // the bottom corners — click either one to roll the page
     if(!drag){
-      if(!s.bkOpen){ kids.push(this.bkCorner('br','cover',1,'c-br')); }
+      if(!s.bkOpen){ if(n) kids.push(this.bkCorner('br','cover',1,'c-br')); }
       else {
         if(idx<last) kids.push(this.bkCorner('br','page',1,'p-br'));
         kids.push(this.bkCorner('bl', idx>0?'page':'cover', -1, 'x-bl'));
       }
     }
 
-    return React.createElement('div',{style:{borderRadius:'22px',padding:'clamp(24px,4vw,56px) clamp(16px,3vw,44px)',
-      background:'radial-gradient(ellipse at 50% 6%,#3b2413,#1e1108 52%,#0d0704 84%)',
-      boxShadow:'inset 0 0 100px rgba(0,0,0,.66)',overflow:'hidden'}},
-      React.createElement('div',{style:{perspective:'2600px',perspectiveOrigin:'50% 42%',display:'flex',justifyContent:'center'}},
-        React.createElement('div',{ref:el=>{this._bkStage=el;}, style:{position:'relative',
-          width:single?'min(420px,100%)':'min(860px,100%)', aspectRatio:single?'420/560':'860/548',
-          transformStyle:'preserve-3d',
-          transform:(single||spread)?'none':'translateX(-25%)',transition:'transform '+slide}}, kids)),
-      React.createElement('div',{style:{textAlign:'center',marginTop:'clamp(16px,2.5vw,26px)',fontFamily:"'Space Mono',monospace",
-        fontSize:'11px',letterSpacing:'0.18em',textTransform:'uppercase',color:'#8c6f47'}},
-        s.bkOpen ? (idx===0 ? 'Index · click a bottom corner' : idx+' / '+n+' · click a bottom corner')
-                 : 'click the corner to open'));
+    return React.createElement('div',{style:shellStyle},
+      React.createElement('div',{ref:el=>{this._bkFlyEl=el;}, style:{willChange:'transform'}},
+        React.createElement('div',{style:{perspective:'2600px',perspectiveOrigin:'50% 42%',display:'flex',justifyContent:'center'}},
+          React.createElement('div',{ref:el=>{this._bkStage=el;}, style:{position:'relative',
+            width:single?'min(420px,100%)':'min(860px,100%)', aspectRatio:single?'420/560':'860/548',
+            transformStyle:'preserve-3d',
+            transform:(single||spread)?'none':'translateX(-25%)',transition:'transform '+slide}}, kids))),
+      React.createElement('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',gap:'16px',
+        marginTop:'clamp(16px,2.5vw,26px)',flexWrap:'wrap'}},
+        React.createElement('div',{onClick:()=>{ if(!this._bkBusy && !this._bk) this.bkToShelf(); },
+          title:'Back to the shelf', className:'bk-back'},'← Shelf'),
+        React.createElement('div',{style:{fontFamily:"'Space Mono',monospace",
+          fontSize:'11px',letterSpacing:'0.18em',textTransform:'uppercase',color:'#8c6f47'}},
+          !n ? 'this one is still empty'
+             : s.bkOpen ? (idx===0 ? 'Index · click a bottom corner' : idx+' / '+n+' · click a bottom corner')
+                        : 'click the corner to open')));
   }
 
   // ---- dreamy per-song background scene ----

@@ -6,6 +6,7 @@ To publish a new poem, copy a block below and change the words:
 
     @title: Your poem title
     @date: July 2026
+    @book: corona
     First line of the poem.
     Second line.
 
@@ -13,10 +14,23 @@ To publish a new poem, copy a block below and change the words:
 
 Rules:
   - "@title:" starts a new poem (this is required).
+  - "@book:" picks which volume it goes in. Leave it out and it goes in කවිය.
   - "@track:" is optional – name a song and the page gets a play button.
   - "@date:" is optional – write anything you like.
   - Newest poem at the top shows first on the site.
   - Save the file, commit, and it appears on the Journal page automatically.
+
+THE THREE BOOKS
+---------------
+Write either the short name or the Sinhala title after "@book:":
+
+    @book: kaviya    or  @book: කවිය                 poems, kept by hand
+    @book: corona    or  @book: කොරෝනා කාලේ ආතල්      written through the lockdown
+    @book: satahan   or  @book: සටහන්                notes from the studio
+
+So to put a poem in the second book, add this one line to it:
+
+    @book: corona
 
 
 @title: හැඩැති මල
