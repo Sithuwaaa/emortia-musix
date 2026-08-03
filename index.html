@@ -227,10 +227,10 @@ input,textarea,button{font-family:inherit;}
   flex-wrap:wrap;padding:clamp(8px,2vw,22px) 0 clamp(4px,1vw,12px);}
 @keyframes bkVolIn{0%{opacity:0;transform:translateY(26px) rotateX(14deg);}100%{opacity:1;transform:none;}}
 /* the book travelling between its slot on the shelf and the reading stage */
-@keyframes bkFlyIn{from{transform:translate(var(--fx,0),var(--fy,0)) scale(var(--fsx,1),var(--fsy,1));opacity:.25;}}
-@keyframes bkFlyOut{to{transform:translate(var(--fx,0),var(--fy,0)) scale(var(--fsx,1),var(--fsy,1));opacity:.15;}}
-.bk-flyin{animation:bkFlyIn .78s cubic-bezier(.22,.72,.24,1);transform-origin:50% 50%;}
-.bk-flyout{animation:bkFlyOut .66s cubic-bezier(.5,0,.3,1) forwards;transform-origin:50% 50%;}
+@keyframes bkFlyIn{from{transform:translate(var(--fx,0),var(--fy,0)) scale(var(--fs,1));opacity:.3;}}
+@keyframes bkFlyOut{to{transform:translate(var(--fx,0),var(--fy,0)) scale(var(--fs,1));opacity:.2;}}
+.bk-flyin{animation:bkFlyIn .78s cubic-bezier(.19,.82,.25,1);transform-origin:50% 50%;}
+.bk-flyout{animation:bkFlyOut .66s cubic-bezier(.55,0,.35,1) forwards;transform-origin:50% 50%;}
 .bk-vol{cursor:pointer;animation:bkVolIn .62s cubic-bezier(.2,.8,.28,1) both;}
 .bk-volcover{position:relative;width:clamp(132px,15vw,208px);aspect-ratio:430/548;overflow:hidden;
   border-radius:3px 9px 9px 3px;box-shadow:6px 12px 30px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,232,196,.2);
@@ -869,6 +869,8 @@ class Component extends DCLogic {
     }
     if(this._bkRaf) cancelAnimationFrame(this._bkRaf);
     if(this._bkGuard) clearTimeout(this._bkGuard);
+    if(this._bkOpenT) clearTimeout(this._bkOpenT);
+    if(this._bkFlyT) clearTimeout(this._bkFlyT);
     if(this._bkUp) this._bkUp();
     if(this._bkMq && this._onBkMq){
       if(this._bkMq.removeEventListener) this._bkMq.removeEventListener('change', this._onBkMq);
@@ -1017,58 +1019,67 @@ class Component extends DCLogic {
      as a transition from a hand-set start frame. That matters: a transition
      that never fires — throttled tab, dropped frame — would strand the book at
      shelf scale, whereas a keyframe that never fires just leaves it in place. */
-  bkFlyDeltas(el, other, invert){
-    const mine=el.getBoundingClientRect();
-    if(!mine.width || !other || !other.width) return null;
-    const a=invert?mine:other, b=invert?other:mine;
-    return {sx:(a.width/b.width), sy:(a.height/b.height),
-      dx:(a.left+a.width/2)-(b.left+b.width/2), dy:(a.top+a.height/2)-(b.top+b.height/2)};
+  /* Put the shut cover exactly on its slot on the shelf.
+     The reference is the cover, not the whole stage: a shut book shows only the
+     right half of the stage, and that half has the same proportions as a shelf
+     cover, so the scale comes out even. Measuring against the whole stage gave
+     4.2x across and 2.1x down — the book arrived huge and stretched.
+     The wrapper scales about its own centre, so the cover's offset from that
+     centre scales too and has to come out of the translation. */
+  bkFlyDeltas(slot){
+    const w=this._bkFlyEl, e=this._bkCover||this._bkStage;
+    if(!w || !e || !slot || !slot.width) return null;
+    const W=w.getBoundingClientRect(), E=e.getBoundingClientRect();
+    if(!W.width || !E.width) return null;
+    const k=slot.width/E.width;
+    const wcx=W.left+W.width/2, wcy=W.top+W.height/2;
+    const ecx=E.left+E.width/2, ecy=E.top+E.height/2;
+    const scx=slot.left+slot.width/2, scy=slot.top+slot.height/2;
+    return {s:k, dx:scx-wcx-k*(ecx-wcx), dy:scy-wcy-k*(ecy-wcy)};
   }
   bkFlySet(el, d){
     el.style.setProperty('--fx', d.dx.toFixed(1)+'px');
     el.style.setProperty('--fy', d.dy.toFixed(1)+'px');
-    el.style.setProperty('--fsx', d.sx.toFixed(4));
-    el.style.setProperty('--fsy', d.sy.toFixed(4));
+    el.style.setProperty('--fs', d.s.toFixed(4));
   }
-  bkFly(fromRect, after){
+  bkFlyRun(slot, cls, ms, after){
     const el=this._bkFlyEl;
-    if(!el || !fromRect || this.reducedMotion()){ if(after) after(); return; }
-    const d=this.bkFlyDeltas(el, fromRect, true);
+    if(!el || this.reducedMotion()){ if(after) after(); return; }
+    const d=this.bkFlyDeltas(slot);
     if(!d){ if(after) after(); return; }
     this.bkFlySet(el, d);
-    el.classList.remove('bk-flyout');
-    el.classList.remove('bk-flyin'); void el.offsetWidth;    // restart if one is already running
-    el.classList.add('bk-flyin');
+    el.classList.remove('bk-flyin','bk-flyout');
+    void el.offsetWidth;                                     // restart if one is already running
+    el.classList.add(cls);
     clearTimeout(this._bkFlyT);
-    this._bkFlyT=setTimeout(()=>{ if(el) el.classList.remove('bk-flyin'); if(after) after(); }, 820);
+    this._bkFlyT=setTimeout(()=>{ if(el) el.classList.remove(cls); if(after) after(); }, ms);
   }
-  bkFlyOut(toRect, after){
-    const el=this._bkFlyEl;
-    if(!el || !toRect || this.reducedMotion()){ if(after) after(); return; }
-    const d=this.bkFlyDeltas(el, toRect, false);
-    if(!d){ if(after) after(); return; }
-    this.bkFlySet(el, d);
-    el.classList.remove('bk-flyin');
-    el.classList.remove('bk-flyout'); void el.offsetWidth;
-    el.classList.add('bk-flyout');
-    clearTimeout(this._bkFlyT);
-    this._bkFlyT=setTimeout(()=>{ if(el) el.classList.remove('bk-flyout'); if(after) after(); }, 700);
-  }
+  bkFly(fromRect, after){ this.bkFlyRun(fromRect,'bk-flyin',800,after); }
+  bkFlyOut(toRect, after){ this.bkFlyRun(toRect,'bk-flyout',680,after); }
   /* pull a volume off the shelf, then swing its cover open */
   bkPickVolume(i, rect){
     if(this._bkBusy || this._bk) return;
     this._bkFromRect=rect;
     this.setState({bkVol:i, bkShelf:false, bkOpen:false, bkSpread:false, bkIdx:0, bkDrag:null},
       ()=>{
-        this.bkFly(this._bkFromRect, ()=>{
+        this.bkFly(this._bkFromRect);
+        // start the cover before the book has quite finished landing, so the two
+        // read as one movement instead of a flight then a pause then a swing
+        clearTimeout(this._bkOpenT);
+        this._bkOpenT=setTimeout(()=>{
           if(this.bkList().length) this.bkTurn('cover',1);
-        });
+        }, this.reducedMotion()?0:520);
       });
   }
   /* shut the cover, then set the book back in its slot */
   bkToShelf(){
+    // The shelf is not mounted while a book is open, so its slot may be a
+    // detached node measuring zero — fall back to where the book was taken from
+    // rather than letting a zero rect skip the flight entirely.
     const slot=this._bkSlots && this._bkSlots[this.bkVolIdx()];
-    const rect=slot && slot.getBoundingClientRect ? slot.getBoundingClientRect() : this._bkFromRect;
+    let rect=null;
+    if(slot && slot.isConnected){ const r=slot.getBoundingClientRect(); if(r.width) rect=r; }
+    if(!rect) rect=this._bkFromRect;
     this.bkFlyOut(rect, ()=>this.setState({bkShelf:true, bkOpen:false, bkSpread:false, bkIdx:0, bkDrag:null}));
   }
   bkGeo(){
@@ -1138,7 +1149,7 @@ class Component extends DCLogic {
         }
       };
       if(this.reducedMotion()){ finish(); return; }
-      this.bkAnimate(fromU, toU, kind==='cover'?1000:880, finish);
+      this.bkAnimate(fromU, toU, kind==='cover'?860:820, finish);
     });
   }
   bkGoTo(i){
@@ -1440,7 +1451,7 @@ class Component extends DCLogic {
     // it is dropped once it has finished swinging.
     if(!single || !s.bkOpen || coverTurning)
     kids.push(React.createElement('div',{key:'cover', className:coverTurning?'bk-leaf':'',
-      ref:coverTurning?(el=>{this._bkLeaf=el;}):null,
+      ref:(el=>{ this._bkCover=el; if(coverTurning) this._bkLeaf=el; }),
       style:{position:'absolute',left:pgLeft,top:0,width:pgWidth,height:'100%',transformOrigin:'left center',
         transformStyle:'preserve-3d', zIndex:coverTurning?7:(s.bkOpen?1:8),
         transform:coverTurning?undefined:(s.bkOpen?'translateZ(-8px) rotateY(-179.4deg)':'rotateY(0deg)'),
