@@ -1386,7 +1386,9 @@ class Component extends DCLogic {
         React.createElement('div',{style:{fontFamily:"'Bricolage Grotesque',sans-serif",fontWeight:700,fontSize:'22px',color:'var(--text)',marginBottom:'8px'}},'No poems published yet'),
         'Add your first poem to poems/poems.txt and it will show up here.');
     }
-    const shellStyle={borderRadius:'22px',padding:'clamp(24px,4vw,56px) clamp(16px,3vw,44px)',
+    // tight padding: the frame is only a surround, and every pixel it gives up
+    // goes to the book
+    const shellStyle={borderRadius:'22px',padding:'clamp(16px,2vw,30px) clamp(12px,1.6vw,26px)',
       background:'radial-gradient(ellipse at 50% 6%,#3b2413,#1e1108 52%,#0d0704 84%)',
       boxShadow:'inset 0 0 100px rgba(0,0,0,.66)',overflow:'hidden'};
     if(s.bkShelf){
@@ -1522,8 +1524,8 @@ class Component extends DCLogic {
             // Cap the width by what is left of the window height as well, or the
             // spread runs past the sticky header and the player and you only ever
             // see half the book. 1.5693 and 0.75 are the two aspect ratios.
-            width: single ? 'max(240px,min(420px,100%,(100vh - 300px) * 0.75))'
-                          : 'max(360px,min(860px,100%,(100vh - 320px) * 1.5693))',
+            width: single ? 'max(240px,min(520px,100%,(100vh - 275px) * 0.75))'
+                          : 'max(360px,min(1100px,100%,(100vh - 290px) * 1.5693))',
             aspectRatio:single?'420/560':'860/548',
             transformStyle:'preserve-3d',
             transform:(single||spread)?'none':'translateX(-25%)',transition:'transform '+slide}}, kids))),
