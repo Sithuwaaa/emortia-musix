@@ -226,6 +226,11 @@ input,textarea,button{font-family:inherit;}
 .bk-shelf{display:flex;gap:clamp(18px,3vw,52px);justify-content:center;align-items:flex-start;
   flex-wrap:wrap;padding:clamp(8px,2vw,22px) 0 clamp(4px,1vw,12px);}
 @keyframes bkVolIn{0%{opacity:0;transform:translateY(26px) rotateX(14deg);}100%{opacity:1;transform:none;}}
+/* the book travelling between its slot on the shelf and the reading stage */
+@keyframes bkFlyIn{from{transform:translate(var(--fx,0),var(--fy,0)) scale(var(--fsx,1),var(--fsy,1));opacity:.25;}}
+@keyframes bkFlyOut{to{transform:translate(var(--fx,0),var(--fy,0)) scale(var(--fsx,1),var(--fsy,1));opacity:.15;}}
+.bk-flyin{animation:bkFlyIn .78s cubic-bezier(.22,.72,.24,1);transform-origin:50% 50%;}
+.bk-flyout{animation:bkFlyOut .66s cubic-bezier(.5,0,.3,1) forwards;transform-origin:50% 50%;}
 .bk-vol{cursor:pointer;animation:bkVolIn .62s cubic-bezier(.2,.8,.28,1) both;}
 .bk-volcover{position:relative;width:clamp(132px,15vw,208px);aspect-ratio:430/548;overflow:hidden;
   border-radius:3px 9px 9px 3px;box-shadow:6px 12px 30px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,232,196,.2);
@@ -244,7 +249,8 @@ input,textarea,button{font-family:inherit;}
   filter:drop-shadow(-7px 8px 16px rgba(0,0,0,.62));}
 .bk-close::after{content:'';position:absolute;right:0;top:0;width:100%;height:100%;
   clip-path:polygon(100% 0,100% 34%,66% 0);background:rgba(255,240,214,.22);}
-@media (prefers-reduced-motion:reduce){.bk-vol{animation:none;}.bk-volcover,.bk-back{transition:none;}}
+@media (prefers-reduced-motion:reduce){.bk-vol{animation:none;}.bk-volcover{transition:none;}
+  .bk-flyin,.bk-flyout{animation:none;}.bk-close{transition:none;}}
 @media (hover:none){.bk-curl,.bk-curlsh{opacity:.6;transform:scale(.62);}}
 @media (prefers-reduced-motion:reduce){.poem-line{animation:none;}.bk-curl,.bk-curlsh{transition:none;}}
 /* ---- journal: vinyl-room paper stack ---- */
@@ -658,7 +664,7 @@ class Component extends DCLogic {
     }));
     const pp=this.loadPlayerPrefs();
     this.state = { page:'home', theme:'burgundy', menuOpen:false, poems:[], poemsLoaded:false,
-      bkOpen:false, bkIdx:0, bkSpread:false, bkDrag:null, bkInk:0, bkVol:0, bkShelf:true,
+      bkOpen:false, bkIdx:0, bkSpread:false, bkDrag:null, bkInk:0, bkVol:0, bkShelf:true, bkPer:10,
       bkSingle:(window.matchMedia && window.matchMedia('(max-width:700px)').matches), playing:false, idx:0, progress:0, volume:pp.volume, muted:pp.muted, shuffle:pp.shuffle, repeat:pp.repeat, queueOpen:false, contact:{name:'',email:'',msg:''}, sent:false, audioMissing:false, syncTimes:[], lyricsOpen:false, fsOpen:false };
     this.PLAYER_KEY='emortia_player_v1';
     this._preMuteVol=pp.volume||0.78;
@@ -1002,47 +1008,51 @@ class Component extends DCLogic {
     });
   }
   bkList(){ return this.bkPoemsIn(this.bkVolIdx()); }
-  bkCount(){ return this.bkList().length + 1; }             // index page + a sheet per poem
+  bkCount(){ return this.bkIndexSpreads() + this.bkList().length; }   // index spreads, then a spread per poem
   bkIsSingle(){ return (window.innerWidth||0) <= 700; }     // one page per leaf on a phone
   /* Fly the book between its slot on the shelf and the reading stage: measure
      both boxes, start the stage sitting exactly on the shelf slot, then let it
      travel to its own place. The reverse on the way out. */
+  /* Both flights run as keyframes off the element's resting state rather than
+     as a transition from a hand-set start frame. That matters: a transition
+     that never fires — throttled tab, dropped frame — would strand the book at
+     shelf scale, whereas a keyframe that never fires just leaves it in place. */
+  bkFlyDeltas(el, other, invert){
+    const mine=el.getBoundingClientRect();
+    if(!mine.width || !other || !other.width) return null;
+    const a=invert?mine:other, b=invert?other:mine;
+    return {sx:(a.width/b.width), sy:(a.height/b.height),
+      dx:(a.left+a.width/2)-(b.left+b.width/2), dy:(a.top+a.height/2)-(b.top+b.height/2)};
+  }
+  bkFlySet(el, d){
+    el.style.setProperty('--fx', d.dx.toFixed(1)+'px');
+    el.style.setProperty('--fy', d.dy.toFixed(1)+'px');
+    el.style.setProperty('--fsx', d.sx.toFixed(4));
+    el.style.setProperty('--fsy', d.sy.toFixed(4));
+  }
   bkFly(fromRect, after){
     const el=this._bkFlyEl;
     if(!el || !fromRect || this.reducedMotion()){ if(after) after(); return; }
-    const to=el.getBoundingClientRect();
-    if(!to.width || !fromRect.width){ if(after) after(); return; }
-    const sx=fromRect.width/to.width, sy=fromRect.height/to.height;
-    const dx=(fromRect.left+fromRect.width/2)-(to.left+to.width/2);
-    const dy=(fromRect.top+fromRect.height/2)-(to.top+to.height/2);
-    el.style.transition='none';
-    el.style.transformOrigin='50% 50%';
-    el.style.transform='translate('+dx.toFixed(1)+'px,'+dy.toFixed(1)+'px) scale('+sx.toFixed(4)+','+sy.toFixed(4)+')';
-    el.style.opacity='0.25';
-    void el.offsetWidth;                                    // commit the start frame
-    el.style.transition='transform .78s cubic-bezier(.22,.72,.24,1),opacity .42s ease';
-    el.style.transform='none';
-    el.style.opacity='1';
+    const d=this.bkFlyDeltas(el, fromRect, true);
+    if(!d){ if(after) after(); return; }
+    this.bkFlySet(el, d);
+    el.classList.remove('bk-flyout');
+    el.classList.remove('bk-flyin'); void el.offsetWidth;    // restart if one is already running
+    el.classList.add('bk-flyin');
     clearTimeout(this._bkFlyT);
-    this._bkFlyT=setTimeout(()=>{ if(el) el.style.transition=''; if(after) after(); }, 820);
+    this._bkFlyT=setTimeout(()=>{ if(el) el.classList.remove('bk-flyin'); if(after) after(); }, 820);
   }
   bkFlyOut(toRect, after){
     const el=this._bkFlyEl;
     if(!el || !toRect || this.reducedMotion()){ if(after) after(); return; }
-    const from=el.getBoundingClientRect();
-    if(!from.width || !toRect.width){ if(after) after(); return; }
-    const sx=toRect.width/from.width, sy=toRect.height/from.height;
-    const dx=(toRect.left+toRect.width/2)-(from.left+from.width/2);
-    const dy=(toRect.top+toRect.height/2)-(from.top+from.height/2);
-    el.style.transformOrigin='50% 50%';
-    el.style.transition='transform .66s cubic-bezier(.5,0,.3,1),opacity .5s ease .16s';
-    el.style.transform='translate('+dx.toFixed(1)+'px,'+dy.toFixed(1)+'px) scale('+sx.toFixed(4)+','+sy.toFixed(4)+')';
-    el.style.opacity='0.15';
+    const d=this.bkFlyDeltas(el, toRect, false);
+    if(!d){ if(after) after(); return; }
+    this.bkFlySet(el, d);
+    el.classList.remove('bk-flyin');
+    el.classList.remove('bk-flyout'); void el.offsetWidth;
+    el.classList.add('bk-flyout');
     clearTimeout(this._bkFlyT);
-    this._bkFlyT=setTimeout(()=>{
-      if(el){ el.style.transition=''; el.style.transform=''; el.style.opacity=''; }
-      if(after) after();
-    }, 700);
+    this._bkFlyT=setTimeout(()=>{ if(el) el.classList.remove('bk-flyout'); if(after) after(); }, 700);
   }
   /* pull a volume off the shelf, then swing its cover open */
   bkPickVolume(i, rect){
@@ -1150,6 +1160,22 @@ class Component extends DCLogic {
   /* Verses run from four lines to a dozen, so a single type size either
      overflows the page or wastes it. Shrink each one until it fits the paper. */
   bkFitVerses(){
+    // How many index entries the page holds, read off a real one. The list box
+    // is sized by the page, not by its contents, so this settles immediately
+    // instead of oscillating.
+    const list=this._bkIndexList;
+    if(list && list.clientHeight){
+      // offsetHeight, not a bounding rect: the book is inside a wrapper that
+      // gets scaled while it flies off the shelf, and a rect would be scaled
+      // with it while clientHeight would not — the ratio has to be layout px
+      // on both sides.
+      const row=list.querySelector('.bk-entry');
+      const rh=row?row.offsetHeight:0;
+      if(rh>4){
+        const per=Math.max(3, Math.floor((list.clientHeight+0.5)/rh));
+        if(per!==this.state.bkPer) this.setState({bkPer:per});   // render clamps bkIdx to the new count
+      }
+    }
     const els=document.querySelectorAll('.bk-verse');
     for(let i=0;i<els.length;i++){
       const el=els[i], box=el.parentElement;
@@ -1208,37 +1234,76 @@ class Component extends DCLogic {
           this.poemLines(p.body, inkKey))),
       this.bkFolio(folio,'right'));
   }
-  /* the index — the first page after the cover, and nowhere else */
-  bkIndexPage(L, idx, single){
-    const n=L.length;
+  /* How many index entries fit one page, measured from the last one drawn.
+     It depends only on the page box, never on the number of entries, so
+     re-rendering with a new value settles in one step. */
+  bkPerPage(){ return Math.max(3, this.state.bkPer||10); }
+  bkIndexChunks(){
+    const n=this.bkList().length;
+    let c=Math.max(1, Math.ceil(n/this.bkPerPage()));
+    // The index gets one page on the first opening and two on each after, so an
+    // even number of pages would leave a blank facing one. Round up to odd and
+    // spread the entries out instead.
+    if(!this.bkIsSingle() && c>1 && c%2===0) c++;
+    return c;
+  }
+  bkChunkSize(){ return Math.max(1, Math.ceil(this.bkList().length / this.bkIndexChunks())); }
+  /* Spread 0 shows the index on its right page only — the left is the inside
+     of the cover — so every further index spread carries two pages of it. */
+  bkIndexSpreads(){
+    const c=this.bkIndexChunks();
+    if(this.bkIsSingle()) return c;
+    return c<=1 ? 1 : 1+Math.ceil((c-1)/2);
+  }
+  /* one page of the index; entries that do not fit run on to the next page */
+  bkIndexPage(L, idx, single, chunk, folio){
+    const n=L.length, size=this.bkChunkSize(), C=this.bkIndexChunks(), IS=this.bkIndexSpreads();
+    const from=chunk*size, slice=L.slice(from, from+size);
     return React.createElement(React.Fragment,null,
       React.createElement('div',{key:'h',
         style:{display:'flex',flexDirection:'column',flex:1,minHeight:0,overflow:'hidden'}},
-        React.createElement('div',{style:{fontFamily:"'UN-Agni',serif",lineHeight:1.24,
-          fontSize:single?'clamp(21px,5.4vw,28px)':'clamp(23px,2.8vw,36px)',color:'#33241c'}},'පටුන'),
+        React.createElement('div',{style:{display:'flex',alignItems:'baseline',gap:'10px'}},
+          React.createElement('div',{style:{fontFamily:"'UN-Agni',serif",lineHeight:1.24,
+            fontSize:single?'clamp(21px,5.4vw,28px)':'clamp(23px,2.8vw,36px)',color:'#33241c'}},'පටුන'),
+          C>1?React.createElement('div',{style:{fontFamily:"'EB Garamond',serif",fontStyle:'italic',
+            fontSize:'clamp(11px,1.3vw,15px)',color:'#a08760'}}, (chunk+1)+' / '+C):null),
         React.createElement('div',{style:{width:'34%',height:'1px',background:'rgba(160,124,72,.5)',margin:'5% 0 7%'}}),
-        L.map((p,i)=>React.createElement('div',{key:'e'+i, className:'bk-entry', onClick:this.bkGoTo(i+1),
-          style:{display:'flex',alignItems:'baseline',gap:'8px',cursor:'pointer',padding:'3px 5px',borderRadius:'3px',
-            flexShrink:0,lineHeight:1.35,background:(i+1)===idx?'rgba(138,48,73,.10)':'transparent'}},
-          React.createElement('div',{style:{fontFamily:"'EB Garamond',serif",fontSize:'clamp(10px,1.15vw,14px)',color:'#a08760',minWidth:'1.7em'}}, (i+1)+'.'),
-          React.createElement('div',{style:{fontFamily:"'UN-Alakamanda',serif",
-            fontSize:n>12?'clamp(12px,1.25vw,16px)':'clamp(13px,1.45vw,19px)',
-            color:(i+1)===idx?'#8a3049':'#3a2a20',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}, p.title),
-          React.createElement('div',{style:{fontFamily:"'EB Garamond',serif",fontSize:'clamp(10px,1.15vw,14px)',color:'#a08760'}}, 2*i+3)))),
-      this.bkFolio('1','right'));
+        React.createElement('div',{className:'bk-index-list', ref:el=>{this._bkIndexList=el;},
+          style:{flex:1,minHeight:0,display:'flex',flexDirection:'column',overflow:'hidden'}},
+          slice.map((p,k)=>{
+            const i=from+k, spread=IS+i;
+            return React.createElement('div',{key:'e'+i, className:'bk-entry', onClick:this.bkGoTo(spread),
+              style:{display:'flex',alignItems:'baseline',gap:'8px',cursor:'pointer',padding:'3px 5px',borderRadius:'3px',
+                flexShrink:0,lineHeight:1.35,background:spread===idx?'rgba(138,48,73,.10)':'transparent'}},
+              React.createElement('div',{style:{fontFamily:"'EB Garamond',serif",fontSize:'clamp(10px,1.15vw,14px)',color:'#a08760',minWidth:'1.7em'}}, (i+1)+'.'),
+              React.createElement('div',{style:{fontFamily:"'UN-Alakamanda',serif",
+                fontSize:n>12?'clamp(12px,1.25vw,16px)':'clamp(13px,1.45vw,19px)',
+                color:spread===idx?'#8a3049':'#3a2a20',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}, p.title),
+              React.createElement('div',{style:{fontFamily:"'EB Garamond',serif",fontSize:'clamp(10px,1.15vw,14px)',color:'#a08760'}}, 2*spread+1));
+          }))),
+      this.bkFolio(folio,'right'));
   }
   /* one page's worth of content, by side and spread index */
   bkSide(which, s, L, idx, single, inkKey){
     if(s<0 || s>=this.bkCount()) return null;
+    const IS=this.bkIndexSpreads(), C=this.bkIndexChunks();
     if(single){
-      if(s===0) return this.bkIndexPage(L, idx, true);
-      const p=L[s-1];
+      if(s<IS) return this.bkIndexPage(L, idx, true, s, s+1);
+      const p=L[s-IS];
       return React.createElement(React.Fragment,null,
         this.bkMetaPage(p, null, true),
         this.bkVersePage(p, s+1, inkKey, true));
     }
-    if(which==='L') return s===0 ? null : this.bkMetaPage(L[s-1], 2*s, false);
-    return s===0 ? this.bkIndexPage(L, idx, false) : this.bkVersePage(L[s-1], 2*s+1, inkKey, false);
+    if(s<IS){
+      // spread 0 keeps the inside cover on its left; after that the index
+      // runs across both pages, so a long one fills spreads rather than spilling
+      const c = which==='L' ? (s===0 ? -1 : 2*s-1) : (s===0 ? 0 : 2*s);
+      if(c<0 || c>=C) return null;
+      return this.bkIndexPage(L, idx, false, c, which==='L' ? 2*s : 2*s+1);
+    }
+    const j=s-IS;
+    if(which==='L') return this.bkMetaPage(L[j], 2*s, false);
+    return this.bkVersePage(L[j], 2*s+1, inkKey, false);
   }
   /* the wire spiral running down the binding edge */
   bkWire(single, small){
@@ -1443,15 +1508,21 @@ class Component extends DCLogic {
       React.createElement('div',{ref:el=>{this._bkFlyEl=el;}, style:{willChange:'transform'}},
         React.createElement('div',{style:{perspective:'2600px',perspectiveOrigin:'50% 42%',display:'flex',justifyContent:'center'}},
           React.createElement('div',{ref:el=>{this._bkStage=el;}, style:{position:'relative',
-            width:single?'min(420px,100%)':'min(860px,100%)', aspectRatio:single?'420/560':'860/548',
+            // Cap the width by what is left of the window height as well, or the
+            // spread runs past the sticky header and the player and you only ever
+            // see half the book. 1.5693 and 0.75 are the two aspect ratios.
+            width: single ? 'max(240px,min(420px,100%,(100vh - 300px) * 0.75))'
+                          : 'max(360px,min(860px,100%,(100vh - 320px) * 1.5693))',
+            aspectRatio:single?'420/560':'860/548',
             transformStyle:'preserve-3d',
             transform:(single||spread)?'none':'translateX(-25%)',transition:'transform '+slide}}, kids))),
       React.createElement('div',{style:{textAlign:'center',marginTop:'clamp(16px,2.5vw,26px)',
         fontFamily:"'Space Mono',monospace",fontSize:'11px',letterSpacing:'0.18em',
         textTransform:'uppercase',color:'#8c6f47'}},
         !n ? 'this one is still empty · fold the top corner to shelve it'
-           : s.bkOpen ? (idx===0 ? 'Index · bottom corner turns, top corner closes'
-                                 : idx+' / '+n+' · bottom corner turns, top corner closes')
+           : s.bkOpen ? (idx<this.bkIndexSpreads()
+                          ? 'Index · bottom corner turns, top corner closes'
+                          : (idx-this.bkIndexSpreads()+1)+' / '+n+' · bottom corner turns, top corner closes')
                       : 'click the corner to open'));
   }
 
