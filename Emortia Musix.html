@@ -233,10 +233,17 @@ input,textarea,button{font-family:inherit;}
 .bk-vol:hover .bk-volcover{transform:translateY(-14px) rotate(-1.2deg);
   box-shadow:10px 26px 50px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,232,196,.28);}
 .bk-vol:active .bk-volcover{transform:translateY(-6px) scale(.985);}
-.bk-back{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;
-  color:#e2c69b;cursor:pointer;border:1px solid rgba(214,170,104,.34);border-radius:999px;
-  padding:8px 16px;background:rgba(24,13,6,.5);transition:border-color .2s ease,color .2s ease,transform .2s ease;}
-.bk-back:hover{border-color:#e5bd7d;color:#fff6e6;transform:translateY(-1px);}
+/* Closing the book is the corner of the board turning back on itself, top
+   right, the way the design has it — it grows as you come near. */
+.bk-close{position:absolute;right:0;top:0;z-index:10;cursor:pointer;
+  width:clamp(42px,7%,72px);height:clamp(42px,10.5%,82px);
+  clip-path:polygon(100% 0,100% 100%,0 0);border-radius:0 3px 0 0;
+  filter:drop-shadow(-4px 5px 10px rgba(0,0,0,.5));
+  transition:width .28s cubic-bezier(.3,.9,.3,1),height .28s cubic-bezier(.3,.9,.3,1),filter .28s ease;}
+.bk-close:hover{width:clamp(58px,9.6%,98px);height:clamp(58px,14%,112px);
+  filter:drop-shadow(-7px 8px 16px rgba(0,0,0,.62));}
+.bk-close::after{content:'';position:absolute;right:0;top:0;width:100%;height:100%;
+  clip-path:polygon(100% 0,100% 34%,66% 0);background:rgba(255,240,214,.22);}
 @media (prefers-reduced-motion:reduce){.bk-vol{animation:none;}.bk-volcover,.bk-back{transition:none;}}
 @media (hover:none){.bk-curl,.bk-curlsh{opacity:.6;transform:scale(.62);}}
 @media (prefers-reduced-motion:reduce){.poem-line{animation:none;}.bk-curl,.bk-curlsh{transition:none;}}
@@ -902,7 +909,28 @@ class Component extends DCLogic {
     return poems
       .filter(p=>p.title)
       .map(p=>({title:p.title, date:p.date, track:p.track, book:p.book,
-        body:p.body.join('\n').replace(/^\n+|\n+$/g,'')}));
+        body:p.body.join('\n').replace(/^\n+|\n+$/g,'')}))
+      // oldest first, so a book reads forward in time whatever order the file is in
+      .sort((a,b)=>this.poemTime(a)-this.poemTime(b));
+  }
+  /* Dates are written by hand, so read them loosely: a Sinhala or English month
+     name with a year, or a plain 2024/09/10. Anything unreadable sinks to the
+     back rather than jumping to the front as year zero. */
+  poemTime(p){
+    const s=String((p&&p.date)||'').trim();
+    if(!s) return Infinity;
+    const iso=s.match(/(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);
+    if(iso) return Date.UTC(+iso[1], +iso[2]-1, +iso[3]);
+    const MON=[['ජනවාරි','jan'],['පෙබරවාරි','feb'],['මාර්තු','mar'],['අප්‍රේල්','apr'],['මැයි','may'],
+               ['ජූනි','jun'],['ජූලි','jul'],['අගෝස්තු','aug'],['සැප්තැම්බර්','sep'],['ඔක්තෝ','oct'],
+               ['නොවැම්බර්','nov'],['දෙසැම්බර්','dec']];
+    const low=s.toLowerCase();
+    let mo=-1;
+    for(let i=0;i<12;i++){ if(s.indexOf(MON[i][0])>=0 || low.indexOf(MON[i][1])>=0){ mo=i; break; } }
+    const ym=s.match(/(\d{4})/);
+    if(!ym) return Infinity;
+    const dm=s.replace(ym[1],'').match(/(\d{1,2})/);
+    return Date.UTC(+ym[1], mo<0?0:mo, dm?+dm[1]:1);
   }
   /* a poem names the song it became with "@track:", matched on title or slug */
   findTrack(name){
@@ -953,11 +981,14 @@ class Component extends DCLogic {
      the title; anything unmarked falls into the first one. */
   bkVolumes(){ return [
     {id:'kaviya', title:'කවිය', sub:'poems, kept by hand',
-     cover:'linear-gradient(154deg,#e3c096,#cda772 40%,#b78f57 72%,#a67f49)', ink:'#5b3d1e'},
+     cover:'linear-gradient(154deg,#e3c096,#cda772 40%,#b78f57 72%,#a67f49)', ink:'#5b3d1e',
+     fold:'linear-gradient(225deg,#9c7442 42%,#e6c79f)'},
     {id:'corona', title:'කොරෝනා කාලේ ආතල්', sub:'written through the lockdown',
-     cover:'linear-gradient(154deg,#dfae98,#c98d73 40%,#ae7056 72%,#98604a)', ink:'#5a2f1e'},
+     cover:'linear-gradient(154deg,#dfae98,#c98d73 40%,#ae7056 72%,#98604a)', ink:'#5a2f1e',
+     fold:'linear-gradient(225deg,#8f5843 42%,#e3b6a1)'},
     {id:'satahan', title:'සටහන්', sub:'notes from the studio',
-     cover:'linear-gradient(154deg,#cbc79c,#adaa79 40%,#93905e 72%,#7d7a4d)', ink:'#3f3f1d'}
+     cover:'linear-gradient(154deg,#cbc79c,#adaa79 40%,#93905e 72%,#7d7a4d)', ink:'#3f3f1d',
+     fold:'linear-gradient(225deg,#74713f 42%,#d2cfa6)'}
   ]; }
   bkVolIdx(){ const v=this.state.bkVol; return (v>=0 && v<this.bkVolumes().length) ? v : 0; }
   bkPoemsIn(i){
@@ -1389,6 +1420,16 @@ class Component extends DCLogic {
     kids.push(React.createElement('div',{key:'vig', style:{position:'absolute',inset:0,borderRadius:'3px',pointerEvents:'none',zIndex:4,
       background:'radial-gradient(ellipse at 50% 46%,transparent 54%,rgba(40,22,8,.18) 90%)'}}));
 
+    // top right: fold the corner back to shut the book and shelve it
+    if(!drag)
+      kids.push(React.createElement('div',{key:'close', className:'bk-close', title:'Close the book',
+        style:{background:vol.fold},
+        onClick:(e)=>{
+          e.stopPropagation();
+          if(this._bkBusy || this._bk) return;
+          if(s.bkOpen) this.bkTurn('cover',-1); else this.bkToShelf();
+        }}));
+
     // the bottom corners — click either one to roll the page
     if(!drag){
       if(!s.bkOpen){ if(n) kids.push(this.bkCorner('br','cover',1,'c-br')); }
@@ -1405,15 +1446,13 @@ class Component extends DCLogic {
             width:single?'min(420px,100%)':'min(860px,100%)', aspectRatio:single?'420/560':'860/548',
             transformStyle:'preserve-3d',
             transform:(single||spread)?'none':'translateX(-25%)',transition:'transform '+slide}}, kids))),
-      React.createElement('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',gap:'16px',
-        marginTop:'clamp(16px,2.5vw,26px)',flexWrap:'wrap'}},
-        React.createElement('div',{onClick:()=>{ if(!this._bkBusy && !this._bk) this.bkToShelf(); },
-          title:'Back to the shelf', className:'bk-back'},'← Shelf'),
-        React.createElement('div',{style:{fontFamily:"'Space Mono',monospace",
-          fontSize:'11px',letterSpacing:'0.18em',textTransform:'uppercase',color:'#8c6f47'}},
-          !n ? 'this one is still empty'
-             : s.bkOpen ? (idx===0 ? 'Index · click a bottom corner' : idx+' / '+n+' · click a bottom corner')
-                        : 'click the corner to open')));
+      React.createElement('div',{style:{textAlign:'center',marginTop:'clamp(16px,2.5vw,26px)',
+        fontFamily:"'Space Mono',monospace",fontSize:'11px',letterSpacing:'0.18em',
+        textTransform:'uppercase',color:'#8c6f47'}},
+        !n ? 'this one is still empty · fold the top corner to shelve it'
+           : s.bkOpen ? (idx===0 ? 'Index · bottom corner turns, top corner closes'
+                                 : idx+' / '+n+' · bottom corner turns, top corner closes')
+                      : 'click the corner to open'));
   }
 
   // ---- dreamy per-song background scene ----
