@@ -13,6 +13,12 @@
   var TOKEN_KEY = 'emortia_gh_token';
   var CFG_KEY   = 'emortia_gh_repo';      // optional "owner/repo@branch" override
 
+  /* Where the site lives in git. Named outright rather than only read off the
+     address, because a custom domain does not spell out the repository the way
+     user.github.io/repo does — deriving alone would switch publishing off the
+     day the site moved to its own domain. */
+  var DEFAULT = { owner:'Sithuwaaa', repo:'emortia-musix', branch:'main' };
+
   function cfg(){
     var raw = '';
     try { raw = localStorage.getItem(CFG_KEY) || ''; } catch(e){}
@@ -20,13 +26,18 @@
       var m = raw.match(/^([^\/]+)\/([^@]+)(?:@(.+))?$/);
       if (m) return { owner:m[1], repo:m[2], branch:m[3] || 'main' };
     }
-    // user.github.io/repo/... — the project site's own address names both
+    // user.github.io/repo/... — a project site's address names both
     var host = (location.hostname || '').toLowerCase();
     var gh = host.match(/^([a-z0-9-]+)\.github\.io$/);
-    if (!gh) return null;
-    var seg = (location.pathname || '').split('/').filter(Boolean);
-    if (!seg.length) return null;
-    return { owner: gh[1], repo: seg[0], branch: 'main' };
+    if (gh){
+      var seg = (location.pathname || '').split('/').filter(Boolean);
+      if (seg.length) return { owner: gh[1], repo: seg[0], branch: 'main' };
+    }
+    // a custom domain, or the site served from the root — fall back to the name
+    if (location.protocol === 'https:' || location.protocol === 'http:'){
+      if (host && host !== 'localhost' && host !== '127.0.0.1') return DEFAULT;
+    }
+    return null;
   }
 
   function token(){ try { return localStorage.getItem(TOKEN_KEY) || ''; } catch(e){ return ''; } }
