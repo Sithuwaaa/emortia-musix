@@ -12,6 +12,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="../_lib/owner-config.js"></script>
 <script src="../_lib/owner.js"></script>
+<script src="../_lib/publish.js"></script>
 <style>
   :root{
     /* teal – the site's Tools colour; this is the flagship tool */
@@ -211,7 +212,7 @@ const HIDDEN = ['Dashboard', 'Temp Sheet', 'New Site Locations'];
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let BOOK = null, ORDER = [], SAVED = '';
+let BOOK = null, ORDER = [], SAVED = '', PENDING = false;
 let SITEACCESS = null;             // {cols, rows} from the Site Access tool
 let ACTIVE = 'Dashboard', QUERY = '', WRAP = false;
 
@@ -222,8 +223,8 @@ function applyTheme(t){ document.documentElement.dataset.theme = t; $('themeBtn'
 applyTheme(localStorage.getItem(THEME_KEY) || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
 $('themeBtn').onclick = () => applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
 
-let tt; function toast(m){ const t = $('toast'); t.textContent = m; t.classList.add('show');
-  clearTimeout(tt); tt = setTimeout(() => t.classList.remove('show'), 2200); }
+let tt; function toast(m, ms){ const t = $('toast'); t.textContent = m; t.classList.add('show');
+  clearTimeout(tt); tt = setTimeout(() => t.classList.remove('show'), ms || 2200); }
 
 /* ---------- IndexedDB ---------- */
 function idb(name, store){ return new Promise((res, rej) => { const r = indexedDB.open(name, 1);
@@ -270,30 +271,45 @@ async function loadSiteAccess(){
   if (stored && stored.cols) { SITEACCESS = stored; return; }
   try { SITEACCESS = await (await fetch('../site-access/data.json')).json(); } catch(e){ SITEACCESS = null; }
 }
+/* The workbook committed to the repository is the shared copy: read that first
+   so every device agrees. A local copy is only ever a stand-in for the minute
+   or so between publishing and GitHub Pages rebuilding, and is dropped as soon
+   as the published file has caught up. */
+const PENDING_GRACE = 20 * 60 * 1000;
 async function load(){
-  BOOK = null; ORDER = []; SAVED = '';
+  BOOK = null; ORDER = []; SAVED = ''; PENDING = false;
   buildSwitcher();
+  let buf = null, stamp = '';
+  for (const name of ds().files){            // first candidate that loads wins
+    try {
+      const res = await fetch(name + '?v=' + Date.now());   // never a stale cache
+      if (!res.ok) continue;
+      buf = await res.arrayBuffer(); SOURCE = name;
+      const lm = res.headers.get('last-modified');
+      if (lm){ const d = new Date(lm); if (!isNaN(d)) stamp = d.toISOString().slice(0, 10); }
+      break;
+    } catch(e){ /* try the next name */ }
+  }
   const saved = await idbGet(DB, STORE, bookKey());
-  if (saved && saved.sheets){ BOOK = saved.sheets; ORDER = saved.order; SAVED = saved.savedAt || ''; }
-  else {
-    let buf = null;
-    for (const name of ds().files){          // first candidate that loads wins
-      try {
-        const res = await fetch(name);
-        if (!res.ok) continue;
-        buf = await res.arrayBuffer(); SOURCE = name; break;
-      } catch(e){ /* try the next name */ }
-    }
-    if (!buf){
-      $('view').innerHTML = '<div class="err"><b>No “' + esc(ds().label) + '” workbook yet.</b><br>' +
-        'Looked for ' + ds().files.map(f => '<code>' + esc(f) + '</code>').join(' or ') +
-        ' in <code>tools/project-update/</code>.<br>' +
-        (window.IS_OWNER ? 'Upload one with the link at the bottom of this page – it will be stored for this dataset.'
-                         : 'Ask the owner to add it.') + '</div>';
-      $('pill').innerHTML = '<b>—</b> no workbook';
-      buildTabs(); renderFooter(); return;
-    }
-    const p = parseWorkbook(buf); BOOK = p.sheets; ORDER = p.order; SAVED = '';
+  let usePending = false;
+  if (saved && saved.sheets){
+    const fresh = saved.savedAtMs && (Date.now() - saved.savedAtMs) < PENDING_GRACE;
+    const landed = buf && saved.bytes && saved.bytes === buf.byteLength;
+    usePending = !!(fresh && !landed);
+    if (!usePending) await idbSet(DB, STORE, bookKey(), null);   // published caught up
+  }
+  if (usePending){
+    BOOK = saved.sheets; ORDER = saved.order; SAVED = saved.savedAt || ''; PENDING = true;
+  } else if (buf){
+    const p = parseWorkbook(buf); BOOK = p.sheets; ORDER = p.order; SAVED = stamp;
+  } else {
+    $('view').innerHTML = '<div class="err"><b>No “' + esc(ds().label) + '” workbook yet.</b><br>' +
+      'Looked for ' + ds().files.map(f => '<code>' + esc(f) + '</code>').join(' or ') +
+      ' in <code>tools/project-update/</code>.<br>' +
+      (window.IS_OWNER ? 'Upload one with the link at the bottom of this page.'
+                       : 'Ask the owner to add it.') + '</div>';
+    $('pill').innerHTML = '<b>—</b> no workbook';
+    buildTabs(); renderFooter(); return;
   }
   await loadSiteAccess();
   refreshPill(); buildTabs(); render();
@@ -329,8 +345,12 @@ function bucketOf(status){
   const s = String(status || '').toLowerCase();
   if (!s) return 'other';
   if (/on hold|hold/.test(s)) return 'hold';
+  if (/terminat/.test(s)) return 'terminated';
+  if (/dispute/.test(s)) return 'dispute';
   if (/tx pending/.test(s)) return 'tx';
   if (/on air pending/.test(s)) return 'airPending';
+  // must come before the plain on-air test, or "Partially On Air" reads as live
+  if (/partial\w*\s*on\s*air/.test(s)) return 'partial';
   if (/on air/.test(s)) return 'onAir';
   if (/installation completed|commissioning/.test(s)) return 'commissioning';
   if (/te wip|partially completed|wip/.test(s)) return 'wip';
@@ -339,55 +359,78 @@ function bucketOf(status){
 }
 const BUCKETS = [
   { k:'onAir', label:'On Air', sub:'live', c:'var(--ok)' },
+  { k:'partial', label:'Partially On Air', sub:'part live', c:'#a8c93f' },
   { k:'airPending', label:'On Air Pending', sub:'nearly done', c:'#e8a13c' },
   { k:'commissioning', label:'Commissioning', sub:'install done', c:'var(--info)' },
   { k:'wip', label:'TE WIP', sub:'in progress', c:'var(--wip)' },
   { k:'mobilize', label:'To be Mobilized', sub:'not started', c:'var(--idle)' },
   { k:'hold', label:'On Hold', sub:'blocked', c:'var(--warn)' },
   { k:'tx', label:'Tx Pending', sub:'tx blocked', c:'var(--warn)' },
+  { k:'dispute', label:'Dispute', sub:'blocked', c:'#e2596b' },
+  { k:'terminated', label:'Terminated', sub:'dropped', c:'#5f6f75' },
   { k:'other', label:'Unclassified', sub:'no status', c:'var(--muted)' }
 ];
 const statusColour = s => (BUCKETS.find(b => b.k === bucketOf(s)) || {}).c || 'var(--muted)';
 
 /* ---------- MOD / defence permission cross-reference ----------
-   New lamp sites aren't in the operational site list yet, but each MW hop's
-   far end IS an existing site. We look those hubs up in Site Access and flag
-   any whose access permission comes from a defence authority. */
+   Two ways a defence permission reaches this project. A lamp site can carry one
+   itself, now that most of them have been added to the operational site list;
+   or the far end of one of its MW hops can, which is an existing site and was
+   the only route when the lamp sites were still missing from that list. Check
+   both against Site Access and flag whatever comes back. */
 const MOD_RE = /\b(mod|sla|slaf|sln|slarmy|army|navy|air\s*force|defen[cs]e|stf)\b/i;
 function modSites(){
   if (!SITEACCESS || !BOOK) return null;
-  const tx = BOOK['Tx Design']; if (!tx) return null;
+  const tx = BOOK['Tx Design'];
   const ci = n => SITEACCESS.cols.indexOf(n);
   const iId = ci('Site_ID'), iPerm = ci('Access_Permission_providing_Party'),
         iName = ci('Site_Name'), iTime = ci('Time_Restrictions_final'), iTel = ci('Depot_Contact');
   if (iId < 0 || iPerm < 0) return null;
   const byId = {}; SITEACCESS.rows.forEach(r => { const k = String(r[iId] || '').trim().toUpperCase(); if (k) byId[k] = r; });
 
-  const farCols = [];
-  tx.cols.forEach((c, i) => { if (/far\s*end\s*site\s*id/i.test(c)) farCols.push(i); });
-  const iNear = tx.cols.findIndex(c => /^site\s*id/i.test(c));
-  const iNearName = tx.cols.findIndex(c => /^site\s*name/i.test(c));
-
-  const hubs = new Map();   // hubId -> {serves:Set}
-  tx.rows.forEach(r => {
-    farCols.forEach(i => {
-      const id = String(r[i] || '').trim().toUpperCase();
-      if (!id || !/[A-Z]/.test(id)) return;
-      if (!hubs.has(id)) hubs.set(id, { serves: new Map() });
-      const nid = String(r[iNear] || '').trim();
-      if (nid) hubs.get(id).serves.set(nid, String(r[iNearName] || '').trim());
+  // every hop's far end, and who it serves
+  const hubs = new Map();   // hubId -> {serves:Map}
+  if (tx){
+    const farCols = [];
+    tx.cols.forEach((c, i) => { if (/far\s*end\s*site\s*id/i.test(c)) farCols.push(i); });
+    const iNear = tx.cols.findIndex(c => /^site\s*id/i.test(c));
+    const iNearName = tx.cols.findIndex(c => /^site\s*name/i.test(c));
+    tx.rows.forEach(r => {
+      farCols.forEach(i => {
+        const id = String(r[i] || '').trim().toUpperCase();
+        if (!id || !/[A-Z]/.test(id)) return;
+        if (!hubs.has(id)) hubs.set(id, { serves: new Map() });
+        const nid = String(r[iNear] || '').trim();
+        if (nid) hubs.get(id).serves.set(nid, String(r[iNearName] || '').trim());
+      });
     });
-  });
+  }
+  // and the plan's own sites, which are in the operational list now
+  const plan = BOOK['Full Plan'];
+  const own = new Map();
+  if (plan){
+    const iS = colIdx(plan.cols, 'Site ID', 'Site  ID', 'SiteID');
+    const iN = colIdx(plan.cols, 'Site Name', 'Site  Name');
+    if (iS >= 0) plan.rows.forEach(r => {
+      const id = String(r[iS] || '').trim().toUpperCase();
+      if (id && /[A-Z]/.test(id)) own.set(id, iN >= 0 ? String(r[iN] || '').trim() : '');
+    });
+  }
 
-  const out = [], checked = hubs.size; let known = 0;
-  hubs.forEach((v, id) => {
+  const seen = {}, out = [];
+  let checked = 0, known = 0;
+  const test = (id, serves, isOwn) => {
+    if (seen[id]) return; seen[id] = 1; checked++;
     const m = byId[id]; if (!m) return; known++;
     const perm = String(m[iPerm] || '').trim();
     if (perm && MOD_RE.test(perm))
-      out.push({ id, name: String(m[iName] || ''), perm, restrict: iTime >= 0 ? String(m[iTime] || '') : '',
-                 serves: [...v.serves.entries()] });
-  });
-  out.sort((a, b) => a.id.localeCompare(b.id));
+      out.push({ id, name: String(m[iName] || ''), perm, own: !!isOwn,
+                 restrict: iTime >= 0 ? String(m[iTime] || '') : '',
+                 serves: serves ? [...serves.entries()] : [] });
+  };
+  own.forEach((nm, id) => test(id, null, true));
+  hubs.forEach((v, id) => test(id, v.serves, false));
+  out.sort((a, b) => (a.own === b.own ? a.id.localeCompare(b.id) : (a.own ? -1 : 1)));
   return { list: out, checked, known };
 }
 
@@ -467,7 +510,8 @@ function renderDashboard(){
   /* Overall completion – a site part-way through still counts for something,
      so the green bar is weighted by how far each stage has got. "On air" is
      shown underneath as the strict figure. */
-  const WEIGHT = { onAir:1, airPending:.9, commissioning:.75, wip:.5, tx:.25, mobilize:.1, hold:0, other:0 };
+  const WEIGHT = { onAir:1, airPending:.9, partial:.8, commissioning:.75, wip:.5, tx:.25, mobilize:.1,
+                   hold:0, dispute:0, terminated:0, other:0 };
   const earned = BUCKETS.reduce((s, b) => s + counts[b.k] * (WEIGHT[b.k] || 0), 0);
   const wpct = total ? Math.round(earned / total * 100) : 0;
   const partOf = BUCKETS.filter(b => counts[b.k] && WEIGHT[b.k] > 0 && b.k !== 'onAir')
@@ -481,23 +525,30 @@ function renderDashboard(){
        '<span class="bartrack"><span class="barfill" style="--w:' + pct + '%;--b:var(--ok)"></span></span>' +
        '<span class="n">' + pct + '%</span></div>' +
        '<div class="note" style="margin-top:11px">' + counts.onAir + ' of ' + total + ' sites fully on air' +
-       (partOf.length ? '; part credit for ' + partOf.join(', ') : '') + '.</div></div>';
+       (partOf.length ? '; part credit for ' + partOf.join(', ') : '') + '.' +
+       // a dropped site can never complete, so say why the bar cannot reach 100%
+       (counts.terminated ? ' ' + counts.terminated + ' terminated ' +
+         (counts.terminated === 1 ? 'site is' : 'sites are') +
+         ' still counted in the total, so the bar cannot reach 100%.' : '') +
+       '</div></div>';
 
   /* MOD permission panel */
   const mod = modSites();
   h += '<div class="panel mod"><h2><span class="dot" style="background:var(--warn)"></span>MOD permission sites' +
-       (mod ? '<span class="tag">' + mod.known + ' of ' + mod.checked + ' hubs checked</span>' : '') + '</h2>';
+       (mod ? '<span class="tag">' + mod.known + ' of ' + mod.checked + ' sites checked</span>' : '') + '</h2>';
   if (!mod) h += '<div class="note">Couldn’t reach the Site Access data to check permissions.</div>';
   else if (!mod.list.length)
-    h += '<div class="note">No defence-permission hubs found. This checks each MW hop’s far-end (hub) site against the Site Access list – ' +
-         'the new lamp sites themselves aren’t in that list yet, so the hubs they connect to are what gets checked.</div>';
+    h += '<div class="note">No defence permissions found. Every site in the plan is looked up in the Site Access list, and so is ' +
+         'the far end of each MW hop — clearance can sit on either.</div>';
   else {
-    h += '<div class="note" style="margin-bottom:12px">These hop far-end sites need defence clearance before access – plan lead time for the sites they serve.</div><div class="modlist">';
+    h += '<div class="note" style="margin-bottom:12px">These need defence clearance before access – plan lead time for them and for anything they serve.</div><div class="modlist">';
     mod.list.forEach(m => {
       h += '<div class="modcard"><div class="id">' + esc(m.id) + '</div><div class="nm">' + esc(m.name) + '</div>' +
            '<span class="perm">🛡 ' + esc(m.perm) + '</span>' +
            (m.restrict ? '<div class="serves" style="margin-top:8px">⏱ ' + esc(m.restrict) + '</div>' : '') +
-           '<div class="serves">Serves ' + m.serves.map(([id, nm]) => '<b>' + esc(id) + '</b> ' + esc(nm)).join('<br>') + '</div></div>';
+           '<div class="serves">' + (m.own ? 'In this plan' : 'Hop far end') +
+           (m.serves.length ? ' · serves ' + m.serves.map(([id, nm]) => '<b>' + esc(id) + '</b> ' + esc(nm)).join('<br>') : '') +
+           '</div></div>';
     });
     h += '</div>';
   }
@@ -596,26 +647,64 @@ function renderGrid(name){
 $('file').addEventListener('change', async e => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return;
   toast('Reading ' + f.name + '…');
+  let buf, p;
   try {
-    const p = parseWorkbook(await f.arrayBuffer());
+    buf = await f.arrayBuffer();
+    p = parseWorkbook(buf);
     if (!p.sheets['Full Plan']) { toast('That workbook has no “Full Plan” sheet'); return; }
-    SAVED = new Date().toISOString().slice(0, 10);
-    await idbSet(DB, STORE, bookKey(), { sheets: p.sheets, order: p.order, savedAt: SAVED });
-    BOOK = p.sheets; ORDER = p.order;
-    refreshPill(); buildTabs(); render();
-    toast(ds().label + ' updated · ' + p.sheets['Full Plan'].rows.length + ' sites');
-  } catch (err){ console.error(err); toast('Could not read that file: ' + err.message); }
+  } catch (err){ console.error(err); toast('Could not read that file: ' + err.message); return; }
+
+  // show it straight away, and hold it only until the published copy catches up
+  SAVED = new Date().toISOString().slice(0, 10); PENDING = true;
+  await idbSet(DB, STORE, bookKey(), {
+    sheets: p.sheets, order: p.order, savedAt: SAVED,
+    savedAtMs: Date.now(), bytes: buf.byteLength
+  });
+  BOOK = p.sheets; ORDER = p.order;
+  refreshPill(); buildTabs(); render();
+
+  const target = 'tools/project-update/' + (SOURCE || ds().files[0]);
+  if (!window.Publish || !Publish.ready()){
+    PENDING = false; renderFooter();
+    toast('Saved on this device only — connect GitHub to publish it', 4200);
+    return;
+  }
+  toast('Publishing to the site…', 6000);
+  try {
+    await Publish.putFile(target, buf, 'Project Update: ' + ds().label + ' from ' + f.name);
+    toast('Published · every device picks it up within a minute', 5200);
+  } catch (err){
+    console.error(err);
+    PENDING = false; renderFooter();
+    toast('Saved here, but publishing failed: ' + err.message, 7000);
+  }
 });
 
 function renderFooter(){
-  const bits = ['<b>' + esc(ds().label) + '</b> · reads <b>' + esc(SOURCE) + '</b> from this folder · nothing is uploaded anywhere'];
-  if (window.IS_OWNER)
-    bits.push('<a href="#" id="upBtn">Update ' + esc(ds().label) + ' from Excel…</a>' +
-              (SAVED ? ' · <a href="#" id="resetBtn" style="color:var(--muted)">reset to bundled</a>' : ''));
+  const cfg = window.Publish && Publish.config();
+  const bits = ['<b>' + esc(ds().label) + '</b> · reads <b>' + esc(SOURCE) + '</b> published in this repository' +
+    (PENDING ? ' · <b style="color:var(--warn)">this device is showing an upload that is still publishing</b>' : '')];
+  if (window.IS_OWNER){
+    let line = '<a href="#" id="upBtn">Update ' + esc(ds().label) + ' from Excel…</a>';
+    if (window.Publish && Publish.ready())
+      line += ' · <span style="color:var(--ok)">publishes to ' + esc(cfg.owner + '/' + cfg.repo) + '</span>' +
+              ' · <a href="#" id="ghOff" style="color:var(--muted)">disconnect</a>';
+    else if (cfg)
+      line += ' · <a href="#" id="ghOn">connect GitHub to publish for every device</a>';
+    else
+      line += ' · <span style="color:var(--muted)">publishing works on the live site only</span>';
+    if (PENDING) line += ' · <a href="#" id="resetBtn" style="color:var(--muted)">discard local copy</a>';
+    bits.push(line);
+  }
   document.querySelector('footer').innerHTML = bits.join('<br>');
   const u = $('upBtn'); if (u) u.onclick = e => { e.preventDefault(); $('file').click(); };
   const r = $('resetBtn'); if (r) r.onclick = async e => { e.preventDefault();
     await idbSet(DB, STORE, bookKey(), null); location.reload(); };
+  const on = $('ghOn'); if (on) on.onclick = async e => { e.preventDefault();
+    try { if (await Publish.connect()){ toast('Connected — uploads now publish for everyone', 4200); renderFooter(); } }
+    catch (err){ toast(err.message, 7000); } };
+  const off = $('ghOff'); if (off) off.onclick = e => { e.preventDefault();
+    Publish.disconnect(); renderFooter(); toast('Disconnected — uploads stay on this device'); };
 }
 
 /* ---------- render ---------- */

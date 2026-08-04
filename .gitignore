@@ -2,3 +2,9 @@ Thumbs.db
 .DS_Store
 media/IMG_*.jpg
 poems/*.docx
+poems/*.txt.bak
+# Excel's lock files, left behind while a workbook is open
+~$*
+# The DNS site list is the raw source for the two lookup tools. They read the
+# extracted data.json, so the 3 MB workbook itself never needs publishing.
+tools/site-access/*.xlsx
