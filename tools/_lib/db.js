@@ -142,10 +142,11 @@
     const table = TABLE[key], keyCol = KEYCOL[key];
     const idx = cols.indexOf(cols.find(cn => cn.toLowerCase().replace(/[^a-z]/g,'') === 'siteid') || cols[0]);
 
-    const recs = rows.map(r => {
+    const recs = [rows.map(r => {
       const o = {}; cols.forEach((cn, i) => { o[cn] = r[i] == null ? '' : String(r[i]); });
       const rec = {}; rec[keyCol] = String(r[idx] || '').trim(); rec.data = o; return rec;
-    }).filter(r => r[keyCol]);
+    }).filter(r => r[keyCol])
+  .reduce((m, r) => (m.set(r[keyCol], r), m), new Map()).values()];
 
     const CHUNK = 500;
     for (let i = 0; i < recs.length; i += CHUNK){
