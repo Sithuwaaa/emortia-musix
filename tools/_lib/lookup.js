@@ -12,7 +12,7 @@ applyTheme(localStorage.getItem(THEME_KEY)||(matchMedia('(prefers-color-scheme: 
 $('themeBtn').onclick=()=>applyTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
 
 /* toast */
-let tt;function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),1800)}
+let tt;function toast(m,ms){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),ms||1800)}
 
 /* IndexedDB */
 function idb(){return new Promise((res,rej)=>{const r=indexedDB.open(C.idbName,1);r.onupgradeneeded=()=>r.result.createObjectStore(C.idbStore);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
@@ -33,14 +33,36 @@ function buildIndex(){
   const idc=ci(C.idCol);
   ROWS.forEach(r=>{if(r[idc])IDX.byId[String(r[idc]).toLowerCase()]=r});
 }
+/* A tool opts into the shared database by naming a dataset key in its config.
+   Without one — Site Data, for now — nothing here changes and the old
+   device-local path runs exactly as before. */
+const SYNCED = !!(C.syncKey && window.DB);
+function applyDataset(ds){
+  COLS=ds.cols; ROWS=ds.rows.map(r=>r.slice()); savedAt=ds.savedAt||'';
+  buildIndex();
+  const where = SYNCED
+    ? (ds.source==='server' ? ' · synced' : ds.source==='bundled' ? ' · offline copy' : '')
+    : '';
+  pill.innerHTML='<b>'+ROWS.length.toLocaleString()+'</b> '+C.unit+(savedAt?' · updated '+savedAt:'')+where;
+  route();
+}
 async function loadData(){
+  if(SYNCED){
+    // paints from cache first, then swaps itself if the server is ahead
+    const ds=await window.DB.load(C.syncKey, C.dataUrl, fresh=>{
+      applyDataset(fresh); toast('Updated from another device');
+    });
+    applyDataset(ds);
+    window.DB.subscribe(C.syncKey, async ()=>{
+      const fresh=await window.DB.load(C.syncKey, C.dataUrl);
+      applyDataset(fresh); toast('Updated from another device');
+    });
+    return;
+  }
   const stored=await idbGet('dataset');
   let ds=stored;
   if(!ds){ds=await (await fetch(C.dataUrl)).json();ds.savedAt=''}
-  COLS=ds.cols; ROWS=ds.rows.map(r=>r.slice()); savedAt=ds.savedAt||'';
-  buildIndex();
-  pill.innerHTML='<b>'+ROWS.length.toLocaleString()+'</b> '+C.unit+(savedAt?' · updated '+savedAt:'');
-  route();
+  applyDataset(ds);
 }
 function search(term){
   term=term.trim().toLowerCase(); if(!term) return [];
@@ -200,17 +222,37 @@ $('file').addEventListener('change', async e=>{
         if(!r.some(v=>v&&v!=='Unknown'&&v!=='0'&&v!=='Undefined'&&v!=='Deny')) continue;
         rows.push(r);
       }
-      await idbSet('dataset',{cols,rows,savedAt:new Date().toISOString().slice(0,10)});
-      toast('Replaced · '+rows.length.toLocaleString()+' '+C.unit);
+      if(SYNCED){ await publishDataset(cols,rows,'Replaced'); }
+      else{
+        await idbSet('dataset',{cols,rows,savedAt:new Date().toISOString().slice(0,10)});
+        toast('Replaced · '+rows.length.toLocaleString()+' '+C.unit);
+      }
     }else{
       const res=mergeUpload(arr);
       ROWS.forEach(r=>{delete r.__blob});
-      await idbSet('dataset',{cols:COLS,rows:ROWS.map(r=>r.slice(0,COLS.length)),savedAt:new Date().toISOString().slice(0,10)});
-      toast('Merged · '+res.updated+' updated · '+res.added+' added (of '+res.seen+' rows)');
+      const merged=ROWS.map(r=>r.slice(0,COLS.length));
+      if(SYNCED){ await publishDataset(COLS,merged,'Merged · '+res.updated+' updated · '+res.added+' added'); }
+      else{
+        await idbSet('dataset',{cols:COLS,rows:merged,savedAt:new Date().toISOString().slice(0,10)});
+        toast('Merged · '+res.updated+' updated · '+res.added+' added (of '+res.seen+' rows)');
+      }
     }
     await loadData();
   }catch(err){console.error(err);toast('Could not read that file: '+err.message)}
 });
+
+/* Push a whole dataset to the shared database. Writes are refused without a
+   session, so ask for one first rather than letting the upload fail deep in a
+   chunk loop with a policy error. */
+async function publishDataset(cols,rows,what){
+  const s=await window.AuthGate.require();
+  if(!s){ toast('Cancelled — nothing was published'); return; }
+  toast('Publishing '+rows.length.toLocaleString()+' '+C.unit+'…',60000);
+  await window.DB.publish(C.syncKey,cols,rows,(done,total)=>{
+    if(done<total) toast('Publishing… '+done.toLocaleString()+' of '+total.toLocaleString(),60000);
+  });
+  toast(what+' · '+rows.length.toLocaleString()+' '+C.unit+' · every device sees this now',5000);
+}
 
 /* events */
 let dq; q.addEventListener('input',()=>{clearTimeout(dq);dq=setTimeout(route,120)});
@@ -219,13 +261,29 @@ addEventListener('keydown',e=>{if(e.key==='/'&&document.activeElement!==q){e.pre
 
 /* footer – the data-editing links show only in owner mode (see _lib/owner.js) */
 const editLinks = window.IS_OWNER
-  ? '<br><a href="#" id="refresh">Update data from Excel…</a> · <a href="#" id="reset" style="color:var(--muted)">reset to bundled</a>'
+  ? '<br><a href="#" id="refresh">Update data from Excel…</a>' +
+    (SYNCED ? ' · <a href="#" id="acct" style="color:var(--muted)">…</a>'
+            : ' · <a href="#" id="reset" style="color:var(--muted)">reset to bundled</a>')
   : '';
+const lead = SYNCED
+  ? (window.DB.configured() ? 'Shared across every device · ' : 'Not syncing yet — anon key missing · ')
+  : 'Runs entirely on your device · ';
 document.querySelector('main').insertAdjacentHTML('beforeend',
-  '<footer>Runs entirely on your device · '+C.source+editLinks+'</footer>');
+  '<footer>'+lead+C.source+editLinks+'</footer>');
 if(window.IS_OWNER){
   $('refresh').onclick=e=>{e.preventDefault();$('file').click()};
-  $('reset').onclick=async e=>{e.preventDefault();await idbSet('dataset',null);location.reload()};
+  const rs=$('reset'); if(rs) rs.onclick=async e=>{e.preventDefault();await idbSet('dataset',null);location.reload()};
+  const ac=$('acct');
+  if(ac){
+    const paint=s=>{ac.textContent=s?('signed in as '+s.user.email+' · sign out'):'sign in to publish'};
+    window.DB.session().then(paint);
+    window.DB.onAuth(paint);
+    ac.onclick=async e=>{e.preventDefault();
+      const s=await window.DB.session();
+      if(s){await window.DB.signOut();toast('Signed out');paint(null);}
+      else{const ns=await window.AuthGate.signIn(); if(ns){toast('Signed in');paint(ns);}}
+    };
+  }
 }
 
 loadData();

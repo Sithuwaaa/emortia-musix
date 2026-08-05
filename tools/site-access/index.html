@@ -21,6 +21,9 @@
 <script src="../_lib/theme.js" defer></script>
 <script src="../_lib/owner-config.js"></script>
 <script src="../_lib/owner.js"></script>
+<script src="../_lib/supabase-config.js"></script>
+<script src="../_lib/db.js"></script>
+<script src="../_lib/authgate.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -45,8 +48,9 @@
 <script>
 window.LOOKUP_CONFIG = {
   dataUrl:'data.json', idbName:'site_access_db', idbStore:'ds', sheetName:'Sheet1',
+  syncKey:'site_access',          // shared through Supabase; see tools/_lib/db.js
   unit:'sites', unitSingular:'site', source:'DNS Operational Site list · Sheet1',
-  homeIcon:'📡', homeText:n=>'Search '+n.toLocaleString()+' Dialog sites by ID, name, district or address.<br>All data stays on your device.',
+  homeIcon:'📡', homeText:n=>'Search '+n.toLocaleString()+' Dialog sites by ID, name, district or address.<br>The same data on every device.',
   idCol:'Site_ID', nameCol:'Site_Name', metaCol:'District',
   latCol:'Latitude', lngCol:'Longitude', telCol:'Depot_Contact',
   searchCols:['Site_ID','Other_Site_IDS','Site_Name','District','New_Region','Depot','Additional_data-Site_Address'],
