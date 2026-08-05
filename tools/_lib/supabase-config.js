@@ -14,5 +14,5 @@ window.SUPABASE_CONFIG = {
   /* Project Settings → API → anon / public.
      Until this is filled in the tools fall back to the data.json committed in
      the repository, so the site keeps working — it just will not sync. */
-  anonKey: ''
+  anonKey: 'sb_publishable_FOEi0FC-zv5IsRsBYaTPBA_8yrVkCrQ'
 };
