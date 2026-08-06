@@ -174,6 +174,81 @@
       .subscribe();
   }
 
+  /* ------------------------------------------------------------- workbooks
+     A whole parsed workbook in one row of `books`. Unlike the lookup datasets
+     this is not a table of records — it is many sheets of differing shapes, and
+     each dataset carries its own sheet list. Ongoing has eleven sheets, Master
+     eight with different names, so nothing here may assume a fixed set. */
+  const BOOK_CACHE = k => 'book:' + k;
+
+  async function publishBook(key, book){
+    const c = await client();
+    if (!c) throw new Error('Supabase is not configured — the anon key is missing.');
+    const s = await session();
+    if (!s) throw new Error('Sign in first — the write policies check auth.uid(), so uploads fail without a session.');
+
+    const savedAt = book.savedAt || new Date().toISOString().slice(0, 10);
+    const row = {
+      key: key,
+      sheets: book.sheets,
+      sheet_order: book.order,
+      saved_at: savedAt,
+      bytes: book.bytes || null,
+      updated_at: new Date().toISOString(),
+      updated_by: s.user.id
+    };
+    const { error } = await c.from('books').upsert(row, { onConflict: 'key' });
+    if (error) throw new Error(error.message);
+
+    const saved = { sheets: book.sheets, order: book.order, savedAt: savedAt,
+                    bytes: book.bytes || null, source: 'server' };
+    await cacheSet(BOOK_CACHE(key), saved);
+    return saved;
+  }
+
+  async function fetchBook(key){
+    const c = await client(); if (!c) return null;
+    const { data, error } = await c.from('books')
+      .select('sheets,sheet_order,saved_at,bytes,updated_at').eq('key', key).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) return null;
+    return { sheets: data.sheets || {}, order: data.sheet_order || [],
+             savedAt: (data.saved_at || data.updated_at || '').slice(0, 10),
+             bytes: data.bytes || null, source: 'server' };
+  }
+
+  /* Server, then cache, then whatever the caller can bundle. onUpdate fires if
+     the server turns out to be newer than the cache that was handed back. */
+  async function loadBook(key, bundled, onUpdate){
+    const cached = await cacheGet(BOOK_CACHE(key));
+    const refresh = (async () => {
+      if (!configured()) return null;
+      try {
+        const remote = await fetchBook(key);
+        if (remote){ await cacheSet(BOOK_CACHE(key), remote); return remote; }
+      } catch(e){ console.warn('Supabase read failed, staying on the local copy:', e.message); }
+      return null;
+    })();
+
+    if (cached){
+      refresh.then(r => { if (r && onUpdate && r.savedAt !== cached.savedAt) onUpdate(r); });
+      return cached;
+    }
+    const remote = await refresh;
+    if (remote) return remote;
+    return bundled ? await bundled() : null;
+  }
+
+  async function subscribeBook(key, fn){
+    const c = await client(); if (!c) return;
+    c.channel('bk-' + key)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'books', filter: 'key=eq.' + key },
+          () => fn())
+      .subscribe();
+  }
+
   window.DB = { configured, client, session, signIn, signOut, onAuth,
-                load, publish, subscribe, cacheSet, cacheGet };
+                load, publish, subscribe,
+                publishBook, loadBook, subscribeBook,
+                cacheSet, cacheGet };
 })();

@@ -12,7 +12,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="../_lib/owner-config.js"></script>
 <script src="../_lib/owner.js"></script>
-<script src="../_lib/publish.js"></script>
+<script src="../_lib/supabase-config.js"></script>
+<script src="../_lib/db.js"></script>
+<script src="../_lib/authgate.js"></script>
 <style>
   :root{
     /* teal – the site's Tools colour; this is the flagship tool */
@@ -212,7 +214,7 @@ const HIDDEN = ['Dashboard', 'Temp Sheet', 'New Site Locations'];
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let BOOK = null, ORDER = [], SAVED = '', PENDING = false;
+let BOOK = null, ORDER = [], SAVED = '', ORIGIN = '';
 let SITEACCESS = null;             // {cols, rows} from the Site Access tool
 let ACTIVE = 'Dashboard', QUERY = '', WRAP = false;
 
@@ -271,48 +273,52 @@ async function loadSiteAccess(){
   if (stored && stored.cols) { SITEACCESS = stored; return; }
   try { SITEACCESS = await (await fetch('../site-access/data.json')).json(); } catch(e){ SITEACCESS = null; }
 }
-/* The workbook committed to the repository is the shared copy: read that first
-   so every device agrees. A local copy is only ever a stand-in for the minute
-   or so between publishing and GitHub Pages rebuilding, and is dropped as soon
-   as the published file has caught up. */
-const PENDING_GRACE = 20 * 60 * 1000;
-async function load(){
-  BOOK = null; ORDER = []; SAVED = ''; PENDING = false;
-  buildSwitcher();
-  let buf = null, stamp = '';
+/* The shared database holds the parsed workbook. The .xlsm committed beside
+   this page is only a fallback for a first visit with nothing published yet —
+   the file is never the source of truth, so there is no waiting for a deploy
+   and no local copy standing in while one happens. */
+async function bundled(){
   for (const name of ds().files){            // first candidate that loads wins
     try {
-      const res = await fetch(name + '?v=' + Date.now());   // never a stale cache
+      const res = await fetch(name + '?v=' + Date.now());
       if (!res.ok) continue;
-      buf = await res.arrayBuffer(); SOURCE = name;
+      const buf = await res.arrayBuffer(); SOURCE = name;
       const lm = res.headers.get('last-modified');
+      let stamp = '';
       if (lm){ const d = new Date(lm); if (!isNaN(d)) stamp = d.toISOString().slice(0, 10); }
-      break;
+      const p = parseWorkbook(buf);
+      return { sheets: p.sheets, order: p.order, savedAt: stamp, bytes: buf.byteLength, source: 'bundled' };
     } catch(e){ /* try the next name */ }
   }
-  const saved = await idbGet(DB, STORE, bookKey());
-  let usePending = false;
-  if (saved && saved.sheets){
-    const fresh = saved.savedAtMs && (Date.now() - saved.savedAtMs) < PENDING_GRACE;
-    const landed = buf && saved.bytes && saved.bytes === buf.byteLength;
-    usePending = !!(fresh && !landed);
-    if (!usePending) await idbSet(DB, STORE, bookKey(), null);   // published caught up
-  }
-  if (usePending){
-    BOOK = saved.sheets; ORDER = saved.order; SAVED = saved.savedAt || ''; PENDING = true;
-  } else if (buf){
-    const p = parseWorkbook(buf); BOOK = p.sheets; ORDER = p.order; SAVED = stamp;
-  } else {
+  return null;
+}
+function applyBook(b){
+  BOOK = b.sheets; ORDER = b.order || []; SAVED = b.savedAt || ''; ORIGIN = b.source || '';
+}
+async function load(){
+  BOOK = null; ORDER = []; SAVED = ''; ORIGIN = '';
+  buildSwitcher();
+  const b = await window.DB.loadBook(bookKey(), bundled, fresh => {
+    applyBook(fresh); refreshPill(); buildTabs(); render();
+    toast('Updated from another device', 3600);
+  });
+  if (!b){
     $('view').innerHTML = '<div class="err"><b>No “' + esc(ds().label) + '” workbook yet.</b><br>' +
-      'Looked for ' + ds().files.map(f => '<code>' + esc(f) + '</code>').join(' or ') +
+      'Nothing published, and no ' + ds().files.map(f => '<code>' + esc(f) + '</code>').join(' or ') +
       ' in <code>tools/project-update/</code>.<br>' +
       (window.IS_OWNER ? 'Upload one with the link at the bottom of this page.'
                        : 'Ask the owner to add it.') + '</div>';
     $('pill').innerHTML = '<b>—</b> no workbook';
     buildTabs(); renderFooter(); return;
   }
+  applyBook(b);
   await loadSiteAccess();
   refreshPill(); buildTabs(); render();
+  window.DB.subscribeBook(bookKey(), async () => {
+    const fresh = await window.DB.loadBook(bookKey(), bundled);
+    if (fresh){ applyBook(fresh); refreshPill(); buildTabs(); render();
+      toast('Updated from another device', 3600); }
+  });
 }
 function buildSwitcher(){
   $('dsbar').innerHTML = DATASETS.map(d =>
@@ -331,7 +337,12 @@ function refreshPill(){
   const plan = BOOK && BOOK['Full Plan'];
   $('pill').innerHTML = '<b>' + (plan ? plan.rows.length : 0) + '</b> sites · ' + ds().label + (SAVED ? ' · updated ' + SAVED : '');
 }
-function visibleSheets(){ return ORDER.filter(n => !HIDDEN.includes(n) && BOOK[n] && BOOK[n].rows.length); }
+/* Each dataset carries its own sheet list — Ongoing has eleven, Master eight
+   with different names — so the tabs are built from that book's order and
+   never from a fixed set. */
+function visibleSheets(){
+  return (ORDER || []).filter(n => !HIDDEN.includes(n) && BOOK[n] && BOOK[n].rows && BOOK[n].rows.length);
+}
 function buildTabs(){
   const all = ['Dashboard'].concat(visibleSheets());
   if (!all.includes(ACTIVE)) ACTIVE = 'Dashboard';
@@ -654,57 +665,52 @@ $('file').addEventListener('change', async e => {
     if (!p.sheets['Full Plan']) { toast('That workbook has no “Full Plan” sheet'); return; }
   } catch (err){ console.error(err); toast('Could not read that file: ' + err.message); return; }
 
-  // show it straight away, and hold it only until the published copy catches up
-  SAVED = new Date().toISOString().slice(0, 10); PENDING = true;
-  await idbSet(DB, STORE, bookKey(), {
-    sheets: p.sheets, order: p.order, savedAt: SAVED,
-    savedAtMs: Date.now(), bytes: buf.byteLength
-  });
-  BOOK = p.sheets; ORDER = p.order;
-  refreshPill(); buildTabs(); render();
+  // ask for the session before writing, rather than failing inside the upsert
+  let s;
+  try { s = await window.AuthGate.require(); }
+  catch (err){ toast(err.message, 7000); return; }
+  if (!s){ toast('Cancelled — nothing was published'); return; }
 
-  const target = 'tools/project-update/' + (SOURCE || ds().files[0]);
-  if (!window.Publish || !Publish.ready()){
-    PENDING = false; renderFooter();
-    toast('Saved on this device only — connect GitHub to publish it', 4200);
-    return;
-  }
-  toast('Publishing to the site…', 6000);
+  const book = { sheets: p.sheets, order: p.order,
+                 savedAt: new Date().toISOString().slice(0, 10), bytes: buf.byteLength };
+  toast('Publishing ' + ds().label + '…', 60000);
   try {
-    await Publish.putFile(target, buf, 'Project Update: ' + ds().label + ' from ' + f.name);
-    toast('Published · every device picks it up within a minute', 5200);
+    await window.DB.publishBook(bookKey(), book);
+    applyBook(Object.assign({}, book, { source: 'server' }));
+    refreshPill(); buildTabs(); render();
+    toast(ds().label + ' published · ' + p.sheets['Full Plan'].rows.length +
+          ' sites · every device sees this now', 5200);
   } catch (err){
     console.error(err);
-    PENDING = false; renderFooter();
-    toast('Saved here, but publishing failed: ' + err.message, 7000);
+    toast('Could not publish: ' + err.message, 7000);
   }
 });
 
 function renderFooter(){
-  const cfg = window.Publish && Publish.config();
-  const bits = ['<b>' + esc(ds().label) + '</b> · reads <b>' + esc(SOURCE) + '</b> published in this repository' +
-    (PENDING ? ' · <b style="color:var(--warn)">this device is showing an upload that is still publishing</b>' : '')];
+  const where = ORIGIN === 'server' ? 'shared across every device'
+              : ORIGIN === 'bundled' ? 'nothing published yet — showing <b>' + esc(SOURCE) + '</b> from this folder'
+              : 'offline copy';
+  const lead = window.DB.configured() ? where : 'not syncing yet — anon key missing';
+  const bits = ['<b>' + esc(ds().label) + '</b> · ' + lead];
   if (window.IS_OWNER){
-    let line = '<a href="#" id="upBtn">Update ' + esc(ds().label) + ' from Excel…</a>';
-    if (window.Publish && Publish.ready())
-      line += ' · <span style="color:var(--ok)">publishes to ' + esc(cfg.owner + '/' + cfg.repo) + '</span>' +
-              ' · <a href="#" id="ghOff" style="color:var(--muted)">disconnect</a>';
-    else if (cfg)
-      line += ' · <a href="#" id="ghOn">connect GitHub to publish for every device</a>';
-    else
-      line += ' · <span style="color:var(--muted)">publishing works on the live site only</span>';
-    if (PENDING) line += ' · <a href="#" id="resetBtn" style="color:var(--muted)">discard local copy</a>';
-    bits.push(line);
+    bits.push('<a href="#" id="upBtn">Update ' + esc(ds().label) + ' from Excel…</a>' +
+              ' · <a href="#" id="acct" style="color:var(--muted)">…</a>');
   }
   document.querySelector('footer').innerHTML = bits.join('<br>');
   const u = $('upBtn'); if (u) u.onclick = e => { e.preventDefault(); $('file').click(); };
-  const r = $('resetBtn'); if (r) r.onclick = async e => { e.preventDefault();
-    await idbSet(DB, STORE, bookKey(), null); location.reload(); };
-  const on = $('ghOn'); if (on) on.onclick = async e => { e.preventDefault();
-    try { if (await Publish.connect()){ toast('Connected — uploads now publish for everyone', 4200); renderFooter(); } }
-    catch (err){ toast(err.message, 7000); } };
-  const off = $('ghOff'); if (off) off.onclick = e => { e.preventDefault();
-    Publish.disconnect(); renderFooter(); toast('Disconnected — uploads stay on this device'); };
+  const ac = $('acct');
+  if (ac){
+    const paint = s => { ac.textContent = s ? ('signed in as ' + s.user.email + ' · sign out')
+                                            : 'sign in to publish'; };
+    window.DB.session().then(paint);
+    window.DB.onAuth(paint);
+    ac.onclick = async e => {
+      e.preventDefault();
+      const s = await window.DB.session();
+      if (s){ await window.DB.signOut(); toast('Signed out'); paint(null); }
+      else { const ns = await window.AuthGate.signIn(); if (ns){ toast('Signed in'); paint(ns); } }
+    };
+  }
 }
 
 /* ---------- render ---------- */
