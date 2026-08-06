@@ -1968,10 +1968,12 @@ class Component extends DCLogic {
     return {
       isHome:s.page==='home', isMusic:s.page==='music', isBlog:s.page==='blog', isTools:s.page==='tools', isAbout:s.page==='about', isContact:s.page==='contact',
       tools:[
+        {name:'What To Do', initial:'W', tag:'Jobs · reminders', href:'tools/whattodo/',
+         desc:'The running list of what still needs doing, shared across every device. Add a job on one, tick it off on another, and it leaves both. Nudges every 15 minutes while the page is open.'},
         {name:'Project Update', initial:'P', tag:'Dialog · lamp pole rollout', href:'tools/project-update/',
          desc:'Live dashboard for the lamp-pole build – status, region, Tx plan, district and team breakdowns, with MOD-permission hubs flagged automatically from the Site Access list. Every sheet of the workbook is browsable and searchable.'},
         {name:'Site Access Lookup', initial:'S', tag:'Dialog · site list', href:'tools/site-access/',
-         desc:'Search 5,880 Dialog sites by ID, name or district and get depot, contact, tower and access-permission details instantly. Works offline.'},
+         desc:'Search 5,934 Dialog sites by ID, name or district and get depot, contact, tower and access-permission details instantly. Works offline.'},
         {name:'Site Data Lookup', initial:'D', tag:'Dialog · technical', href:'tools/site-data/',
          desc:'Full technical profile for 13,000+ sites – TX technology, tower, power, generator, solar and equipment counts. Search and go.'},
         {name:'RF Jumper Colour Codes', initial:'R', tag:'Huawei · Dialog', href:'tools/rf-jumper/',

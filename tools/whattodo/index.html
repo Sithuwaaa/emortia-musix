@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#190c11">
+<title>What To Do</title>
+<link rel="icon" href="../gin-extractor/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="../_lib/owner-config.js"></script>
+<script src="../_lib/owner.js"></script>
+<script src="../_lib/supabase-config.js"></script>
+<script src="../_lib/db.js"></script>
+<script src="../_lib/authgate.js"></script>
+<style>
+  :root{
+    /* rose — the one accent the other tools had not taken, and it ties back to
+       the site's own burgundy */
+    --navy:#2a121b;--navy-2:#3a1826;--accent:#d4547a;--accentB:#e87b9c;--accentD:#a63558;--accent-ink:#1d0610;
+    --bg:#190c11;--card:#25131b;--card-2:#1f0f16;--line:#3a1e29;--line3:#502c3a;
+    --text:#f6eaef;--muted:#ad8b98;--zebra:rgba(255,255,255,.018);
+    --ok:#34c98b;--warn:#f2764a;--info:#4f9bf0;--idle:#8d7480;
+    --glow:rgba(212,84,122,.5);--glowSoft:rgba(212,84,122,.28);
+  }
+  html[data-theme="light"]{
+    --navy:#3a1826;--navy-2:#4a2030;--accent:#b03a5e;--accentB:#d4547a;--accentD:#8a2745;--accent-ink:#ffffff;
+    --bg:#faf3f5;--card:#ffffff;--card-2:#fdf7f9;--line:#e8d6dd;--line3:#d4b8c3;
+    --text:#2a121b;--muted:#7a5e69;--zebra:rgba(0,0,0,.022);
+    --ok:#1f9a68;--warn:#c2542c;--info:#2f6fd0;--idle:#7a5e69;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);
+    font-family:'Hanken Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;line-height:1.5}
+
+  /* header — same shape as the other tools, its own colour */
+  .hdr{position:sticky;top:0;z-index:30;background:linear-gradient(180deg,var(--navy-2),var(--navy));
+    color:#fff;padding:calc(env(safe-area-inset-top) + 12px) 16px 12px;display:flex;align-items:center;gap:10px;
+    border-bottom:1px solid var(--line3);box-shadow:0 6px 26px rgba(0,0,0,.5);overflow:hidden}
+  .hdr::before{content:'';position:absolute;inset:-24px 0;pointer-events:none;opacity:.5;
+    background-image:linear-gradient(rgba(232,123,156,.10) 1px,transparent 1px),linear-gradient(90deg,rgba(232,123,156,.07) 1px,transparent 1px);
+    background-size:24px 24px;animation:tGrid 2.8s linear infinite}
+  @keyframes tGrid{to{transform:translateY(24px)}}
+  .hdr>*{position:relative;z-index:1}
+  .hdr .logo{width:30px;height:30px;border-radius:50%;background:linear-gradient(150deg,var(--accentB),var(--accentD));
+    display:grid;place-items:center;font-weight:800;color:#fff0f5;font-size:14px;flex-shrink:0;
+    box-shadow:0 0 18px var(--glow);animation:tFloat 4.5s ease-in-out infinite}
+  @keyframes tFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+  .hdr h1{font-family:'Bricolage Grotesque',sans-serif;font-size:18px;font-weight:700;margin-right:auto;white-space:nowrap;color:#fff}
+  .hdr h1::after{content:'\2588';color:var(--accentB);margin-left:6px;animation:tCaret 1s steps(1,end) infinite}
+  @keyframes tCaret{0%,49%{opacity:1}50%,100%{opacity:0}}
+  .pill{font-family:'Space Mono',monospace;font-size:11.5px;background:rgba(0,0,0,.32);border:1px solid var(--line3);
+    color:#f0d8e2;border-radius:999px;padding:5px 12px;white-space:nowrap;display:inline-flex;align-items:center;gap:7px}
+  .pill::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--accentB);animation:tLed 1.6s ease-in-out infinite}
+  @keyframes tLed{0%,100%{opacity:.35}50%{opacity:1}}
+  .pill b{color:var(--accentB)}
+  .theme{background:none;border:1px solid var(--line3);color:#fff;border-radius:9px;width:34px;height:34px;
+    font-size:15px;cursor:pointer;flex-shrink:0;transition:border-color .2s ease,transform .2s ease}
+  .theme:hover{border-color:var(--accentB);transform:scale(1.06)}
+
+  .tabs{position:sticky;top:55px;z-index:25;display:flex;gap:4px;overflow-x:auto;padding:10px 14px;
+    background:var(--bg);border-bottom:1px solid var(--line);scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{flex-shrink:0;border:1px solid var(--line);background:var(--card-2);color:var(--muted);border-radius:9px;
+    padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit;
+    transition:transform .15s ease,border-color .15s ease,color .15s ease}
+  .tab:hover{transform:translateY(-1px);border-color:var(--accent);color:var(--text)}
+  .tab.on{background:var(--accent);color:var(--accent-ink);border-color:transparent;box-shadow:0 6px 16px var(--glowSoft)}
+
+  main{max-width:860px;margin:0 auto;padding:18px 14px calc(env(safe-area-inset-bottom) + 40px)}
+  @keyframes rise{0%{opacity:0;transform:translateY(12px)}100%{opacity:1;transform:none}}
+
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px;
+    animation:rise .4s ease both}
+  .panel h2{font-family:'Bricolage Grotesque',sans-serif;font-size:17px;margin-bottom:6px;display:flex;align-items:center;gap:9px}
+  .panel h2 .dot{width:7px;height:7px;border-radius:50%;background:var(--accentB)}
+  .panel h2 .tag{margin-left:auto;font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);font-weight:400}
+  .note{color:var(--muted);font-size:13px;line-height:1.55}
+
+  /* the reminder bar */
+  .remind{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    background:var(--card-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:16px}
+  .remind .lab{font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .remind .next{font-family:'Space Mono',monospace;font-size:12.5px;color:var(--accentB);margin-left:auto}
+  .btn{border:1px solid var(--line3);background:none;color:var(--text);border-radius:9px;padding:7px 13px;
+    font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;
+    transition:border-color .18s ease,transform .18s ease,background .18s ease}
+  .btn:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .btn.on{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+
+  /* a task */
+  .task{display:flex;align-items:flex-start;gap:13px;background:var(--card);border:1px solid var(--line);
+    border-left:3px solid var(--accent);border-radius:12px;padding:14px 15px;margin-bottom:10px;
+    animation:rise .35s ease both}
+  .task.over{border-left-color:var(--warn)}
+  .task.soon{border-left-color:#e8a13c}
+  .task .body{flex:1;min-width:0}
+  .task .t{font-size:15.5px;font-weight:600;line-height:1.35;word-break:break-word}
+  .task .n{color:var(--muted);font-size:13px;margin-top:3px;white-space:pre-wrap;word-break:break-word}
+  .task .when{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.04em;margin-top:7px;color:var(--muted)}
+  .task .when b{color:var(--warn);font-weight:400}
+  .tick{flex-shrink:0;width:26px;height:26px;border-radius:50%;border:2px solid var(--line3);background:none;
+    cursor:pointer;display:grid;place-items:center;color:transparent;font-size:14px;margin-top:2px;
+    transition:border-color .18s ease,background .18s ease,color .18s ease,transform .18s ease}
+  .tick:hover{border-color:var(--ok);color:var(--ok);transform:scale(1.08)}
+  @keyframes tickOff{to{opacity:0;transform:translateX(26px) scale(.96)}}
+  .task.going{animation:tickOff .32s ease forwards;pointer-events:none}
+
+  /* add form */
+  .field{margin-bottom:13px}
+  .field label{display:block;font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+  .field input,.field textarea{width:100%;background:var(--card-2);color:var(--text);border:1px solid var(--line);
+    border-radius:9px;padding:10px 12px;font-size:14.5px;font-family:inherit;outline:none;
+    transition:border-color .18s ease}
+  .field input:focus,.field textarea:focus{border-color:var(--accent)}
+  .field textarea{min-height:78px;resize:vertical}
+  .go{background:var(--accent);color:var(--accent-ink);border:none;border-radius:10px;padding:12px 20px;
+    font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;
+    transition:transform .18s ease,box-shadow .18s ease}
+  .go:hover{transform:translateY(-1px);box-shadow:0 8px 20px var(--glowSoft)}
+  .go:disabled{opacity:.5;cursor:default;transform:none;box-shadow:none}
+
+  .empty{text-align:center;color:var(--muted);padding:46px 20px;font-size:14.5px;line-height:1.6}
+  .empty .big{font-size:38px;margin-bottom:10px;opacity:.65}
+  .err{border:1px solid var(--warn);border-radius:12px;padding:14px 16px;color:var(--text);
+    background:rgba(242,118,74,.08);font-size:14px;line-height:1.6}
+
+  footer{margin-top:26px;padding-top:16px;border-top:1px solid var(--line);
+    color:var(--muted);font-size:12.5px;line-height:1.7}
+  footer a{color:var(--accent);text-decoration:none}
+  footer a:hover{text-decoration:underline}
+
+  .toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:var(--navy-2);
+    color:#fff;border:1px solid var(--line3);border-radius:10px;padding:11px 18px;font-size:13.5px;
+    opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;z-index:120;max-width:90vw;text-align:center}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+  @media (prefers-reduced-motion:reduce){*{animation:none !important}}
+</style>
+</head>
+<body>
+<header class="hdr">
+  <div class="logo">W</div>
+  <h1>What To Do</h1>
+  <span class="pill" id="pill">loading…</span>
+  <button class="theme" id="themeBtn" aria-label="Toggle theme">☾</button>
+</header>
+<div class="tabs" id="tabs"></div>
+<main><div id="view"></div><footer></footer></main>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   What To Do — a first pass. Tasks live in the shared database so
+   the same list shows on every device, and ticking one off on the
+   phone clears it from the laptop.
+   ============================================================ */
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let TODOS = [], ACTIVE = 'Dashboard', BUSY = false, LOAD_ERR = null;
+
+/* ---------- theme (shared key with the other tools) ---------- */
+const THEME_KEY = 'office_tool_theme';
+function applyTheme(t){ document.documentElement.dataset.theme = t; $('themeBtn').textContent = t === 'dark' ? '☀' : '☾';
+  try { localStorage.setItem(THEME_KEY, t); } catch(e){} }
+applyTheme(localStorage.getItem(THEME_KEY) || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+$('themeBtn').onclick = () => applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+
+let tt; function toast(m, ms){ const t = $('toast'); t.textContent = m; t.classList.add('show');
+  clearTimeout(tt); tt = setTimeout(() => t.classList.remove('show'), ms || 2400); }
+
+/* ---------- time helpers ---------- */
+const pending = () => TODOS.filter(t => !t.done);
+function whenText(due){
+  if (!due) return { text:'no deadline', state:'' };
+  const d = new Date(due), now = Date.now(), diff = d - now;
+  const mins = Math.round(Math.abs(diff) / 60000);
+  const rel = mins < 60 ? mins + ' min'
+            : mins < 1440 ? Math.round(mins / 60) + ' h'
+            : Math.round(mins / 1440) + ' d';
+  const stamp = d.toLocaleString([], { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+  if (diff < 0) return { text: stamp + ' · ' + rel + ' overdue', state:'over' };
+  if (diff < 3600e3) return { text: stamp + ' · in ' + rel, state:'soon' };
+  return { text: stamp + ' · in ' + rel, state:'' };
+}
+
+/* ---------- tabs ---------- */
+function buildTabs(){
+  const all = ['Dashboard', 'Add To Do'];
+  $('tabs').innerHTML = all.map(n =>
+    '<button class="tab' + (n === ACTIVE ? ' on' : '') + '" data-t="' + n + '">' + n + '</button>').join('');
+  [...$('tabs').children].forEach(b => b.onclick = () => { ACTIVE = b.dataset.t; buildTabs(); render(); });
+}
+function refreshPill(){
+  const n = pending().length;
+  $('pill').innerHTML = '<b>' + n + '</b> pending' + (REMIND ? ' · reminding' : '');
+}
+
+/* ============================================================
+   Reminders — every 15 minutes while this page is open.
+
+   Worth being straight about the limit: with no server pushing to
+   your phone, a browser can only remind you while the tab is
+   alive. Closing it stops the reminders. Making them arrive with
+   the tab shut needs push, which needs a server — a later job.
+   ============================================================ */
+const EVERY = 15 * 60 * 1000;
+const REMIND_KEY = 'whattodo_remind';
+let REMIND = false, timer = null, nextAt = 0, tick = null;
+
+function canNotify(){ return typeof Notification !== 'undefined'; }
+function fire(){
+  const list = pending();
+  nextAt = Date.now() + EVERY;
+  if (!list.length) return;                       // nothing to nag about
+  const overdue = list.filter(t => t.due && new Date(t.due) < new Date()).length;
+  const head = list.length + (list.length === 1 ? ' job pending' : ' jobs pending')
+             + (overdue ? ' · ' + overdue + ' overdue' : '');
+  const body = list.slice(0, 4).map(t => '• ' + t.title).join('\n')
+             + (list.length > 4 ? '\n…and ' + (list.length - 4) + ' more' : '');
+  if (canNotify() && Notification.permission === 'granted'){
+    try { new Notification(head, { body: body, tag: 'whattodo', renotify: true }); } catch(e){}
+  }
+  toast(head, 5000);                              // always visible in-page too
+  document.title = '(' + list.length + ') What To Do';
+}
+async function setRemind(on){
+  REMIND = on;
+  try { localStorage.setItem(REMIND_KEY, on ? '1' : '0'); } catch(e){}
+  clearInterval(timer); clearInterval(tick); timer = tick = null;
+  if (on){
+    if (canNotify() && Notification.permission === 'default'){
+      try { await Notification.requestPermission(); } catch(e){}
+    }
+    nextAt = Date.now() + EVERY;
+    timer = setInterval(fire, EVERY);
+    tick = setInterval(() => { const el = $('nextIn'); if (el) el.textContent = countdown(); }, 1000);
+  } else {
+    document.title = 'What To Do';
+  }
+  refreshPill(); render();
+}
+function countdown(){
+  if (!REMIND) return 'off';
+  const left = Math.max(0, nextAt - Date.now());
+  const m = Math.floor(left / 60000), s = Math.floor(left % 60000 / 1000);
+  return 'next in ' + m + ':' + String(s).padStart(2, '0');
+}
+
+/* ---------- data ---------- */
+async function refresh(){
+  const r = await window.DB.listTodos();
+  TODOS = r.items; LOAD_ERR = r.error;
+  refreshPill(); render();
+}
+async function markDone(id, el){
+  if (BUSY) return; BUSY = true;
+  el.closest('.task').classList.add('going');     // let it slide out before the list redraws
+  try {
+    await window.AuthGate.require();
+    await window.DB.setTodoDone(id, true);
+    TODOS = TODOS.filter(t => t.id !== id);       // done means gone from here
+    setTimeout(() => { refreshPill(); render(); }, 300);
+    toast('Done');
+  } catch (err){
+    el.closest('.task').classList.remove('going');
+    toast(err.message, 6000);
+  } finally { BUSY = false; }
+}
+
+/* ---------- views ---------- */
+function renderDashboard(){
+  const list = pending();
+  let h = '<div class="remind">' +
+    '<span class="lab">Remind me every 15 min</span>' +
+    '<button class="btn' + (REMIND ? ' on' : '') + '" id="remBtn">' + (REMIND ? 'On' : 'Off') + '</button>' +
+    (canNotify() && Notification.permission === 'denied'
+      ? '<span class="note">notifications blocked — reminders show on the page</span>' : '') +
+    '<span class="next" id="nextIn">' + countdown() + '</span></div>';
+
+  if (LOAD_ERR){
+    h += '<div class="err"><b>The list could not be read.</b><br>' + esc(LOAD_ERR) + '</div>';
+    if (!list.length) return h;
+  }
+  if (!list.length){
+    h += '<div class="empty"><div class="big">✓</div>Nothing pending.<br>' +
+         'Add something on the <b>Add To Do</b> tab.</div>';
+    return h;
+  }
+  h += list.map(t => {
+    const w = whenText(t.due);
+    return '<div class="task ' + w.state + '">' +
+      '<button class="tick" data-id="' + esc(t.id) + '" title="Mark done">✓</button>' +
+      '<div class="body"><div class="t">' + esc(t.title) + '</div>' +
+      (t.note ? '<div class="n">' + esc(t.note) + '</div>' : '') +
+      '<div class="when">' + (w.state === 'over' ? '<b>' + esc(w.text) + '</b>' : esc(w.text)) + '</div>' +
+      '</div></div>';
+  }).join('');
+  return h;
+}
+function renderAdd(){
+  return '<div class="panel"><h2><span class="dot"></span>Add a job</h2>' +
+    '<p class="note" style="margin-bottom:15px">It appears on the Dashboard, on every device.</p>' +
+    '<div class="field"><label for="tTitle">What needs doing</label>' +
+      '<input id="tTitle" maxlength="200" placeholder="e.g. Send the MW update to Manoj"></div>' +
+    '<div class="field"><label for="tNote">Notes (optional)</label>' +
+      '<textarea id="tNote" maxlength="2000" placeholder="Anything worth remembering"></textarea></div>' +
+    '<div class="field"><label for="tDue">Due (optional)</label>' +
+      '<input id="tDue" type="datetime-local"></div>' +
+    '<button class="go" id="addBtn">Add to the list</button></div>';
+}
+function render(){
+  $('view').innerHTML = ACTIVE === 'Dashboard' ? renderDashboard() : renderAdd();
+  if (ACTIVE === 'Dashboard'){
+    const rb = $('remBtn'); if (rb) rb.onclick = () => setRemind(!REMIND);
+    [...document.querySelectorAll('.tick')].forEach(b => b.onclick = () => markDone(b.dataset.id, b));
+  } else {
+    const add = $('addBtn');
+    add.onclick = async () => {
+      const title = $('tTitle').value.trim();
+      if (!title){ toast('Give it a title first'); $('tTitle').focus(); return; }
+      add.disabled = true; add.textContent = 'Adding…';
+      try {
+        await window.AuthGate.require();
+        const due = $('tDue').value ? new Date($('tDue').value).toISOString() : null;
+        await window.DB.addTodo({ title, note: $('tNote').value.trim(), due });
+        await refresh();
+        ACTIVE = 'Dashboard'; buildTabs(); render();
+        toast('Added');
+      } catch (err){
+        toast(err.message, 6000);
+        add.disabled = false; add.textContent = 'Add to the list';
+      }
+    };
+    $('tTitle').focus();
+  }
+  renderFooter();
+}
+function renderFooter(){
+  const lead = window.DB.configured() ? 'Shared across every device' : 'Not syncing yet — anon key missing';
+  let h = lead + ' · reminders run while this page is open';
+  h += '<br><a href="#" id="acct">…</a>';
+  document.querySelector('footer').innerHTML = h;
+  const ac = $('acct');
+  const paint = s => { ac.textContent = s ? ('signed in as ' + s.user.email + ' · sign out') : 'sign in to add or tick off'; };
+  window.DB.session().then(paint);
+  ac.onclick = async e => {
+    e.preventDefault();
+    const s = await window.DB.session();
+    if (s){ await window.DB.signOut(); toast('Signed out'); paint(null); }
+    else { const ns = await window.AuthGate.signIn(); if (ns){ toast('Signed in'); paint(ns); } }
+  };
+}
+
+/* ---------- boot ---------- */
+(async function(){
+  buildTabs();
+  try { REMIND = localStorage.getItem(REMIND_KEY) === '1'; } catch(e){}
+  await refresh();
+  if (REMIND) setRemind(true); else render();
+  window.DB.onAuth(() => renderFooter());
+  // someone ticked one off elsewhere — drop it here too
+  window.DB.subscribeTodos(refresh);
+})();
+</script>
+</body>
+</html>

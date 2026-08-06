@@ -247,8 +247,72 @@
       .subscribe();
   }
 
+  /* ----------------------------------------------------------------- todos
+     Rows rather than a blob, because two devices can be ticking things off at
+     the same time and a whole-document write would have one clobber the other.
+     Reads are cached so the list is there before the network answers. */
+  const TODO_CACHE = 'todos';
+
+  /* Returns {items, error}. A read that fails still hands back the cache so the
+     page is usable, but the caller is told why — an empty list and a broken
+     connection look identical on screen otherwise, and "nothing pending" is a
+     bad way to find out the table was never created. */
+  async function listTodos(){
+    const cached = async () => (await cacheGet(TODO_CACHE)) || [];
+    const c = await client();
+    if (!c) return { items: await cached(),
+      error: configured() ? 'Could not reach Supabase.'
+                          : 'Not syncing — the anon key is missing from tools/_lib/supabase-config.js.' };
+    const { data, error } = await c.from('todos')
+      .select('id,title,note,due,done,done_at,created_at')
+      .order('done', { ascending: true })
+      .order('due', { ascending: true, nullsFirst: false })
+      .order('created_at', { ascending: true });
+    if (error){
+      console.warn('Todo read failed, using the cached list:', error.message);
+      const missing = /schema cache|does not exist/i.test(error.message);
+      return { items: await cached(),
+        error: missing ? 'The todos table does not exist yet — run supabase/004_todos.sql in the SQL Editor.'
+                       : error.message };
+    }
+    await cacheSet(TODO_CACHE, data || []);
+    return { items: data || [], error: null };
+  }
+
+  async function addTodo(t){
+    const c = await client();
+    if (!c) throw new Error('Supabase is not configured — the anon key is missing.');
+    const s = await session();
+    if (!s) throw new Error('Sign in first — adding writes to the shared list.');
+    const row = { title: t.title, note: t.note || null, due: t.due || null,
+                  updated_at: new Date().toISOString(), updated_by: s.user.id };
+    const { data, error } = await c.from('todos').insert(row).select().single();
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  async function setTodoDone(id, done){
+    const c = await client();
+    if (!c) throw new Error('Supabase is not configured — the anon key is missing.');
+    const s = await session();
+    if (!s) throw new Error('Sign in first — ticking off writes to the shared list.');
+    const { error } = await c.from('todos').update({
+      done: !!done, done_at: done ? new Date().toISOString() : null,
+      updated_at: new Date().toISOString(), updated_by: s.user.id
+    }).eq('id', id);
+    if (error) throw new Error(error.message);
+  }
+
+  async function subscribeTodos(fn){
+    const c = await client(); if (!c) return;
+    c.channel('todos')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, () => fn())
+      .subscribe();
+  }
+
   window.DB = { configured, client, session, signIn, signOut, onAuth,
                 load, publish, subscribe,
                 publishBook, loadBook, subscribeBook,
+                listTodos, addTodo, setTodoDone, subscribeTodos,
                 cacheSet, cacheGet };
 })();
