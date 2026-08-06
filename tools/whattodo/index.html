@@ -269,8 +269,17 @@ const BELL = [
   { r:4.17, g:0.13, d:0.45 },
   { r:5.43, g:0.09, d:0.30 }
 ];
+/* Everything that gets scheduled is kept, so a minute of chiming already on
+   the audio clock can still be cut off when Stop is pressed. */
+let scheduled = [];
+function keep(node){ scheduled.push(node); return node; }
+function killScheduled(){
+  for (const n of scheduled){ try { n.stop(0); } catch(e){} }
+  scheduled = [];
+}
+
 let noiseBuf = null;
-function hammer(ctx, at, level){
+function hammer(ctx, at, level, tone){
   if (!noiseBuf){
     noiseBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.06), ctx.sampleRate);
     const d = noiseBuf.getChannelData(0);
@@ -278,66 +287,110 @@ function hammer(ctx, at, level){
   }
   const src = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain();
   src.buffer = noiseBuf;
-  bp.type = 'bandpass'; bp.frequency.setValueAtTime(2600, at); bp.Q.setValueAtTime(1.1, at);
+  bp.type = 'bandpass'; bp.frequency.setValueAtTime(tone || 2600, at); bp.Q.setValueAtTime(1.1, at);
   g.gain.setValueAtTime(level, at);
   g.gain.exponentialRampToValueAtTime(0.0001, at + 0.09);
   src.connect(bp); bp.connect(g); g.connect(master(ctx));
-  src.start(at); src.stop(at + 0.09);
+  src.start(at); src.stop(at + 0.09); keep(src);
 }
-/* base is the prime; a tower bell sits low, around E3 */
-function bellStrike(ctx, at, base, level){
-  hammer(ctx, at, level * 0.5);
+/* base is the prime. `hold` scales every partial's decay, which is the whole
+   difference between a quarter bell and the hour bell. */
+function strikePartials(ctx, at, base, level, hold){
   for (const p of BELL){
     const o = ctx.createOscillator(), g = ctx.createGain();
+    const d = p.d * (hold || 1);
     o.type = 'sine';
     o.frequency.setValueAtTime(base * p.r * (1 + (Math.random() - 0.5) * 0.005), at);
     g.gain.setValueAtTime(0.0001, at);
     g.gain.exponentialRampToValueAtTime(Math.max(0.0002, level * p.g), at + 0.005);
-    g.gain.exponentialRampToValueAtTime(0.0001, at + p.d);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + d);
     o.connect(g); g.connect(master(ctx));
-    o.start(at); o.stop(at + p.d + 0.05);
+    o.start(at); o.stop(at + d + 0.05); keep(o);
   }
 }
-const BELL_HZ = 164.81;          // E3 — the note a decent tower bell strikes
+/* ---------- Big Ben ----------
+   Westminster Quarters. The tune lives on four quarter bells in E major, and
+   the hour is struck on the great bell — the one actually named Big Ben,
+   which sounds E an octave and a half below.
 
-/* The chime: one soft strike, enough to look up for. */
-function chime(){
-  const ctx = audioCtx(); if (!ctx) return;
-  bellStrike(ctx, ctx.currentTime + 0.03, BELL_HZ, 0.16);
-  if (navigator.vibrate) navigator.vibrate(180);
+   The phrases are the real ones. At the hour the tower plays four of them,
+   sixteen strokes, and only then strikes the hour. A quarter past gets one
+   phrase — which happens to be exactly what this tool wants for a fifteen
+   minute nudge, so the quarter chime is the nudge and the full hour sequence
+   is the alarm. */
+const WQ = { B: 246.94, E: 329.63, Fs: 369.99, Gs: 415.30 };   // B3 E4 F#4 G#4
+const WQ_QUARTER = ['Gs','Fs','E','B'];
+const WQ_HOUR = [
+  ['E','Gs','Fs','B'],
+  ['E','Fs','Gs','E'],
+  ['Gs','E','Fs','B'],
+  ['B','Fs','Gs','E']
+];
+const GREAT_HZ = 82.41;          // E2 — the hour bell
+const NOTE_GAP = 1.15, PHRASE_GAP = 2.05, HOUR_GAP = 4.6;
+
+/* The quarter bells are smaller: brighter, and they let go sooner. */
+function quarterBell(ctx, at, hz, level){
+  hammer(ctx, at, level * 0.35, 3200);
+  strikePartials(ctx, at, hz, level, 0.55);
+}
+/* The great bell is the opposite: slow to speak and slow to die. */
+function greatBell(ctx, at, level){
+  hammer(ctx, at, level * 0.45, 1800);
+  strikePartials(ctx, at, GREAT_HZ, level, 1.8);
 }
 
-/* The alarm: the bell tolling, once every couple of seconds for a minute, or
-   until it is stopped. Each strike is scheduled only when it falls due rather
-   than queueing the whole minute up front — that way stopping actually stops
-   it, instead of leaving sixty seconds of sound already committed to the
-   audio clock and no way to call it back. */
-const ALARM_FOR = 60 * 1000, TOLL = 2200;
-let alarmTimer = null, alarmEnds = 0, alarmTick = null;
-const alarming = () => !!alarmTimer;
+const ALARM_FOR = 60 * 1000;
+let alarmEnds = 0, alarmTick = null, alarmStop = null;
+const alarming = () => !!alarmStop;
 
 function startAlarm(ms){
   stopAlarm(true);
   const ctx = audioCtx(); if (!ctx) return;
-  alarmEnds = Date.now() + (ms || ALARM_FOR);
-  const toll = () => {
+  const span = (ms || ALARM_FOR) / 1000;
+  alarmEnds = Date.now() + span * 1000;
+
+  /* Scheduled on the audio clock rather than by timer, because a melody drifts
+     audibly if each note waits on setInterval. Every node is kept so the whole
+     lot can be cut off — otherwise Stop would leave a minute of Westminster
+     already committed and no way to call it back. */
+  const t0 = ctx.currentTime + 0.06, endAt = t0 + span;
+  let t = t0;
+  for (const phrase of WQ_HOUR){
+    for (const n of phrase){
+      if (t < endAt) quarterBell(ctx, t, WQ[n], 0.20);
+      t += NOTE_GAP;
+    }
+    t += PHRASE_GAP - NOTE_GAP;
+  }
+  t += 0.7;                                   // the pause before the hour strikes
+  while (t < endAt){ greatBell(ctx, t, 0.34); t += HOUR_GAP; }
+
+  alarmStop = () => killScheduled();
+  if (navigator.vibrate) navigator.vibrate([260, 140, 200]);
+  alarmTick = setInterval(() => {
     if (Date.now() >= alarmEnds){ stopAlarm(); return; }
-    bellStrike(ctx, ctx.currentTime + 0.02, BELL_HZ, 0.30);
-    if (navigator.vibrate) navigator.vibrate([260, 140, 200]);
-  };
-  toll();
-  alarmTimer = setInterval(toll, TOLL);
-  alarmTick  = setInterval(() => { const el = $('almLeft'); if (el) el.textContent = alarmLeft(); }, 500);
+    const el = $('almLeft'); if (el) el.textContent = alarmLeft();
+  }, 500);
   render();
 }
 function stopAlarm(quiet){
-  clearInterval(alarmTimer); clearInterval(alarmTick);
-  alarmTimer = alarmTick = null; alarmEnds = 0;
+  if (alarmStop) alarmStop();
+  clearInterval(alarmTick);
+  alarmTick = null; alarmStop = null; alarmEnds = 0;
   if (navigator.vibrate) navigator.vibrate(0);
   if (!quiet) render();
 }
 function alarmLeft(){
   return Math.max(0, Math.ceil((alarmEnds - Date.now()) / 1000)) + 's';
+}
+/* The quarter chime — one phrase, which is literally what a clock tower plays
+   at a quarter past, and this nudges every fifteen minutes. */
+function chime(){
+  const ctx = audioCtx(); if (!ctx) return;
+  let t = ctx.currentTime + 0.05;
+  for (const n of WQ_QUARTER){ quarterBell(ctx, t, WQ[n], 0.17); t += NOTE_GAP; }
+  if (navigator.vibrate) navigator.vibrate(180);
 }
 function ring(urgent){ if (urgent) startAlarm(); else chime(); }
 function setSound(on){
