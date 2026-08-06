@@ -207,9 +207,61 @@ function refreshPill(){
    ============================================================ */
 const EVERY = 15 * 60 * 1000;
 const REMIND_KEY = 'whattodo_remind';
-let REMIND = false, timer = null, nextAt = 0, tick = null;
+const SOUND_KEY = 'whattodo_sound';
+let REMIND = false, SOUND = true, timer = null, nextAt = 0, tick = null;
 
 function canNotify(){ return typeof Notification !== 'undefined'; }
+
+/* ---------- the ring ----------
+   Synthesised rather than a file: nothing to download, works offline, and no
+   sound sitting in the repo. A browser will not let a page make noise until
+   it has been interacted with, so the context is opened on the click that
+   turns reminders on — which is also why that click plays a short preview.
+   Audio is not throttled the way animation is, so this still sounds with the
+   tab in the background. It cannot sound with the tab closed. */
+let AC = null;
+function audioCtx(){
+  try {
+    if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === 'suspended') AC.resume();
+  } catch(e){ return null; }
+  return AC;
+}
+function beep(ctx, at, freq, dur, peak){
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(freq, at);
+  g.gain.setValueAtTime(0.0001, at);
+  g.gain.exponentialRampToValueAtTime(peak, at + 0.014);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+  o.connect(g); g.connect(ctx.destination);
+  o.start(at); o.stop(at + dur + 0.03);
+}
+/* urgent → the alarm: an insistent triplet, three times over.
+   otherwise → a two-note chime, enough to look up for. */
+function ring(urgent){
+  const ctx = audioCtx(); if (!ctx) return;
+  const t0 = ctx.currentTime + 0.03;
+  if (urgent){
+    for (let r = 0; r < 3; r++){
+      const b = t0 + r * 0.64;
+      beep(ctx, b,        880,  0.13, 0.22);
+      beep(ctx, b + 0.17, 1174, 0.13, 0.22);
+      beep(ctx, b + 0.34, 880,  0.20, 0.19);
+    }
+    if (navigator.vibrate) navigator.vibrate([220, 120, 220, 120, 320]);
+  } else {
+    beep(ctx, t0,        659, 0.50, 0.16);
+    beep(ctx, t0 + 0.23, 880, 0.62, 0.14);
+    if (navigator.vibrate) navigator.vibrate(180);
+  }
+}
+function setSound(on){
+  SOUND = on;
+  try { localStorage.setItem(SOUND_KEY, on ? '1' : '0'); } catch(e){}
+  if (on) ring(false);                    // preview, and unlock audio on this click
+  render();
+}
 function fire(){
   const list = pending();
   nextAt = Date.now() + EVERY;
@@ -222,6 +274,7 @@ function fire(){
   if (canNotify() && Notification.permission === 'granted'){
     try { new Notification(head, { body: body, tag: 'whattodo', renotify: true }); } catch(e){}
   }
+  if (SOUND) ring(overdue > 0);                   // chime, or the alarm if overdue
   toast(head, 5000);                              // always visible in-page too
   document.title = '(' + list.length + ') What To Do';
 }
@@ -233,6 +286,7 @@ async function setRemind(on){
     if (canNotify() && Notification.permission === 'default'){
       try { await Notification.requestPermission(); } catch(e){}
     }
+    audioCtx();                                   // unlock sound on this click
     nextAt = Date.now() + EVERY;
     timer = setInterval(fire, EVERY);
     tick = setInterval(() => { const el = $('nextIn'); if (el) el.textContent = countdown(); }, 1000);
@@ -275,6 +329,7 @@ function renderDashboard(){
   let h = '<div class="remind">' +
     '<span class="lab">Remind me every 15 min</span>' +
     '<button class="btn' + (REMIND ? ' on' : '') + '" id="remBtn">' + (REMIND ? 'On' : 'Off') + '</button>' +
+    '<button class="btn' + (SOUND ? ' on' : '') + '" id="sndBtn" title="' + (SOUND ? 'Ring is on — click to hear it' : 'Ring is off') + '">' + (SOUND ? '🔔 Ring' : '🔕 Silent') + '</button>' +
     (canNotify() && Notification.permission === 'denied'
       ? '<span class="note">notifications blocked — reminders show on the page</span>' : '') +
     '<span class="next" id="nextIn">' + countdown() + '</span></div>';
@@ -314,6 +369,7 @@ function render(){
   $('view').innerHTML = ACTIVE === 'Dashboard' ? renderDashboard() : renderAdd();
   if (ACTIVE === 'Dashboard'){
     const rb = $('remBtn'); if (rb) rb.onclick = () => setRemind(!REMIND);
+    const sb = $('sndBtn'); if (sb) sb.onclick = () => setSound(!SOUND);   // on plays a preview
     [...document.querySelectorAll('.tick')].forEach(b => b.onclick = () => markDone(b.dataset.id, b));
   } else {
     const add = $('addBtn');
@@ -356,7 +412,8 @@ function renderFooter(){
 /* ---------- boot ---------- */
 (async function(){
   buildTabs();
-  try { REMIND = localStorage.getItem(REMIND_KEY) === '1'; } catch(e){}
+  try { REMIND = localStorage.getItem(REMIND_KEY) === '1';
+        SOUND  = localStorage.getItem(SOUND_KEY)  !== '0'; } catch(e){}
   await refresh();
   if (REMIND) setRemind(true); else render();
   window.DB.onAuth(() => renderFooter());
