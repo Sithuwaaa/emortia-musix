@@ -189,12 +189,27 @@ input,textarea,button{font-family:inherit;}
 .bk-leaf{transform-style:preserve-3d;
   transform:rotateY(var(--a,0deg)) translateZ(var(--lift,0px)) rotate(var(--tz,0deg));
   box-shadow:var(--sx,0px) 14px 44px rgba(0,0,0,var(--so,0));will-change:transform;}
+/* ---- the soft fold ----
+   A hard cover swings; a page creases. These three layers are the crease: the
+   part of the sheet still lying flat, the corner folded back on itself showing
+   its reverse, and the shadow the fold throws across the page beneath. */
+.bk-sheet{position:absolute;inset:0;pointer-events:none;z-index:7;}
+.bk-flat,.bk-flap,.bk-creaseShadow{position:absolute;inset:0;will-change:clip-path,transform;}
+.bk-flat{clip-path:var(--flat,polygon(0 0,0 0,0 0));}
+.bk-flap{clip-path:var(--flap,polygon(0 0,0 0,0 0));transform:var(--fold,none);
+  transform-origin:0 0;filter:brightness(.93);}
+/* the lift off the page, strongest right at the crease */
+.bk-flap::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(var(--creaseDeg,0deg),rgba(255,246,228,.30),rgba(120,86,40,.20) 42%,rgba(60,40,14,.34));}
+.bk-creaseShadow{clip-path:var(--flat,polygon(0 0,0 0,0 0));opacity:var(--shadeOn,0);
+  background:linear-gradient(var(--shadeDeg,0deg),rgba(38,22,6,.42),rgba(38,22,6,.16) 34px,transparent 96px);}
 .bk-face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden;}
 .bk-shade{position:absolute;inset:0;pointer-events:none;background:#1b0f04;}
 /* The hit area is clipped to the same triangle as the fold, so the grab zone
    claims only the corner itself and the table of contents underneath stays
    clickable right up to it. */
-.bk-corner{position:absolute;z-index:9;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.bk-corner{position:absolute;z-index:9;cursor:grab;touch-action:none;-webkit-tap-highlight-color:transparent;}
+.bk-corner:active{cursor:grabbing;}
 .bk-corner.br{clip-path:polygon(100% 0,100% 100%,0 100%);}
 .bk-corner.bl{clip-path:polygon(0 0,0 100%,100% 100%);}
 /* the folded triangle that lifts when you bring the pointer to a corner */
@@ -1089,16 +1104,103 @@ class Component extends DCLogic {
     return r.width ? r : null;
   }
   /* 0 = leaf lying flat on the right, 1 = flat on the left */
-  bkPaint(u){
-    const el=this._bkLeaf; if(!el) return;
-    const t=Math.max(0,Math.min(1,u)), arc=Math.sin(Math.PI*t);
-    el.style.setProperty('--a', (-180*t).toFixed(2)+'deg');
-    el.style.setProperty('--lift', (13*arc).toFixed(2)+'px');   // bows off the wire
-    el.style.setProperty('--tz', (2.6*arc).toFixed(2)+'deg');   // and twists a little
-    el.style.setProperty('--so', (0.5*arc).toFixed(3));
-    el.style.setProperty('--sx', ((t<0.5?-1:1)*30*arc).toFixed(1)+'px');
-    if(this._bkFrontShade) this._bkFrontShade.style.opacity=(0.8*t).toFixed(3);
-    if(this._bkBackShade)  this._bkBackShade.style.opacity=Math.max(0,(1-t)*0.85).toFixed(3);
+  /* ---------------- the fold ----------------
+     A real page does not swing like a door on the spine. Pull a corner and the
+     sheet creases along the perpendicular bisector of where that corner was and
+     where it now is, and everything past the crease is the back of the sheet,
+     reflected in that line. That reflection is why the writing on a folded
+     corner reads backwards.
+
+     Worked in the page's own pixel space: width W, height H, spine at x = 0. */
+  bkClipHalf(poly, M, n){
+    // Sutherland–Hodgman against one half-plane: keep dot(X - M, n) >= 0
+    const side = p => (p.x - M.x) * n.x + (p.y - M.y) * n.y;
+    const out = [];
+    for (let i = 0; i < poly.length; i++){
+      const A = poly[i], B = poly[(i + 1) % poly.length];
+      const sa = side(A), sb = side(B);
+      if (sa >= 0) out.push(A);
+      if ((sa >= 0) !== (sb >= 0)){
+        const t = sa / (sa - sb);
+        out.push({ x: A.x + (B.x - A.x) * t, y: A.y + (B.y - A.y) * t });
+      }
+    }
+    return out;
+  }
+  bkFold(W, H, C, P){
+    const M = { x:(C.x + P.x) / 2, y:(C.y + P.y) / 2 };      // a point on the crease
+    let vx = P.x - C.x, vy = P.y - C.y;                       // C→P is its normal
+    const len = Math.hypot(vx, vy);
+    // Corner still where it started: there is no crease direction to speak of,
+    // and normalising by ~0 would leave a degenerate matrix and a "half-plane"
+    // that keeps the whole page on both sides of itself.
+    if (len < 0.5){
+      return { flat:[{x:0,y:0},{x:W,y:0},{x:W,y:H},{x:0,y:H}], flap:[],
+               matrix:'matrix(1,0,0,1,0,0)', creaseDeg:0, crease:{ x:C.x, y:C.y } };
+    }
+    vx /= len; vy /= len;
+    const dx = -vy, dy = vx;                                  // along the crease
+    const a = dx * dx - dy * dy, b = 2 * dx * dy;             // reflection in it
+    const e = M.x - (a * M.x + b * M.y);
+    const f = M.y - (b * M.x - a * M.y);
+
+    const rect = [{x:0,y:0},{x:W,y:0},{x:W,y:H},{x:0,y:H}];
+    const n = { x:vx, y:vy };
+    const flat = this.bkClipHalf(rect, M, n);                 // the part still lying down
+    const flap = this.bkClipHalf(rect, M, { x:-n.x, y:-n.y });// the part folded over
+    return {
+      flat, flap,
+      matrix: 'matrix(' + a.toFixed(5) + ',' + b.toFixed(5) + ',' + b.toFixed(5) + ',' +
+              (-a).toFixed(5) + ',' + e.toFixed(2) + ',' + f.toFixed(2) + ')',
+      creaseDeg: Math.atan2(dy, dx) * 180 / Math.PI,
+      crease: M
+    };
+  }
+  bkPoly(pts){
+    if (!pts.length) return 'polygon(0 0,0 0,0 0)';
+    return 'polygon(' + pts.map(p => p.x.toFixed(1) + 'px ' + p.y.toFixed(1) + 'px').join(',') + ')';
+  }
+  /* Where the dragged corner sits at progress t. It travels from its own corner
+     across to the mirror of that corner on the far side of the spine, bowing
+     out on the way rather than sliding in a straight line — a sheet held at one
+     corner does not track a ruler. */
+  bkCornerAt(W, H, t, grip){
+    const y0 = grip === 'tr' ? 0 : H;
+    const x = W - 2 * W * t;
+    const bow = Math.sin(Math.PI * t) * H * 0.16 * (grip === 'tr' ? 1 : -1);
+    return { x: x, y: y0 + bow };
+  }
+  bkPaint(u, pointer){
+    // A cover is a board — it swings on the spine and does not crease. Only a
+    // page folds, so the two are painted differently.
+    const drag = this.state.bkDrag;
+    if (drag && drag.kind === 'cover'){
+      const el = this._bkLeaf; if (!el) return;
+      const t = Math.max(0, Math.min(1, u)), arc = Math.sin(Math.PI * t);
+      el.style.setProperty('--a', (-180 * t).toFixed(2) + 'deg');
+      el.style.setProperty('--lift', (13 * arc).toFixed(2) + 'px');
+      el.style.setProperty('--tz', (2.6 * arc).toFixed(2) + 'deg');
+      el.style.setProperty('--so', (0.5 * arc).toFixed(3));
+      el.style.setProperty('--sx', ((t < 0.5 ? -1 : 1) * 30 * arc).toFixed(1) + 'px');
+      if (this._bkFrontShade) this._bkFrontShade.style.opacity = (0.8 * t).toFixed(3);
+      if (this._bkBackShade)  this._bkBackShade.style.opacity = Math.max(0, (1 - t) * 0.85).toFixed(3);
+      return;
+    }
+    const sheet = this._bkSheet; if (!sheet) return;
+    const W = sheet.clientWidth, H = sheet.clientHeight;
+    if (!W || !H) return;
+    const grip = this._bkGrip || 'br';
+    const C = { x: W, y: grip === 'tr' ? 0 : H };
+    const P = pointer || this.bkCornerAt(W, H, Math.max(0, Math.min(1, u)), grip);
+    const f = this.bkFold(W, H, C, P);
+
+    sheet.style.setProperty('--flat', this.bkPoly(f.flat));
+    sheet.style.setProperty('--flap', this.bkPoly(f.flap));
+    sheet.style.setProperty('--fold', f.matrix);
+    // light rakes across the fold from the crease outward
+    sheet.style.setProperty('--creaseDeg', (f.creaseDeg + 90).toFixed(1) + 'deg');
+    sheet.style.setProperty('--shadeDeg', (f.creaseDeg - 90).toFixed(1) + 'deg');
+    sheet.style.setProperty('--shadeOn', (Math.sin(Math.PI * Math.max(0, Math.min(1, u))) * 0.9).toFixed(3));
   }
   bkAnimate(from, to, ms, done){
     const t0=performance.now();
@@ -1334,12 +1436,100 @@ class Component extends DCLogic {
     }
     return rings;
   }
+  /* Take hold of a corner and the crease follows the pointer, which is the
+     whole point of a page rather than a button. Let go past halfway and it
+     finishes; short of it, it falls back. A plain click without moving still
+     turns, so nothing is lost on a touch screen. */
+  bkGrab(pos, kind, dir){
+    return (e) => {
+      if (this._bkBusy || this._bk) return;
+      if (kind !== 'page') return;                       // a cover swings, it does not crease
+      const st = this.state, last = this.bkCount() - 1;
+      const to = dir > 0 ? st.bkIdx + 1 : st.bkIdx - 1;
+      if (to < 0 || to > last) return;
+      if (e.preventDefault) e.preventDefault();
+
+      this._bkGrip = pos;
+      this._bk = { kind:'page', dir, from: st.bkIdx, to, fromU: 0, toU: 1, u: 0, moved: false, P: null };
+      this._bkBusy = true;
+
+      this.setState({ bkDrag:{ kind:'page', dir, from: st.bkIdx, to }, bkSpread: true }, () => {
+        const sheet = this._bkSheet;
+        if (!sheet){ this._bk = null; this._bkBusy = false; this.setState({ bkDrag:null }); return; }
+        const local = ev => {
+          const r = sheet.getBoundingClientRect();
+          return { x: ev.clientX - r.left, y: ev.clientY - r.top, W: r.width };
+        };
+        const move = ev => {
+          const b = this._bk; if (!b) return;
+          const p = local(ev);
+          // how far the corner has come, as a share of its whole journey across
+          const u = Math.max(0, Math.min(1, (p.W - p.x) / (2 * p.W)));
+          if (Math.abs(u) > 0.01) b.moved = true;
+          b.u = u; b.P = { x: p.x, y: p.y };
+          this.bkPaint(u, b.P);
+        };
+        const up = () => {
+          window.removeEventListener('pointermove', move);
+          window.removeEventListener('pointerup', up);
+          window.removeEventListener('pointercancel', up);
+          this._bkUp = null;
+          const b = this._bk; if (!b) return;
+          const commit = !b.moved || b.u > 0.5;
+          this.bkSettleFold(commit);
+        };
+        this._bkUp = up;
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', up);
+        window.addEventListener('pointercancel', up);
+        this.bkPaint(0);
+      });
+    };
+  }
+  /* Ease from wherever the hand let go to where the sheet belongs, moving the
+     corner itself rather than a progress number, so there is no jump between
+     the dragged fold and the finishing one. */
+  bkSettleFold(commit){
+    const b = this._bk; if (!b) return;
+    const sheet = this._bkSheet;
+    const done = () => {
+      this._bk = null; this._bkBusy = false;
+      if (commit) this.setState(s => ({ bkIdx: b.to, bkDrag: null, bkInk: s.bkInk + 1 }));
+      else this.setState({ bkDrag: null });
+    };
+    if (!sheet || this.reducedMotion()){ done(); return; }
+    const W = sheet.clientWidth, H = sheet.clientHeight;
+    const endU = commit ? 1 : 0;
+    const from = b.P || this.bkCornerAt(W, H, b.u, this._bkGrip);
+    const to = this.bkCornerAt(W, H, endU, this._bkGrip);
+    const ms = Math.max(200, 520 * Math.abs(endU - b.u));
+    const t0 = performance.now();
+    let ended = false;
+    const end = () => { if (ended) return; ended = true;
+      if (this._bkRaf) cancelAnimationFrame(this._bkRaf);
+      clearTimeout(this._bkGuard);
+      this.bkPaint(endU); done(); };
+    const step = () => {
+      if (ended) return;
+      const p = Math.min(1, (performance.now() - t0) / ms);
+      const e = 1 - Math.pow(1 - p, 3);
+      this.bkPaint(b.u + (endU - b.u) * e,
+                   { x: from.x + (to.x - from.x) * e, y: from.y + (to.y - from.y) * e });
+      if (p < 1) this._bkRaf = requestAnimationFrame(step); else end();
+    };
+    this._bkRaf = requestAnimationFrame(step);
+    this._bkGuard = setTimeout(end, ms + 400);
+  }
   bkCorner(pos, kind, dir, key){
     const box={position:'absolute',width:'clamp(52px,15%,112px)',height:'clamp(52px,22%,132px)'};
     box.bottom=0;
     box[pos[1]==='l'?'left':'right']=0;
-    return React.createElement('div',{key:key, className:'bk-corner '+pos, style:box,
-      title: dir>0?'Turn the page':'Turn back', onClick:()=>this.bkTurn(kind, dir)},
+    // A page is dragged; a cover is only clicked, since a board does not crease.
+    const on = kind === 'page'
+      ? { onPointerDown: this.bkGrab(pos, kind, dir) }
+      : { onClick: () => { this._bkGrip = pos; this.bkTurn(kind, dir); } };
+    return React.createElement('div',Object.assign({key:key, className:'bk-corner '+pos, style:box,
+      title: dir>0?'Turn the page — or drag it':'Turn back — or drag it'}, on),
       React.createElement('div',{className:'bk-curlsh', style:{'--cx':pos[1]==='l'?'0%':'100%','--cy':'100%'}}),
       React.createElement('div',{className:'bk-curl '+pos}));
   }
@@ -1481,16 +1671,18 @@ class Component extends DCLogic {
 
     // the leaf mid-roll: recto of the near spread, verso of the far one
     if(turning){
-      kids.push(React.createElement('div',{key:'leaf', className:'bk-leaf', ref:el=>{this._bkLeaf=el;},
-        style:{position:'absolute',left:pgLeft,top:0,width:pgWidth,height:'100%',transformOrigin:'left center',zIndex:7}},
-        React.createElement('div',{className:'bk-face bk-paper', style:{padding:padR,borderRadius:single?'3px':'0 3px 3px 0',
-          display:'flex',flexDirection:'column'}},
-          this.bkSide('R', a, L, idx, single, 'la'+a),
-          React.createElement('div',{className:'bk-shade', ref:el=>{this._bkFrontShade=el;}, style:{opacity:0}})),
-        React.createElement('div',{className:'bk-face '+(single?'bk-paper':(b===0?'bk-endpaper':'bk-paper l')), style:{transform:'rotateY(180deg)',padding:padL,
-          borderRadius:single?'3px':'3px 0 0 3px',display:'flex',flexDirection:'column'}},
-          single?null:this.bkSide('L', b, L, idx, false, 'lb'+b),
-          React.createElement('div',{className:'bk-shade', ref:el=>{this._bkBackShade=el;}, style:{opacity:0}}))));
+      // A sheet, not a door: the flat remainder, the corner folded back on
+      // itself showing its reverse, and the shadow that fold throws.
+      kids.push(React.createElement('div',{key:'sheet', className:'bk-sheet',
+        ref:el=>{this._bkSheet=el;},
+        style:{left:pgLeft,width:pgWidth}},
+        React.createElement('div',{className:'bk-creaseShadow', ref:el=>{this._bkCrease=el;}}),
+        React.createElement('div',{className:'bk-flap bk-paper'+(single?'':' l'), ref:el=>{this._bkFlap=el;},
+          style:{padding:padL,borderRadius:single?'3px':'3px 0 0 3px',display:'flex',flexDirection:'column'}},
+          single?null:this.bkSide('L', b, L, idx, false, 'lb'+b)),
+        React.createElement('div',{className:'bk-flat bk-paper', ref:el=>{this._bkFlat=el;},
+          style:{padding:padR,borderRadius:single?'3px':'0 3px 3px 0',display:'flex',flexDirection:'column'}},
+          this.bkSide('R', a, L, idx, single, 'la'+a))));
     }
 
     // the wire sits on the binding edge whether the book is shut or open
