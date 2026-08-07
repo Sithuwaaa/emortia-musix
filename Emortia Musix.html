@@ -37,13 +37,13 @@ header,footer{--accent:#b03a56;--accentB:#d15873;--accentD:#87213c;--glow:rgba(1
 [data-theme="burgundy"][data-section="blog"]{--accent:#c9954a;--accentB:#dfae63;--accentD:#9d6f2f;--glow:rgba(201,149,74,0.5);--glow0:rgba(201,149,74,0);--glowSoft:rgba(201,149,74,0.28);--stripe:rgba(201,149,74,0.06);--dot:rgba(223,174,99,0.7);}
 [data-theme="burgundy"][data-section="tools"]{--accent:#1f97a8;--accentB:#3fbdd0;--accentD:#12707e;--glow:rgba(31,151,168,0.5);--glow0:rgba(31,151,168,0);--glowSoft:rgba(31,151,168,0.28);--stripe:rgba(31,151,168,0.06);--dot:rgba(63,189,208,0.7);}
 [data-theme="burgundy"][data-section="about"]{--accent:#6b5ce0;--accentB:#8a7cf0;--accentD:#4a3cb8;--glow:rgba(107,92,224,0.5);--glow0:rgba(107,92,224,0);--glowSoft:rgba(107,92,224,0.28);--stripe:rgba(107,92,224,0.06);--dot:rgba(138,124,240,0.7);}
-.term-card{--tc:var(--accent);--tcB:var(--accentB);--tcGrid:rgba(255,255,255,.05);--tcLine:var(--line2);--tcBg:var(--surface2);}
-.tool-todo{--tc:#d4547a;--tcB:#e87b9c;--tcGrid:rgba(212,84,122,.10);--tcLine:#3d2029;--tcBg:#1c0f14;}
-.tool-update{--tc:#1f97a8;--tcB:#3fbdd0;--tcGrid:rgba(31,151,168,.10);--tcLine:#1c3a42;--tcBg:#0e1a1e;}
-.tool-access{--tc:#2f8fd4;--tcB:#5fb0ea;--tcGrid:rgba(47,143,212,.10);--tcLine:#1b3245;--tcBg:#0d1620;}
-.tool-data{--tc:#7a68e8;--tcB:#9a8bf2;--tcGrid:rgba(122,104,232,.10);--tcLine:#2a2547;--tcBg:#131024;}
-.tool-jumper{--tc:#d69a3c;--tcB:#eeb95f;--tcGrid:rgba(214,154,60,.10);--tcLine:#3a2d1b;--tcBg:#1a1410;}
-.tool-gin{--tc:#2fa877;--tcB:#4cc294;--tcGrid:rgba(47,168,119,.10);--tcLine:#203029;--tcBg:#0e1712;}
+.term-card{--tc:var(--accent);--tcB:var(--accentB);--tcGrid:rgba(255,255,255,.05);--tcLine:var(--line2);--tcBg:var(--surface2);--tcRGB:255,255,255;}
+.tool-todo{--tc:#d4547a;--tcB:#e87b9c;--tcGrid:rgba(212,84,122,.10);--tcLine:#3d2029;--tcBg:#1c0f14;--tcRGB:212,84,122;}
+.tool-update{--tc:#1f97a8;--tcB:#3fbdd0;--tcGrid:rgba(31,151,168,.10);--tcLine:#1c3a42;--tcBg:#0e1a1e;--tcRGB:31,151,168;}
+.tool-access{--tc:#2f8fd4;--tcB:#5fb0ea;--tcGrid:rgba(47,143,212,.10);--tcLine:#1b3245;--tcBg:#0d1620;--tcRGB:47,143,212;}
+.tool-data{--tc:#7a68e8;--tcB:#9a8bf2;--tcGrid:rgba(122,104,232,.10);--tcLine:#2a2547;--tcBg:#131024;--tcRGB:122,104,232;}
+.tool-jumper{--tc:#d69a3c;--tcB:#eeb95f;--tcGrid:rgba(214,154,60,.10);--tcLine:#3a2d1b;--tcBg:#1a1410;--tcRGB:214,154,60;}
+.tool-gin{--tc:#2fa877;--tcB:#4cc294;--tcGrid:rgba(47,168,119,.10);--tcLine:#203029;--tcBg:#0e1712;--tcRGB:47,168,119;}
 
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;}
@@ -277,8 +277,29 @@ input,textarea,button{font-family:inherit;}
 @keyframes termCaret{0%,49%{opacity:1;}50%,100%{opacity:0;}}
 @keyframes termLed{0%,100%{opacity:.35;}50%{opacity:1;}}
 @keyframes termGrid{to{transform:translateY(24px);}}
-.term-card{transition:border-color .2s ease,transform .2s ease;}
-.term-card:hover{border-color:var(--tc) !important;transform:translateY(-2px);}
+.term-card{transition:border-color .2s ease,transform .2s ease,box-shadow .3s ease;}
+.term-card:hover{border-color:var(--tc) !important;transform:translateY(-2px);box-shadow:0 18px 44px -20px rgba(var(--tcRGB),.55),0 0 0 1px rgba(var(--tcRGB),.14);}
+/* identity glow bloom behind each tool card */
+.term-card::before{content:'';position:absolute;inset:-40%;pointer-events:none;z-index:0;
+  background:radial-gradient(48% 42% at 50% 0%,rgba(var(--tcRGB),.30),rgba(var(--tcRGB),0) 70%);
+  opacity:.55;transition:opacity .35s ease,transform .35s ease;}
+.term-card:hover::before{opacity:1;transform:scale(1.08);}
+.term-card::after{content:'';position:absolute;left:14%;right:14%;top:-1px;height:1px;pointer-events:none;z-index:2;
+  background:linear-gradient(90deg,rgba(var(--tcRGB),0),rgba(var(--tcRGB),.85),rgba(var(--tcRGB),0));
+  opacity:.35;transition:opacity .3s ease;}
+.term-card:hover::after{opacity:1;}
+.term-card>*{position:relative;z-index:1;}
+/* contact pills: brand colour arrives on hover */
+.social-pill{display:inline-flex;align-items:center;gap:9px;text-decoration:none;border-radius:999px;
+  padding:10px 18px;font-family:'Space Mono',monospace;font-size:13px;color:var(--dim);
+  border:1px solid var(--line3);background:transparent;
+  transition:color .22s ease,border-color .22s ease,background .22s ease;}
+.social-pill:hover,.social-pill:focus-visible{color:var(--text);border-color:var(--hb);background:var(--hbg);}
+.sp-mark{position:relative;display:inline-block;flex:0 0 16px;width:16px;height:16px;}
+.sp-mono,.sp-colour{position:absolute;inset:0;transition:opacity .22s ease;}
+.sp-colour{opacity:0;}
+.social-pill:hover .sp-mono,.social-pill:focus-visible .sp-mono{opacity:0;}
+.social-pill:hover .sp-colour,.social-pill:focus-visible .sp-colour{opacity:1;}
 @media (prefers-reduced-motion:reduce){
   .dust-layer *,.hero-petal-fall,.hero-petal,.paper-card,.term-card *{animation:none !important;}
 }
@@ -522,7 +543,6 @@ input,textarea,button{font-family:inherit;}
         <h2 style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(40px,6vw,72px);letter-spacing:-0.03em;margin:6px 0 22px;">Let's make<br>something loud.</h2>
         <p style="color:var(--dim);font-size:16px;line-height:1.6;max-width:380px;margin:0 0 28px;">Bookings, collaborations, or just to send a track you think I'd like – the inbox is open.</p>
         <div style="display:flex;flex-direction:column;gap:12px;font-family:'Space Mono',monospace;font-size:14px;color:var(--text2);">
-          <div>hello@emortia.fm</div>
           {{ socialLinks }}
         </div>
       </div>
@@ -899,16 +919,34 @@ class Component extends DCLogic {
 
   socials(){
     const items=[
-      {name:'YouTube', href:'https://www.youtube.com/@EmortiaMusix', path:'M23.5 6.2a3 3 0 0 0-2.12-2.12C19.5 3.55 12 3.55 12 3.55s-7.5 0-9.38.53A3 3 0 0 0 .5 6.2 31.2 31.2 0 0 0 0 12a31.2 31.2 0 0 0 .5 5.8 3 3 0 0 0 2.12 2.12c1.88.53 9.38.53 9.38.53s7.5 0 9.38-.53a3 3 0 0 0 2.12-2.12A31.2 31.2 0 0 0 24 12a31.2 31.2 0 0 0-.5-5.8zM9.55 15.57V8.43L15.82 12z'},
-      {name:'TikTok', href:'https://www.tiktok.com/@emortiamusix', path:'M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 1 1-1.59-2.39V9.66a5.65 5.65 0 1 0 4.68 5.58V8.95a7.35 7.35 0 0 0 4.3 1.38V7.3a4.28 4.28 0 0 1-3.24-1.48z'},
+      {name:'YouTube', href:'https://www.youtube.com/@EmortiaMusix', hoverBorder:'rgba(255,0,0,.42)', hoverBg:'rgba(255,0,0,.07)',
+        path:'M23.5 6.2a3 3 0 0 0-2.12-2.12C19.5 3.55 12 3.55 12 3.55s-7.5 0-9.38.53A3 3 0 0 0 .5 6.2 31.2 31.2 0 0 0 0 12a31.2 31.2 0 0 0 .5 5.8 3 3 0 0 0 2.12 2.12c1.88.53 9.38.53 9.38.53s7.5 0 9.38-.53a3 3 0 0 0 2.12-2.12A31.2 31.2 0 0 0 24 12a31.2 31.2 0 0 0-.5-5.8zM9.55 15.57V8.43L15.82 12z',
+        colour:[{d:'M23.5 6.2a3 3 0 0 0-2.12-2.12C19.5 3.55 12 3.55 12 3.55s-7.5 0-9.38.53A3 3 0 0 0 .5 6.2 31.2 31.2 0 0 0 0 12a31.2 31.2 0 0 0 .5 5.8 3 3 0 0 0 2.12 2.12c1.88.53 9.38.53 9.38.53s7.5 0 9.38-.53a3 3 0 0 0 2.12-2.12A31.2 31.2 0 0 0 24 12a31.2 31.2 0 0 0-.5-5.8z', fill:'#FF0000'},
+                 {d:'M9.55 15.57V8.43L15.82 12z', fill:'#ffffff'}]},
+      {name:'Spotify', href:'https://open.spotify.com/search/Emortia%20Musix', hoverBorder:'rgba(29,185,84,.42)', hoverBg:'rgba(29,185,84,.07)',
+        path:'M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.52 17.34c-.24.36-.66.48-1.02.24-2.82-1.74-6.36-2.1-10.56-1.14-.42.12-.78-.18-.9-.54-.12-.42.18-.78.54-.9 4.56-1.02 8.52-.6 11.64 1.32.42.18.48.66.3 1.02zm1.44-3.3c-.3.42-.84.6-1.26.3-3.24-1.98-8.16-2.58-11.94-1.38-.48.12-1.02-.12-1.14-.6-.12-.48.12-1.02.6-1.14 4.38-1.32 9.78-.66 13.5 1.62.36.18.54.78.24 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.1 9.3c-.6.18-1.2-.18-1.38-.72-.18-.6.18-1.2.72-1.38 4.26-1.26 11.28-1.02 15.72 1.62.54.3.72 1.02.42 1.56-.3.42-1.02.6-1.5.3z',
+        colour:[{d:'M12 0a12 12 0 1 0 0 24 12 12 0 0 0 0-24z', fill:'#000000'},
+                 {d:'M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.52 17.34c-.24.36-.66.48-1.02.24-2.82-1.74-6.36-2.1-10.56-1.14-.42.12-.78-.18-.9-.54-.12-.42.18-.78.54-.9 4.56-1.02 8.52-.6 11.64 1.32.42.18.48.66.3 1.02zm1.44-3.3c-.3.42-.84.6-1.26.3-3.24-1.98-8.16-2.58-11.94-1.38-.48.12-1.02-.12-1.14-.6-.12-.48.12-1.02.6-1.14 4.38-1.32 9.78-.66 13.5 1.62.36.18.54.78.24 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.1 9.3c-.6.18-1.2-.18-1.38-.72-.18-.6.18-1.2.72-1.38 4.26-1.26 11.28-1.02 15.72 1.62.54.3.72 1.02.42 1.56-.3.42-1.02.6-1.5.3z', fill:'#1DB954'}]},
+      {name:'TikTok', href:'https://www.tiktok.com/@emortiamusix', hoverBorder:'rgba(37,244,238,.38)', hoverBg:'rgba(37,244,238,.06)',
+        path:'M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 1 1-1.59-2.39V9.66a5.65 5.65 0 1 0 4.68 5.58V8.95a7.35 7.35 0 0 0 4.3 1.38V7.3a4.28 4.28 0 0 1-3.24-1.48z',
+        colour:[{d:'M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 1 1-1.59-2.39V9.66a5.65 5.65 0 1 0 4.68 5.58V8.95a7.35 7.35 0 0 0 4.3 1.38V7.3a4.28 4.28 0 0 1-3.24-1.48z', fill:'#25F4EE', dx:-1.1, dy:-1.1},
+                 {d:'M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 1 1-1.59-2.39V9.66a5.65 5.65 0 1 0 4.68 5.58V8.95a7.35 7.35 0 0 0 4.3 1.38V7.3a4.28 4.28 0 0 1-3.24-1.48z', fill:'#FE2C55', dx:1.1, dy:1.1},
+                 {d:'M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 1 1-1.59-2.39V9.66a5.65 5.65 0 1 0 4.68 5.58V8.95a7.35 7.35 0 0 0 4.3 1.38V7.3a4.28 4.28 0 0 1-3.24-1.48z', fill:'#ffffff'}]},
+      {name:'Facebook', href:'https://www.facebook.com/emortiamusix', hoverBorder:'rgba(24,119,242,.42)', hoverBg:'rgba(24,119,242,.07)',
+        path:'M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.09 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.79-4.69 4.53-4.69 1.31 0 2.68.24 2.68.24v2.97h-1.51c-1.49 0-1.96.93-1.96 1.89v2.25h3.33l-.53 3.49h-2.8V24C19.61 23.09 24 18.1 24 12.07z',
+        colour:[{d:'M12 0a12 12 0 1 0 0 24 12 12 0 0 0 0-24z', fill:'#ffffff'},
+                 {d:'M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.09 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.79-4.69 4.53-4.69 1.31 0 2.68.24 2.68.24v2.97h-1.51c-1.49 0-1.96.93-1.96 1.89v2.25h3.33l-.53 3.49h-2.8V24C19.61 23.09 24 18.1 24 12.07z', fill:'#1877F2'}]},
     ];
     return React.createElement('div',{style:{display:'flex',gap:'10px',flexWrap:'wrap'}},
-      items.map(it=>React.createElement('a',{key:it.name, href:it.href, target:'_blank', rel:'noopener noreferrer', title:it.name,
-        style:{display:'inline-flex',alignItems:'center',gap:'9px',color:'var(--dim)',textDecoration:'none',border:'1px solid var(--line3)',borderRadius:'999px',padding:'10px 18px',fontFamily:"'Space Mono',monospace",fontSize:'13px',transition:'color .2s ease,border-color .2s ease'},
-        onMouseEnter:(e)=>{e.currentTarget.style.color='var(--text)';e.currentTarget.style.borderColor='var(--accent)';},
-        onMouseLeave:(e)=>{e.currentTarget.style.color='var(--dim)';e.currentTarget.style.borderColor='var(--line3)';},
-      },
-        React.createElement('svg',{width:16,height:16,viewBox:'0 0 24 24',fill:'currentColor','aria-hidden':true},React.createElement('path',{d:it.path})),
+      items.map(it=>React.createElement('a',{key:it.name, href:it.href, target:'_blank', rel:'noopener noreferrer',
+        title:it.name, className:'social-pill', style:{'--hb':it.hoverBorder, '--hbg':it.hoverBg}},
+        React.createElement('span',{className:'sp-mark'},
+          React.createElement('svg',{className:'sp-mono', width:16, height:16, viewBox:'0 0 24 24', fill:'currentColor', 'aria-hidden':true},
+            React.createElement('path',{d:it.path})),
+          React.createElement('svg',{className:'sp-colour', width:16, height:16, viewBox:'0 0 24 24', 'aria-hidden':true},
+            it.colour.map((c,ci)=>React.createElement('path',{key:ci, d:c.d, fill:c.fill,
+              transform:(c.dx||c.dy)?('translate('+(c.dx||0)+','+(c.dy||0)+')'):undefined})))
+        ),
         it.name
       ))
     );
