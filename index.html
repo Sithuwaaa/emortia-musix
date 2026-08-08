@@ -238,9 +238,34 @@ input,textarea,button{font-family:inherit;}
 .bk-endpaper{background:linear-gradient(150deg,#e2cfa8,#cfb98e);}
 .bk-entry{transition:background .18s ease;}
 .bk-entry:hover{background:rgba(138,48,73,.10) !important;}
-/* ---- the shelf ---- */
-.bk-shelf{display:flex;gap:clamp(18px,3vw,52px);justify-content:center;align-items:flex-start;
-  flex-wrap:wrap;padding:clamp(8px,2vw,22px) 0 clamp(4px,1vw,12px);}
+/* ---- the shelf ----
+   Books need something to stand on. Each volume brings its own length of
+   board, and because the columns sit flush the lengths meet and read as one
+   shelf — so a row that wraps to the next line gets a shelf of its own
+   without anything having to count how many fit. */
+.bk-shelf{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,236px));
+  justify-content:center;row-gap:clamp(30px,5vw,52px);
+  padding:clamp(8px,2vw,22px) 0 clamp(4px,1vw,12px);}
+.bk-stand{position:relative;width:100%;display:flex;justify-content:center;
+  align-items:flex-end;padding:0 clamp(6px,1.4vw,20px) 15px;}
+/* Overhanging both ends by the same amount makes neighbouring lengths overlap
+   rather than gap, so the join stays invisible and only the two outer ends of
+   a row actually stick out — which is what a shelf does. */
+.bk-stand::after{content:'';position:absolute;left:-11px;right:-11px;bottom:0;height:19px;
+  background:linear-gradient(180deg,#c08d4e 0 2px,#9c6631 2px 7px,#7a4b1d 7px 13px,#4a2c11 13px 17px,#2a1809 17px);
+  box-shadow:0 20px 34px -14px rgba(0,0,0,.92),inset 0 1px 0 rgba(255,220,164,.45);}
+/* the book's own shadow, spilling past it onto the board */
+.bk-stand::before{content:'';position:absolute;left:3%;right:3%;bottom:11px;height:22px;z-index:1;
+  pointer-events:none;background:radial-gradient(ellipse at 50% 100%,rgba(0,0,0,.72),rgba(0,0,0,.24) 46%,transparent 76%);
+  filter:blur(3px);transition:opacity .34s ease,transform .34s ease;}
+.bk-vol:hover .bk-stand::before{opacity:.45;transform:translateY(2px) scaleX(1.06);}
+.bk-label{margin-top:14px;text-align:center;}
+/* the reading layer: the whole space between the header and the player */
+.bk-reading{position:fixed;left:0;right:0;top:var(--siteTop,68px);bottom:var(--siteBot,84px);
+  z-index:44;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:clamp(6px,1.4vw,18px);overflow:hidden;
+  background:radial-gradient(ellipse at 50% 0%,#3b2413,#180d06 58%,#080402 92%);}
+html.bk-reading-on,html.bk-reading-on body{overflow:hidden;}
 @keyframes bkVolIn{0%{opacity:0;transform:translateY(26px) rotateX(14deg);}100%{opacity:1;transform:none;}}
 /* the book travelling between its slot on the shelf and the reading stage */
 @keyframes bkFlyIn{from{transform:translate(var(--fx,0),var(--fy,0)) scale(var(--fs,1));opacity:.3;}}
@@ -248,7 +273,7 @@ input,textarea,button{font-family:inherit;}
 .bk-flyin{animation:bkFlyIn .78s cubic-bezier(.19,.82,.25,1);transform-origin:50% 50%;}
 .bk-flyout{animation:bkFlyOut .66s cubic-bezier(.55,0,.35,1) forwards;transform-origin:50% 50%;}
 .bk-vol{cursor:pointer;animation:bkVolIn .62s cubic-bezier(.2,.8,.28,1) both;}
-.bk-volcover{position:relative;width:clamp(132px,15vw,208px);aspect-ratio:430/548;overflow:hidden;
+.bk-volcover{position:relative;width:100%;max-width:196px;aspect-ratio:430/548;overflow:hidden;z-index:2;
   border-radius:3px 9px 9px 3px;box-shadow:6px 12px 30px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,232,196,.2);
   transition:transform .34s cubic-bezier(.2,.8,.28,1),box-shadow .34s ease;}
 .bk-vol:hover .bk-volcover{transform:translateY(-14px) rotate(-1.2deg);
@@ -465,6 +490,35 @@ input,textarea,button{font-family:inherit;}
 
       </div>
 
+      <!-- 1a · what's new spine -->
+      <div style="margin-top:46px;border:1px solid var(--line2);border-radius:18px;background:var(--surface2);padding:clamp(20px,3vw,30px);">
+        <div style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.2em;color:var(--accent);text-transform:uppercase;">Since you were last here</div>
+        <div style="margin-top:18px;border-left:2px solid var(--line2);padding-left:18px;display:flex;flex-direction:column;">
+          <sc-for list="{{ hmFeed }}" as="fd" hint-placeholder-count="3">
+            <div onClick="{{ fd.go }}" style="position:relative;padding:13px 0;border-top:1px solid {{ fd.sep }};cursor:pointer;">
+              <span style="position:absolute;left:-23px;top:18px;width:8px;height:8px;border-radius:50%;background:{{ fd.dot }};box-shadow:0 0 10px {{ fd.glow }};"></span>
+              <div style="font-family:'Space Mono',monospace;font-size:10px;letter-spacing:0.1em;color:var(--mute);text-transform:uppercase;">{{ fd.kind }}</div>
+              <div style="font-size:15px;margin-top:4px;color:var(--text2);line-height:1.5;">{{ fd.title }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <!-- 1c · mood entry -->
+      <div style="margin-top:16px;border:1px solid var(--line2);border-radius:18px;background:var(--surface2);padding:clamp(20px,3vw,30px);">
+        <div style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.2em;color:#8a7cf0;text-transform:uppercase;">Come in by feeling</div>
+        <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(24px,3vw,30px);letter-spacing:-0.025em;margin-top:10px;">Pick a mood</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:20px;">
+          <sc-for list="{{ hmMoods }}" as="md" hint-placeholder-count="3">
+            <div class="hm-card" onClick="{{ md.go }}" style="--hmRGB:{{ md.rgb }};position:relative;border:1px solid {{ md.line }};border-radius:12px;padding:16px;cursor:pointer;overflow:hidden;background:{{ md.wash }};">
+              <div style="width:22px;height:22px;border-radius:6px;background:{{ md.color }};box-shadow:0 0 18px {{ md.glow }};"></div>
+              <div style="font-family:'EB Garamond',serif;font-size:20px;margin-top:11px;">{{ md.name }}</div>
+              <div style="font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:0.08em;color:var(--mute);margin-top:5px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ md.meta }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
       <!-- 2f · who's behind it -->
       <div style="margin-top:46px;border:1px solid var(--line2);border-radius:18px;background:var(--surface2);padding:clamp(22px,3vw,34px);display:flex;gap:clamp(20px,3vw,34px);align-items:center;flex-wrap:wrap;">
         <img src="media/portrait.jpg" alt="Emortia" style="width:132px;height:160px;object-fit:cover;border-radius:14px;flex-shrink:0;filter:saturate(.85);box-shadow:0 18px 40px -18px rgba(0,0,0,.9);"></img>
@@ -647,8 +701,9 @@ input,textarea,button{font-family:inherit;}
         <sc-if value="{{ sent }}" hint-placeholder-val="{{ false }}">
           <div style="text-align:center;padding:40px 10px;">
             <div style="width:56px;height:56px;border-radius:50%;background:var(--accent);display:grid;place-items:center;margin:0 auto 18px;"><svg width="26" height="26" viewBox="0 0 24 24"><polyline points="5,13 10,18 19,6" fill="none" stroke="var(--bg)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline></svg></div>
-            <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:24px;">Message sent.</div>
-            <div style="color:var(--dim);font-size:15px;margin-top:6px;">I'll get back to you between sessions.</div>
+            <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:24px;">Over to your mail.</div>
+            <div style="color:var(--dim);font-size:15px;margin-top:6px;">Your message is written and addressed – press send there and I'll get back to you between sessions.</div>
+            <div style="color:var(--mute);font-size:13px;margin-top:14px;font-family:'Space Mono',monospace;">or write to <a href="mailto:emortiamusix@gmail.com" style="color:var(--accent);text-decoration:none;">emortiamusix@gmail.com</a></div>
           </div>
         </sc-if>
       </div>
@@ -783,6 +838,11 @@ class Component extends DCLogic {
       bkOpen:false, bkIdx:0, bkSpread:false, bkDrag:null, bkInk:0, bkVol:0, bkShelf:true, bkPer:10,
       bkSingle:(window.matchMedia && window.matchMedia('(max-width:700px)').matches), playing:false, idx:0, progress:0, volume:pp.volume, muted:pp.muted, shuffle:pp.shuffle, repeat:pp.repeat, queueOpen:false, contact:{name:'',email:'',msg:''}, sent:false, audioMissing:false, syncTimes:[], lyricsOpen:false, fsOpen:false };
     this.PLAYER_KEY='emortia_player_v1';
+    this.moods=[
+      {name:'Longing', color:'#d15873', rgb:'209,88,115', line:'#4a2632', glow:'rgba(209,88,115,.55)', wash:'linear-gradient(135deg,rgba(209,88,115,.12),transparent 70%)', track:0},
+      {name:'Night',   color:'#6b5ce0', rgb:'107,92,224', line:'#2a2547', glow:'rgba(107,92,224,.5)',  wash:'linear-gradient(135deg,rgba(107,92,224,.12),transparent 70%)', track:1},
+      {name:'Warmth',  color:'#c9954a', rgb:'201,149,74', line:'#453518', glow:'rgba(201,149,74,.5)',  wash:'linear-gradient(135deg,rgba(201,149,74,.12),transparent 70%)', track:2},
+    ];
     this._preMuteVol=pp.volume||0.78;
     this.audio = new Audio();
     this.audio.preload = 'metadata';
@@ -965,13 +1025,21 @@ class Component extends DCLogic {
       }, 120);
     };
     window.addEventListener('resize', this._onBkResize);
+    this.bkWatchChrome();
     // the Sinhala faces load late, and they change the measurement completely
     if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>this.bkFitVerses());
     fetch('poems/poems.txt').then(r=>r.ok?r.text():Promise.reject()).then(t=>{
       this.setState({poems:this.parsePoems(t), poemsLoaded:true});
     }).catch(()=>this.setState({poems:[], poemsLoaded:true}));
   }
-  componentDidUpdate(){ this.bkFitVerses(); }
+  componentDidUpdate(){
+    this.bkFitVerses();
+    // nothing behind the reading layer should scroll under it
+    const on=(this.state.page==='blog' && !this.state.bkShelf);
+    document.documentElement.classList.toggle('bk-reading-on', on);
+    if(on) this.bkChromeNow();
+  }
+  bkChromeNow(){ if(this._bkChromeSet) this._bkChromeSet(); }
   componentWillUnmount(){
     this.audio.pause();
     if(this._onBkResize) window.removeEventListener('resize', this._onBkResize);
@@ -1020,6 +1088,10 @@ class Component extends DCLogic {
         colour:[{d:'M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 1 1-1.59-2.39V9.66a5.65 5.65 0 1 0 4.68 5.58V8.95a7.35 7.35 0 0 0 4.3 1.38V7.3a4.28 4.28 0 0 1-3.24-1.48z', fill:'#25F4EE', dx:-1.1, dy:-1.1},
                  {d:'M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 1 1-1.59-2.39V9.66a5.65 5.65 0 1 0 4.68 5.58V8.95a7.35 7.35 0 0 0 4.3 1.38V7.3a4.28 4.28 0 0 1-3.24-1.48z', fill:'#FE2C55', dx:1.1, dy:1.1},
                  {d:'M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 1 1-1.59-2.39V9.66a5.65 5.65 0 1 0 4.68 5.58V8.95a7.35 7.35 0 0 0 4.3 1.38V7.3a4.28 4.28 0 0 1-3.24-1.48z', fill:'#ffffff'}]},
+      {name:'WhatsApp', href:'https://wa.me/94727010981', hoverBorder:'rgba(37,211,102,.42)', hoverBg:'rgba(37,211,102,.07)',
+        path:'M17.47 14.38c-.29-.15-1.71-.85-1.98-.94-.27-.1-.46-.15-.65.14-.19.29-.75.94-.92 1.13-.17.19-.34.22-.63.07-.29-.15-1.22-.45-2.33-1.44-.86-.77-1.44-1.72-1.61-2.01-.17-.29-.02-.45.13-.59.13-.13.29-.34.44-.51.14-.17.19-.29.29-.48.1-.19.05-.36-.02-.51-.07-.14-.65-1.57-.89-2.15-.23-.56-.47-.49-.65-.5h-.55c-.19 0-.5.07-.76.36-.26.29-1 .98-1 2.38s1.02 2.76 1.17 2.95c.14.19 2.01 3.07 4.87 4.31.68.29 1.21.47 1.62.6.68.22 1.3.19 1.79.11.55-.08 1.71-.7 1.95-1.37.24-.67.24-1.25.17-1.37-.07-.12-.26-.19-.55-.34zM12.04 21.5h-.01c-1.77 0-3.51-.48-5.03-1.38l-.36-.21-3.74.98 1-3.65-.24-.37a9.86 9.86 0 0 1-1.51-5.26c0-5.45 4.44-9.89 9.9-9.89 2.64 0 5.12 1.03 6.99 2.9a9.82 9.82 0 0 1 2.89 6.99c0 5.45-4.44 9.89-9.89 9.89zM20.52 3.45A11.82 11.82 0 0 0 12.04 0C5.5 0 .18 5.32.18 11.86c0 2.09.55 4.13 1.59 5.93L.08 24l6.35-1.66a11.85 11.85 0 0 0 5.61 1.43h.01c6.54 0 11.86-5.32 11.86-11.86 0-3.17-1.23-6.15-3.47-8.39z',
+        colour:[{d:'M12.04 0C5.5 0 .18 5.32.18 11.86c0 2.09.55 4.13 1.59 5.93L.08 24l6.35-1.66a11.85 11.85 0 0 0 5.61 1.43h.01c6.54 0 11.86-5.32 11.86-11.86 0-3.17-1.23-6.15-3.47-8.39A11.82 11.82 0 0 0 12.04 0z', fill:'#25D366'},
+                 {d:'M17.47 14.38c-.29-.15-1.71-.85-1.98-.94-.27-.1-.46-.15-.65.14-.19.29-.75.94-.92 1.13-.17.19-.34.22-.63.07-.29-.15-1.22-.45-2.33-1.44-.86-.77-1.44-1.72-1.61-2.01-.17-.29-.02-.45.13-.59.13-.13.29-.34.44-.51.14-.17.19-.29.29-.48.1-.19.05-.36-.02-.51-.07-.14-.65-1.57-.89-2.15-.23-.56-.47-.49-.65-.5h-.55c-.19 0-.5.07-.76.36-.26.29-1 .98-1 2.38s1.02 2.76 1.17 2.95c.14.19 2.01 3.07 4.87 4.31.68.29 1.21.47 1.62.6.68.22 1.3.19 1.79.11.55-.08 1.71-.7 1.95-1.37.24-.67.24-1.25.17-1.37-.07-.12-.26-.19-.55-.34z', fill:'#ffffff'}]},
       {name:'Facebook', href:'https://www.facebook.com/emortiamusix', hoverBorder:'rgba(24,119,242,.42)', hoverBg:'rgba(24,119,242,.07)',
         path:'M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.09 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.79-4.69 4.53-4.69 1.31 0 2.68.24 2.68.24v2.97h-1.51c-1.49 0-1.96.93-1.96 1.89v2.25h3.33l-.53 3.49h-2.8V24C19.61 23.09 24 18.1 24 12.07z',
         colour:[{d:'M12 0a12 12 0 1 0 0 24 12 12 0 0 0 0-24z', fill:'#ffffff'},
@@ -1223,6 +1295,27 @@ class Component extends DCLogic {
     if(slot && slot.isConnected){ const r=slot.getBoundingClientRect(); if(r.width) rect=r; }
     if(!rect) rect=this._bkFromRect;
     this.bkFlyOut(rect, ()=>this.setState({bkShelf:true, bkOpen:false, bkSpread:false, bkIdx:0, bkDrag:null}));
+  }
+  /* The reading view fills everything the header and the player are not using.
+     Both change height with the window, so measure them and hand the numbers to
+     CSS as custom properties — written straight to the element, so keeping them
+     current costs no re-render and cannot loop. */
+  bkWatchChrome(){
+    const set=()=>{
+      const r=document.documentElement.style;
+      const h=document.querySelector('header'), f=document.querySelector('footer');
+      r.setProperty('--siteTop', Math.round(h?h.getBoundingClientRect().height:68)+'px');
+      r.setProperty('--siteBot', Math.round(f?f.getBoundingClientRect().height:84)+'px');
+    };
+    set();
+    if(window.ResizeObserver && !this._bkChromeRO){
+      this._bkChromeRO=new ResizeObserver(set);
+      const h=document.querySelector('header'), f=document.querySelector('footer');
+      if(h) this._bkChromeRO.observe(h);
+      if(f) this._bkChromeRO.observe(f);
+    }
+    window.addEventListener('resize', set);
+    this._bkChromeSet=set;
   }
   bkGeo(){
     const el=this._bkStage; if(!el) return null;
@@ -1671,6 +1764,7 @@ class Component extends DCLogic {
             const slot=e.currentTarget.querySelector('.bk-volcover');
             this.bkPickVolume(i, slot?slot.getBoundingClientRect():null);
           }},
+          React.createElement('div',{className:'bk-stand'},
           React.createElement('div',{className:'bk-volcover', ref:el=>{this._bkSlots[i]=el;},
             style:{background:v.cover}},
             React.createElement('div',{style:{position:'absolute',inset:0,pointerEvents:'none',
@@ -1685,12 +1779,13 @@ class Component extends DCLogic {
               React.createElement('div',{style:{fontFamily:"'UN-Agni',serif",fontSize:'clamp(17px,2.1vw,27px)',
                 lineHeight:1.16,color:v.ink,textShadow:'0 1px 0 rgba(255,240,210,.55)'}}, v.title),
               React.createElement('div',{style:{width:'54%',height:'1px',
-                background:'linear-gradient(90deg,transparent,rgba(110,76,34,.6),transparent)'}}))),
-          React.createElement('div',{style:{fontFamily:"'EB Garamond',serif",fontStyle:'italic',fontSize:'14px',
-            color:'rgba(214,170,104,.72)',marginTop:'13px',textAlign:'center'}}, v.sub),
-          React.createElement('div',{style:{fontFamily:"'Space Mono',monospace",fontSize:'9.5px',letterSpacing:'0.28em',
-            textTransform:'uppercase',color:cnt?'rgba(222,180,116,.5)':'rgba(222,180,116,.28)',marginTop:'6px',textAlign:'center'}},
-            cnt ? cnt+(cnt===1?' leaf':' leaves') : 'empty'));
+                background:'linear-gradient(90deg,transparent,rgba(110,76,34,.6),transparent)'}})))),
+          React.createElement('div',{className:'bk-label'},
+            React.createElement('div',{style:{fontFamily:"'EB Garamond',serif",fontStyle:'italic',fontSize:'14px',
+              color:'rgba(214,170,104,.72)'}}, v.sub),
+            React.createElement('div',{style:{fontFamily:"'Space Mono',monospace",fontSize:'9.5px',letterSpacing:'0.28em',
+              textTransform:'uppercase',color:cnt?'rgba(222,180,116,.5)':'rgba(222,180,116,.28)',marginTop:'6px'}},
+              cnt ? cnt+(cnt===1?' leaf':' leaves') : 'empty')));
       }));
   }
   renderJournal(){
@@ -1836,19 +1931,24 @@ class Component extends DCLogic {
       }
     }
 
-    return React.createElement('div',{style:shellStyle},
+    /* A book off the shelf gets the screen. Everything between the header and
+       the player belongs to it, so the spread is as large as that space allows
+       instead of being squeezed under a page heading you have to scroll past —
+       which is the whole difference between glancing at a book and reading one. */
+    const free='(100vh - var(--siteTop,68px) - var(--siteBot,84px) - clamp(54px,9vh,88px))';
+    return React.createElement('div',{className:'bk-reading'},
       React.createElement('div',{ref:el=>{this._bkFlyEl=el;}, style:{willChange:'transform'}},
         React.createElement('div',{style:{perspective:'2600px',perspectiveOrigin:'50% 42%',display:'flex',justifyContent:'center'}},
           React.createElement('div',{ref:el=>{this._bkStage=el;}, style:{position:'relative',
-            // Cap the width by what is left of the window height as well, or the
-            // spread runs past the sticky header and the player and you only ever
-            // see half the book. 1.5693 and 0.75 are the two aspect ratios.
-            width: single ? 'max(240px,min(520px,100%,(100vh - 275px) * 0.75))'
-                          : 'max(360px,min(1100px,100%,(100vh - 290px) * 1.5693))',
+            // Height is the binding constraint far more often than width, so the
+            // spread is sized from what is left of it. 1.5693 and 0.75 are the
+            // two aspect ratios.
+            width: single ? 'max(240px,min(560px,94vw,'+free+' * 0.75))'
+                          : 'max(360px,min(1280px,97vw,'+free+' * 1.5693))',
             aspectRatio:single?'420/560':'860/548',
             transformStyle:'preserve-3d',
             transform:(single||spread)?'none':'translateX(-25%)',transition:'transform '+slide}}, kids))),
-      React.createElement('div',{style:{textAlign:'center',marginTop:'clamp(16px,2.5vw,26px)',
+      React.createElement('div',{style:{textAlign:'center',marginTop:'clamp(12px,2vw,22px)',
         fontFamily:"'Space Mono',monospace",fontSize:'11px',letterSpacing:'0.18em',
         textTransform:'uppercase',color:'#8c6f47'}},
         !n ? 'this one is still empty · fold the top corner to shelve it'
@@ -2332,6 +2432,20 @@ class Component extends DCLogic {
       socialLinksLarge: this.socials(true),
       hmTicker: (()=>{ const t=this.tracks.map(x=>x.t).slice(0,6); return t.length?t.concat(['new music','emortia musix']):['emortia musix','new music']; })(),
       hmNowMeta: t.durLabel+' \u00b7 '+this.fmt(s.progress),
+      ...(()=>{
+        const goPage=(p)=>()=>this.setState({page:p, menuOpen:false});
+        const lastPoem=(s.poems||[])[(s.poems||[]).length-1];
+        const newest=this.tracks[this.tracks.length-1];
+        return {
+          hmFeed: [
+            {kind:'Music \u00b7 newest', title:newest.t, dot:'#d15873', glow:'rgba(209,88,115,.7)', sep:'transparent', go:goPage('music')},
+            {kind:'Journal \u00b7 latest entry', title: lastPoem?lastPoem.title:'\u2014', dot:'#c9954a', glow:'rgba(201,149,74,.6)', sep:'var(--line)', go:goPage('blog')},
+            {kind:'Tools \u00b7 now live', title:'6 small utilities, built for real work', dot:'#1f97a8', glow:'rgba(31,151,168,.6)', sep:'var(--line)', go:goPage('tools')},
+          ],
+          hmMoods: this.moods.map(m=>{ const mt=this.tracks[m.track]; return { ...m,
+            meta: mt?mt.t:'', go: ()=>{ this.loadTrack(m.track, true); this.setState({page:'music', menuOpen:false}); } }; }),
+        };
+      })(),
       hmToolCount: 6,
       hmTools: [{name:'What To Do', dot:'#d4547a'},{name:'Project Update', dot:'#1f97a8'},{name:'Site Access Lookup', dot:'#2f8fd4'}],
       hmPoemTitle: (()=>{ const p=(s.poems||[])[(s.poems||[]).length-1]; return p?p.title:'—'; })(),
@@ -2391,7 +2505,17 @@ class Component extends DCLogic {
         email:(e)=>{ const v=e.target.value; this.setState(st=>({contact:{...st.contact,email:v}})); },
         msg:(e)=>{ const v=e.target.value; this.setState(st=>({contact:{...st.contact,msg:v}})); },
       },
-      onSubmit:(e)=>{ e.preventDefault(); this.setState({sent:true}); },
+      /* There is no server behind this site, so the form cannot post anywhere.
+         Rather than pretend, it hands the message to whatever the visitor
+         already writes mail with, addressed and filled in — and only claims to
+         have sent once that has actually been handed over. */
+      onSubmit:(e)=>{ e.preventDefault();
+        const c=this.state.contact||{};
+        const subject='Emortia Musix – '+((c.name||'').trim()||'a message from the site');
+        const body=(c.msg||'')+'\n\n— '+((c.name||'').trim()||'anonymous')+((c.email||'').trim()?' <'+c.email.trim()+'>':'');
+        window.location.href='mailto:emortiamusix@gmail.com?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+        this.setState({sent:true});
+      },
     };
   }
 }
