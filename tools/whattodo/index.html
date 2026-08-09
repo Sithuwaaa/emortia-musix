@@ -90,6 +90,44 @@
   .btn.on{background:var(--accent);color:var(--accent-ink);border-color:transparent}
   .btn.stop{background:var(--warn);color:#1c0a03;border-color:transparent;animation:almPulse 1.1s ease-in-out infinite}
   @keyframes almPulse{0%,100%{box-shadow:0 0 0 0 rgba(242,118,74,.55)}70%{box-shadow:0 0 0 9px rgba(242,118,74,0)}}
+  .btn:disabled{opacity:.4;cursor:default;transform:none;border-color:var(--line)}
+  .btn:disabled:hover{border-color:var(--line);transform:none}
+
+  /* the month */
+  .cal{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px;
+    animation:rise .4s ease both}
+  .cal-head{display:flex;align-items:center;gap:9px;margin-bottom:14px}
+  .cal-title{font-family:'Bricolage Grotesque',sans-serif;font-size:17px;font-weight:700;margin-right:auto}
+  .cal-title span{font-family:'Space Mono',monospace;font-size:12px;font-weight:400;color:var(--muted);
+    margin-left:8px;white-space:nowrap}
+  .cal-nav{border:1px solid var(--line3);background:none;color:var(--text);border-radius:8px;width:32px;height:32px;
+    cursor:pointer;font-size:14px;font-family:inherit;flex-shrink:0;
+    transition:border-color .18s ease,transform .18s ease}
+  .cal-nav:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+  .cal-dow{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--muted);text-align:center;padding-bottom:5px}
+  .cal-day{position:relative;aspect-ratio:1;border:1px solid var(--line);background:var(--card-2);border-radius:9px;
+    padding:5px 6px;cursor:pointer;display:flex;flex-direction:column;font-family:'Space Mono',monospace;
+    font-size:12px;color:var(--text);transition:border-color .16s ease,transform .16s ease,background .16s ease}
+  .cal-day:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .cal-day.out{opacity:.3}
+  .cal-day.today{border-color:var(--accentB)}
+  .cal-day.today .num{color:var(--accentB);font-weight:700}
+  .cal-day.sel{background:var(--accent);border-color:transparent;color:var(--accent-ink)}
+  .cal-day.sel .num,.cal-day.sel .cal-more{color:var(--accent-ink)}
+  .cal-day .num{line-height:1}
+  .cal-dots{display:flex;flex-wrap:wrap;align-content:flex-end;gap:3px;margin-top:auto}
+  .cal-dot{width:6px;height:6px;border-radius:50%;background:var(--accentB);flex-shrink:0}
+  .cal-dot.over{background:var(--warn)}
+  .cal-dot.soon{background:#e8a13c}
+  .cal-day.sel .cal-dot{background:var(--accent-ink)}
+  .cal-more{font-size:9px;color:var(--muted);line-height:1}
+  .cal-key{display:flex;flex-wrap:wrap;gap:14px;margin-top:13px;padding-top:12px;border-top:1px solid var(--line);
+    font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:.05em;color:var(--muted)}
+  .cal-key i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:middle}
+  .day-head{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--muted);margin:0 0 10px 2px}
 
   /* a task */
   .task{display:flex;align-items:flex-start;gap:13px;background:var(--card);border:1px solid var(--line);
@@ -160,7 +198,7 @@
    ============================================================ */
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let TODOS = [], ACTIVE = 'Dashboard', BUSY = false, LOAD_ERR = null;
+let TODOS = [], ACTIVE = 'Calendar', BUSY = false, LOAD_ERR = null;
 
 /* ---------- theme (shared key with the other tools) ---------- */
 const THEME_KEY = 'office_tool_theme';
@@ -187,9 +225,38 @@ function whenText(due){
   return { text: stamp + ' · in ' + rel, state:'' };
 }
 
+/* ---------- the month ----------
+   A job with a deadline belongs on a date, so the calendar is the first thing
+   you see. Jobs without one cannot be drawn on a grid, so they are listed
+   under it rather than quietly dropped — undated is not the same as done. */
+const DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+let CAL_M = null;      // the first of the month on screen
+let CAL_SEL = null;    // the day picked out, as yyyy-mm-dd
+
+const dayKey = d => { const x = new Date(d);
+  return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); };
+
+function tasksByDay(){
+  const m = new Map();
+  for (const t of pending()){
+    if (!t.due) continue;
+    const k = dayKey(t.due);
+    if (!m.has(k)) m.set(k, []);
+    m.get(k).push(t);
+  }
+  for (const list of m.values()) list.sort((a, b) => new Date(a.due) - new Date(b.due));
+  return m;
+}
+const undated = () => pending().filter(t => !t.due);
+function dayState(t){
+  const diff = new Date(t.due) - Date.now();
+  return diff < 0 ? 'over' : diff < 3600e3 ? 'soon' : '';
+}
+function monthLabel(d){ return d.toLocaleDateString([], { month:'long', year:'numeric' }); }
+
 /* ---------- tabs ---------- */
 function buildTabs(){
-  const all = ['Dashboard', 'Add To Do'];
+  const all = ['Calendar', 'Dashboard', 'Add To Do'];
   $('tabs').innerHTML = all.map(n =>
     '<button class="tab' + (n === ACTIVE ? ' on' : '') + '" data-t="' + n + '">' + n + '</button>').join('');
   [...$('tabs').children].forEach(b => b.onclick = () => { ACTIVE = b.dataset.t; buildTabs(); render(); });
@@ -462,18 +529,94 @@ async function markDone(id, el){
 }
 
 /* ---------- views ---------- */
-function renderDashboard(){
-  const list = pending();
-  let h = '<div class="remind">' +
+function taskHTML(t){
+  const w = whenText(t.due);
+  return '<div class="task ' + w.state + '">' +
+    '<button class="tick" data-id="' + esc(t.id) + '" title="Mark done">✓</button>' +
+    '<div class="body"><div class="t">' + esc(t.title) + '</div>' +
+    (t.note ? '<div class="n">' + esc(t.note) + '</div>' : '') +
+    '<div class="when">' + (w.state === 'over' ? '<b>' + esc(w.text) + '</b>' : esc(w.text)) + '</div>' +
+    '</div></div>';
+}
+/* The control strip. Stop sits here whether or not anything is ringing — a
+   button you have to go looking for once the bell has started is no use, and
+   the old Test button in this spot only ever made more noise. */
+function remindBar(){
+  return '<div class="remind">' +
     '<span class="lab">Remind me every 15 min</span>' +
     '<button class="btn' + (REMIND ? ' on' : '') + '" id="remBtn">' + (REMIND ? 'On' : 'Off') + '</button>' +
     '<button class="btn' + (SOUND ? ' on' : '') + '" id="sndBtn">' + (SOUND ? '🔔 Ring' : '🔕 Silent') + '</button>' +
     (alarming()
-      ? '<button class="btn stop" id="stopBtn">⏹ Stop the bell · <span id="almLeft">' + alarmLeft() + '</span></button>'
-      : '<button class="btn" id="testBtn" title="Hear the alarm">🔔 Test alarm</button>') +
+      ? '<button class="btn stop" id="stopBtn">⏹ Stop alarm · <span id="almLeft">' + alarmLeft() + '</span></button>'
+      : '<button class="btn" id="stopBtn" disabled title="Nothing is ringing">⏹ Stop alarm</button>') +
     (canNotify() && Notification.permission === 'denied'
       ? '<span class="note">notifications blocked — reminders show on the page</span>' : '') +
     '<span class="next" id="nextIn">' + countdown() + '</span></div>';
+}
+function renderCalendar(){
+  const now = new Date(), today = dayKey(now);
+  const base = CAL_M ? new Date(CAL_M) : new Date(now.getFullYear(), now.getMonth(), 1);
+  const byDay = tasksByDay(), loose = undated();
+
+  // the grid starts on the Monday of the week the 1st falls in
+  const first = new Date(base.getFullYear(), base.getMonth(), 1);
+  const lead = (first.getDay() + 6) % 7;
+  const start = new Date(first); start.setDate(1 - lead);
+
+  let cells = '';
+  for (let i = 0; i < 42; i++){
+    const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+    const k = dayKey(d), list = byDay.get(k) || [];
+    const cls = ['cal-day'];
+    if (d.getMonth() !== base.getMonth()) cls.push('out');
+    if (k === today) cls.push('today');
+    if (k === CAL_SEL) cls.push('sel');
+    const shown = list.slice(0, 4).map(t => '<span class="cal-dot ' + dayState(t) + '"></span>').join('');
+    cells += '<div class="' + cls.join(' ') + '" data-d="' + k + '" title="' +
+      esc(list.length ? list.length + (list.length === 1 ? ' job' : ' jobs') : 'nothing due') + '">' +
+      '<span class="num">' + d.getDate() + '</span>' +
+      '<span class="cal-dots">' + shown +
+        (list.length > 4 ? '<span class="cal-more">+' + (list.length - 4) + '</span>' : '') +
+      '</span></div>';
+  }
+
+  let h = remindBar();
+  if (LOAD_ERR) h += '<div class="err"><b>The list could not be read.</b><br>' + esc(LOAD_ERR) + '</div>';
+  h += '<div class="cal"><div class="cal-head">' +
+    '<div class="cal-title">' + esc(monthLabel(base)) +
+      '<span>' + pending().length + ' pending</span></div>' +
+    '<button class="cal-nav" id="calPrev" title="Previous month">‹</button>' +
+    '<button class="btn" id="calToday">Today</button>' +
+    '<button class="cal-nav" id="calNext" title="Next month">›</button></div>' +
+    '<div class="cal-grid">' + DOW.map(d => '<div class="cal-dow">' + d + '</div>').join('') + cells + '</div>' +
+    '<div class="cal-key">' +
+      '<span><i style="background:var(--warn)"></i>overdue</span>' +
+      '<span><i style="background:#e8a13c"></i>within the hour</span>' +
+      '<span><i style="background:var(--accentB)"></i>later</span></div></div>';
+
+  // whichever day is picked out, then anything with no date at all
+  if (CAL_SEL){
+    const list = byDay.get(CAL_SEL) || [];
+    const d = new Date(CAL_SEL + 'T00:00:00');
+    h += '<div class="day-head">' + esc(d.toLocaleDateString([], { weekday:'long', day:'numeric', month:'long' })) +
+         ' · ' + (list.length ? list.length + (list.length === 1 ? ' job' : ' jobs') : 'nothing due') + '</div>';
+    h += list.length ? list.map(taskHTML).join('')
+       : '<div class="empty" style="padding:26px 20px">Nothing due this day.</div>';
+  }
+  if (loose.length){
+    h += '<div class="day-head">' + loose.length +
+         (loose.length === 1 ? ' job with no date' : ' jobs with no date') + '</div>';
+    h += loose.map(taskHTML).join('');
+  }
+  if (!pending().length){
+    h += '<div class="empty"><div class="big">✓</div>Nothing pending.<br>' +
+         'Add something on the <b>Add To Do</b> tab.</div>';
+  }
+  return h;
+}
+function renderDashboard(){
+  const list = pending();
+  let h = remindBar();
 
   if (LOAD_ERR){
     h += '<div class="err"><b>The list could not be read.</b><br>' + esc(LOAD_ERR) + '</div>';
@@ -484,20 +627,12 @@ function renderDashboard(){
          'Add something on the <b>Add To Do</b> tab.</div>';
     return h;
   }
-  h += list.map(t => {
-    const w = whenText(t.due);
-    return '<div class="task ' + w.state + '">' +
-      '<button class="tick" data-id="' + esc(t.id) + '" title="Mark done">✓</button>' +
-      '<div class="body"><div class="t">' + esc(t.title) + '</div>' +
-      (t.note ? '<div class="n">' + esc(t.note) + '</div>' : '') +
-      '<div class="when">' + (w.state === 'over' ? '<b>' + esc(w.text) + '</b>' : esc(w.text)) + '</div>' +
-      '</div></div>';
-  }).join('');
+  h += list.map(taskHTML).join('');
   return h;
 }
 function renderAdd(){
   return '<div class="panel"><h2><span class="dot"></span>Add a job</h2>' +
-    '<p class="note" style="margin-bottom:15px">It appears on the Dashboard, on every device.</p>' +
+    '<p class="note" style="margin-bottom:15px">It lands on the calendar under its due date, on every device.</p>' +
     '<div class="field"><label for="tTitle">What needs doing</label>' +
       '<input id="tTitle" maxlength="200" placeholder="e.g. Send the MW update to Manoj"></div>' +
     '<div class="field"><label for="tNote">Notes (optional)</label>' +
@@ -507,14 +642,29 @@ function renderAdd(){
     '<button class="go" id="addBtn">Add to the list</button></div>';
 }
 function render(){
-  $('view').innerHTML = ACTIVE === 'Dashboard' ? renderDashboard() : renderAdd();
-  if (ACTIVE === 'Dashboard'){
+  $('view').innerHTML = ACTIVE === 'Calendar' ? renderCalendar()
+                      : ACTIVE === 'Dashboard' ? renderDashboard() : renderAdd();
+  if (ACTIVE === 'Calendar' || ACTIVE === 'Dashboard'){
     const rb = $('remBtn'); if (rb) rb.onclick = () => setRemind(!REMIND);
     const sb = $('sndBtn'); if (sb) sb.onclick = () => setSound(!SOUND);   // on plays a preview
-    const stb = $('stopBtn'); if (stb) stb.onclick = () => { stopAlarm(); toast('Bell stopped'); };
-    const tb = $('testBtn'); if (tb) tb.onclick = () => startAlarm();
+    const stb = $('stopBtn'); if (stb && !stb.disabled) stb.onclick = () => { stopAlarm(); toast('Alarm stopped'); };
     [...document.querySelectorAll('.tick')].forEach(b => b.onclick = () => markDone(b.dataset.id, b));
-  } else {
+  }
+  if (ACTIVE === 'Calendar'){
+    const now = new Date();
+    const base = CAL_M ? new Date(CAL_M) : new Date(now.getFullYear(), now.getMonth(), 1);
+    const step = n => () => { CAL_M = new Date(base.getFullYear(), base.getMonth() + n, 1); render(); };
+    const p = $('calPrev'); if (p) p.onclick = step(-1);
+    const nx = $('calNext'); if (nx) nx.onclick = step(1);
+    const td = $('calToday'); if (td) td.onclick = () => {
+      CAL_M = new Date(now.getFullYear(), now.getMonth(), 1); CAL_SEL = dayKey(now); render();
+    };
+    [...document.querySelectorAll('.cal-day')].forEach(c => c.onclick = () => {
+      CAL_SEL = (CAL_SEL === c.dataset.d) ? null : c.dataset.d;   // clicking the same day again clears it
+      render();
+    });
+  }
+  if (ACTIVE === 'Add To Do'){
     const add = $('addBtn');
     add.onclick = async () => {
       const title = $('tTitle').value.trim();
@@ -523,9 +673,11 @@ function render(){
       try {
         await window.AuthGate.require();
         const due = $('tDue').value ? new Date($('tDue').value).toISOString() : null;
-        await window.DB.addTodo({ title, note: $('tNote').value.trim(), due });
+        await window.DB.addTodo({ title, note: $(tNote).value.trim(), due });
         await refresh();
-        ACTIVE = 'Dashboard'; buildTabs(); render();
+        // land on the day it is due, so you see where it went
+        if (due){ const d = new Date(due); CAL_M = new Date(d.getFullYear(), d.getMonth(), 1); CAL_SEL = dayKey(d); }
+        ACTIVE = Calendar; buildTabs(); render();
         toast('Added');
       } catch (err){
         toast(err.message, 6000);
