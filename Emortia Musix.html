@@ -857,7 +857,10 @@ class Component extends DCLogic {
       src: x.src || ('audio/' + slugify(x.t) + '.mp3'),
     }));
     const pp=this.loadPlayerPrefs();
-    this.state = { page:'blog', theme:'burgundy', menuOpen:false, poems:[], poemsLoaded:false,
+    // The site opens on the front page. The journal design file this book came
+    // from starts on 'blog' so the book is on screen while you work on it —
+    // convenient there, wrong for a visitor arriving at the door.
+    this.state = { page:'home', theme:'burgundy', menuOpen:false, poems:[], poemsLoaded:false,
       bkOpen:false, bkIdx:0, bkSpread:false, bkDrag:null, bkInk:0, bkVol:0, bkShelf:true, bkPer:10,
       bkSingle:(window.matchMedia && window.matchMedia('(max-width:700px)').matches), playing:false, idx:0, progress:0, volume:pp.volume, muted:pp.muted, shuffle:pp.shuffle, repeat:pp.repeat, queueOpen:false, contact:{name:'',email:'',msg:''}, sent:false, audioMissing:false, syncTimes:[], lyricsOpen:false, fsOpen:false };
     this.PLAYER_KEY='emortia_player_v1';
