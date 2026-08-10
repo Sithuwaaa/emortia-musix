@@ -1,7 +1,7 @@
 # Adding your own tracks
 
 Drop your mp3 files in this folder, then edit the `raw` track list near the
-top of the `Component` class in `../Emortia Musix.html` (search for
+top of the `Component` class in `../Emortia.html` (search for
 `class Component extends DCLogic`).
 
 Each entry looks like:

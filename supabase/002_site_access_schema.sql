@@ -1,4 +1,4 @@
--- Emortia Musix · migration 002
+-- Emortia · migration 002
 -- Run this in Supabase → SQL Editor → New query, then Run.
 -- Safe to run more than once.
 --

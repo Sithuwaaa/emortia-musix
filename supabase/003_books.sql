@@ -1,4 +1,4 @@
--- Emortia Musix · migration 003 — Project Update workbooks
+-- Emortia · migration 003 — Project Update workbooks
 -- Idempotent: if you already created `books`, the table statement is a no-op
 -- and this just makes sure the policies and realtime are in place.
 --

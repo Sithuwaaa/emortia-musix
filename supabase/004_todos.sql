@@ -1,4 +1,4 @@
--- Emortia Musix · migration 004 — What To Do
+-- Emortia · migration 004 — What To Do
 -- Run in Supabase → SQL Editor → New query. Safe to run more than once.
 
 create table if not exists todos (

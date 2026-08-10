@@ -13,7 +13,7 @@
       <rect x="612" y="372" width="15" height="52" rx="7.5"/>
       <rect x="640" y="350" width="15" height="74" rx="7.5"/>
     </g>
-    <text x="600" y="560" font-family="Georgia, serif" font-size="52" font-weight="700" fill="#f7edf0" text-anchor="middle">Emortia <tspan fill="#b03a56">Musix</tspan></text>
+    <text x="600" y="560" font-family="Georgia, serif" font-size="52" font-weight="700" fill="#f7edf0" text-anchor="middle">Emortia</text>
   </svg>
 </template>
 <script src="tools/_lib/owner-config.js"></script>
@@ -23,6 +23,7 @@
 <body>
 <x-dc>
 <helmet>
+<title>Emortia</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b03a56'/%3E%3Cg fill='%23170d10'%3E%3Crect x='8' y='13' width='3' height='8' rx='1.5'/%3E%3Crect x='13' y='9' width='3' height='14' rx='1.5'/%3E%3Crect x='18' y='11' width='3' height='10' rx='1.5'/%3E%3Crect x='23' y='8' width='3' height='15' rx='1.5'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -384,7 +385,7 @@ html.bk-reading-on,html.bk-reading-on body{overflow:hidden;}
           <span style="width:3px;height:10px;border-radius:2px;background:var(--bg);transform-origin:center;animation:eq 0.85s ease-in-out infinite;animation-delay:0.36s;animation-play-state:{{ spinState }};"></span>
           <span style="width:3px;height:15px;border-radius:2px;background:var(--bg);transform-origin:center;animation:eq 0.85s ease-in-out infinite;animation-delay:0.1s;animation-play-state:{{ spinState }};"></span>
         </div>
-        <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:18px;letter-spacing:-0.02em;">Emortia <span style="color:var(--accent);">Musix</span></div>
+        <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:18px;letter-spacing:-0.02em;">Emortia</div>
       </div>
       <nav class="{{ navClass }}" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
         <sc-for list="{{ navItems }}" as="item" hint-placeholder-count="7">
@@ -434,7 +435,7 @@ html.bk-reading-on,html.bk-reading-on body{overflow:hidden;}
           <div style="min-width:240px;flex:1;">
             <div style="font-family:'Space Mono',monospace;font-size:clamp(11px,1.3vw,13px);letter-spacing:0.24em;color:var(--accent);text-transform:uppercase;margin-bottom:14px;animation:riseIn .8s ease both;">Put the headphones on</div>
             <h1 style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(44px,7.6vw,104px);line-height:0.9;letter-spacing:-0.035em;margin:0;">
-              <span style="display:inline-block;animation:riseIn .9s ease both;">Emortia</span><br><span style="display:inline-block;color:var(--accent);animation:riseIn .9s ease .14s both;">Musix</span>
+              <span style="display:inline-block;animation:riseIn .9s ease both;">Emortia</span>
             </h1>
             <button onClick="{{ startPlay }}" style="display:inline-flex;align-items:center;gap:11px;margin-top:26px;background:var(--accent);color:var(--bg);border:none;font-weight:700;font-size:15px;padding:15px 26px;border-radius:999px;cursor:pointer;animation:glow 2.6s ease-in-out infinite;" style-hover="background:var(--accentB);">
               <svg width="15" height="15" viewBox="0 0 24 24"><polygon points="7,4 20,12 7,20" fill="var(--bg)"></polygon></svg> Press play to enter
@@ -2507,7 +2508,7 @@ class Component extends DCLogic {
 
       socialLinks: this.socials(),
       socialLinksLarge: this.socials(true),
-      hmTicker: (()=>{ const t=this.tracks.map(x=>x.t).slice(0,6); return t.length?t.concat(['new music','emortia musix']):['emortia musix','new music']; })(),
+      hmTicker: (()=>{ const t=this.tracks.map(x=>x.t).slice(0,6); return t.length?t.concat(['new music','emortia']):['emortia','new music']; })(),
       hmNowMeta: t.durLabel+' \u00b7 '+this.fmt(s.progress),
       ...(()=>{
         const goPage=(p)=>()=>this.setState({page:p, menuOpen:false});
@@ -2588,7 +2589,7 @@ class Component extends DCLogic {
          have sent once that has actually been handed over. */
       onSubmit:(e)=>{ e.preventDefault();
         const c=this.state.contact||{};
-        const subject='Emortia Musix – '+((c.name||'').trim()||'a message from the site');
+        const subject='Emortia – '+((c.name||'').trim()||'a message from the site');
         const body=(c.msg||'')+'\n\n— '+((c.name||'').trim()||'anonymous')+((c.email||'').trim()?' <'+c.email.trim()+'>':'');
         window.location.href='mailto:emortiamusix@gmail.com?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
         this.setState({sent:true});
