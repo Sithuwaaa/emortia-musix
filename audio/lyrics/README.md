@@ -43,7 +43,7 @@ You don't need any other software. Open the site with `#sync` on the end
 of the URL, e.g.
 
 ```
-https://sithuwaaa.github.io/emortia-musix/#sync
+https://emortia.com/#sync
 ```
 
 A **Time-sync** drawer opens on the right (only for you – it is hidden
