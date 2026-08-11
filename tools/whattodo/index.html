@@ -667,17 +667,23 @@ function render(){
   if (ACTIVE === 'Add To Do'){
     const add = $('addBtn');
     add.onclick = async () => {
+      /* Every field is read here, before anything is awaited. Signing in and
+         saving both take time, and a realtime update arriving meanwhile
+         redraws this view — reaching back for an input afterwards would be
+         reaching for a node that no longer exists. */
       const title = $('tTitle').value.trim();
+      const note = $('tNote').value.trim();
+      const dueRaw = $('tDue').value;
       if (!title){ toast('Give it a title first'); $('tTitle').focus(); return; }
       add.disabled = true; add.textContent = 'Adding…';
       try {
         await window.AuthGate.require();
-        const due = $('tDue').value ? new Date($('tDue').value).toISOString() : null;
-        await window.DB.addTodo({ title, note: $(tNote).value.trim(), due });
+        const due = dueRaw ? new Date(dueRaw).toISOString() : null;
+        await window.DB.addTodo({ title, note, due });
         await refresh();
         // land on the day it is due, so you see where it went
         if (due){ const d = new Date(due); CAL_M = new Date(d.getFullYear(), d.getMonth(), 1); CAL_SEL = dayKey(d); }
-        ACTIVE = Calendar; buildTabs(); render();
+        ACTIVE = 'Calendar'; buildTabs(); render();
         toast('Added');
       } catch (err){
         toast(err.message, 6000);
