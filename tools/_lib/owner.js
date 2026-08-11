@@ -47,11 +47,27 @@
       c.id = '__ownerChip';
       c.style.cssText = 'position:fixed;left:14px;bottom:14px;z-index:99999;display:flex;align-items:center;gap:9px;background:rgba(18,15,12,0.92);color:#fff;border:1px solid rgba(255,255,255,0.18);border-radius:999px;padding:6px 8px 6px 13px;font:600 12px/1 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;box-shadow:0 8px 26px rgba(0,0,0,0.45);backdrop-filter:blur(8px);';
       c.innerHTML = '<span style="color:#7fdc8a;">● Owner mode</span>';
-      var b = document.createElement('button');
-      b.textContent = 'Lock';
-      b.style.cssText = 'background:none;border:1px solid rgba(255,255,255,0.28);color:#fff;border-radius:7px;padding:4px 10px;font:inherit;cursor:pointer;';
-      b.onclick = window.ownerLock;
-      c.appendChild(b);
+      var btn = function (label, onClick, title) {
+        var b = document.createElement('button');
+        b.textContent = label;
+        if (title) b.title = title;
+        b.style.cssText = 'background:none;border:1px solid rgba(255,255,255,0.28);color:#fff;border-radius:7px;padding:4px 10px;font:inherit;cursor:pointer;';
+        b.onclick = onClick;
+        return b;
+      };
+      /* Timing lyrics used to mean knowing to type #sync in the address bar.
+         Only the site itself has a sync panel, so the button only appears
+         there — the tool pages have nothing to show. */
+      if (document.querySelector('x-dc')){
+        var sync = btn('Sync lyrics', function () {
+          var on = (location.hash || '').toLowerCase() === '#sync';
+          location.hash = on ? '' : 'sync';
+          sync.textContent = on ? 'Sync lyrics' : 'Close sync';
+        }, 'Tap out the timings for the playing song');
+        if ((location.hash || '').toLowerCase() === '#sync') sync.textContent = 'Close sync';
+        c.appendChild(sync);
+      }
+      c.appendChild(btn('Lock', window.ownerLock));
       document.body.appendChild(c);
     };
     if (document.readyState === 'loading') addEventListener('DOMContentLoaded', addChip); else addChip();

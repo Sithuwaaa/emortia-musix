@@ -135,6 +135,7 @@ input,textarea,button{font-family:inherit;}
 /* glow blooms (moon / flower / fragrance) */
 .music-bg .bloom{position:absolute;border-radius:50%;filter:blur(26px);mix-blend-mode:screen;}
 /* each glow sits over the light source in that song's cover */
+.music-bg .songbloom{width:58vh;height:58vh;left:50%;top:34%;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(255,226,206,0.34),transparent 68%);animation:bloomPulse 7.5s ease-in-out infinite;}
 .music-bg .moonbloom{width:46vh;height:46vh;left:52%;top:27%;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(226,246,244,0.5),transparent 66%);animation:bloomPulse 7s ease-in-out infinite;}
 .music-bg .flowerbloom{width:54vh;height:54vh;left:62%;top:62%;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(255,120,180,0.42),transparent 68%);animation:bloomPulse 5.4s ease-in-out infinite;}
 .music-bg .warmbloom{width:64vh;height:64vh;left:26%;top:22%;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(255,198,124,0.4),transparent 68%);animation:bloomPulse 8s ease-in-out infinite;}
@@ -846,14 +847,12 @@ class Component extends DCLogic {
     super(props);
     const raw = [
       // d = fallback seconds, replaced by the file's real duration once metadata loads
-      {t:'Harana Hitha', a:'Emortia', d:111, tone:'var(--artA)', src:'audio/harana-hitha.wav', img:'audio/art/harana-hitha.png', scene:'moon'},
-      {t:'Napuru Hitha', a:'Emortia', d:44, tone:'#312338', src:'audio/napuru-hitha.wav', img:'audio/art/napuru-hitha.png', scene:'warm'},
-      {t:'Suwanda Vitharayi', a:'Emortia', d:97, tone:'#1f2e2c', src:'audio/suwanda-vitharayi.wav', img:'audio/art/suwanda-vitharayi.jpg', scene:'petals'},
-      // no sleeves for these three yet — img:'' takes the initial-tile path the
-      // player already has, and each still gets its own scene behind it
-      {t:'Punchi Kella', a:'Emortia', d:73, tone:'#3d2a1e', src:'audio/punchi-kella.wav', img:'', scene:'warm'},
-      {t:'Parissam', a:'Emortia', d:120, tone:'#23303f', src:'audio/parissam.wav', img:'', scene:'moon'},
-      {t:'Hadathi Mala', a:'Emortia', d:98, tone:'#3a2436', src:'audio/hadathi-mala.wav', img:'', scene:'petals'},
+      {t:'Harana Hitha', a:'Emortia', d:111, tone:'var(--artA)', src:'audio/harana-hitha.wav', img:'audio/art/harana-hitha.png'},
+      {t:'Napuru Hitha', a:'Emortia', d:44, tone:'#312338', src:'audio/napuru-hitha.wav', img:'audio/art/napuru-hitha.png'},
+      {t:'Suwanda Vitharayi', a:'Emortia', d:97, tone:'#1f2e2c', src:'audio/suwanda-vitharayi.wav', img:'audio/art/suwanda-vitharayi.png'},
+      {t:'Punchi Kella', a:'Emortia', d:73, tone:'#3d2a1e', src:'audio/punchi-kella.wav', img:'audio/art/punchi-kella.png'},
+      {t:'Parissam', a:'Emortia', d:120, tone:'#23303f', src:'audio/parissam.wav', img:'audio/art/parissam.png'},
+      {t:'Hadathi Mala', a:'Emortia', d:98, tone:'#3a2436', src:'audio/hadathi-mala.wav', img:'audio/art/hadathi-mala.png'},
     ];
     const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
     this.tracks = raw.map((x,i)=>({
@@ -2090,7 +2089,6 @@ class Component extends DCLogic {
     const idx=this.state.idx;
     if(this._sceneIdx===idx && this._sceneEl) return this._sceneEl;  // cache per track so particles don't teleport each render
     const t=this.tracks[idx];
-    const scene=t.scene||'dream';
     const L=[];
     if(t.img){
       L.push(React.createElement('div',{key:'art', className:'art', style:{backgroundImage:'url('+t.img+')'}}));
@@ -2101,24 +2099,9 @@ class Component extends DCLogic {
       L.push(React.createElement('span',{key:'ob', className:'orb b'}));
       L.push(React.createElement('span',{key:'oc', className:'orb c'}));
     }
-    if(scene==='moon'){
-      // moonlit sea: cool silver moon glow, moonlight shimmering on the water,
-      // and pale motes drifting like sea mist
-      L.push(React.createElement('div',{key:'mb', className:'bloom moonbloom'}));
-      L.push(React.createElement('div',{key:'sh', className:'shimmer'}));
-      L.push(this.moteField(16,'silver'));
-    }else if(scene==='petals'){
-      // peony bouquet: soft pink haze with petals falling; no moon in this art
-      L.push(React.createElement('div',{key:'fb', className:'bloom flowerbloom'}));
-      L.push(this.petalField(26,'#ff9ecb','#c4256f'));
-      L.push(this.moteField(10,'pink'));
-    }else if(scene==='warm'){
-      // lamplit room: warm window glow and dust turning slowly in the light
-      L.push(React.createElement('div',{key:'wb', className:'bloom warmbloom'}));
-      L.push(this.moteField(20,'warm'));
-    }else{
-      L.push(this.moteField(10));
-    }
+    // one treatment for every song: a slow bloom and dust turning in it
+    L.push(React.createElement('div',{key:'bl', className:'bloom songbloom'}));
+    L.push(this.moteField(18));
     this._sceneEl=React.createElement('div',{className:'scene'}, L);
     this._sceneIdx=idx;
     return this._sceneEl;
