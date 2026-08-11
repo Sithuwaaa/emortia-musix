@@ -340,6 +340,7 @@ html.bk-reading-on,html.bk-reading-on body{overflow:hidden;}
 .term-card:hover::after{opacity:1;}
 .term-card>*{position:relative;z-index:1;}
 @keyframes tickerRun{to{transform:translateX(-50%);}}
+@keyframes termRoll{0%,42%{transform:translateY(0);}50%,92%{transform:translateY(-1.6em);}100%{transform:translateY(0);}}
 .hm-card{transition:border-color .22s ease,transform .22s ease,box-shadow .3s ease;}
 .hm-card:hover{transform:translateY(-2px);border-color:rgba(var(--hmRGB),.7) !important;box-shadow:0 20px 48px -22px rgba(var(--hmRGB),.6);}
 .hm-card::before{content:'';position:absolute;inset:-45% -15%;pointer-events:none;z-index:0;background:radial-gradient(46% 40% at 50% 0%,rgba(var(--hmRGB),.24),rgba(var(--hmRGB),0) 70%);opacity:.6;transition:opacity .35s ease;}
