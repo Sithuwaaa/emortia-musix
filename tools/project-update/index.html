@@ -126,6 +126,14 @@
   .tabchip{font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:.03em;
     border:1px solid var(--line3);border-radius:999px;padding:3px 9px;color:var(--text2);
     background:color-mix(in oklab,var(--warn) 7%,transparent);white-space:nowrap}
+  /* the export tab */
+  .exlist{display:flex;flex-direction:column;gap:8px}
+  .exrow{display:flex;align-items:center;gap:12px;background:var(--card-2);border:1px solid var(--line);
+    border-radius:11px;padding:12px 14px}
+  .exrow>div:first-child{flex:1;min-width:0}
+  .exrow.whole{border-color:var(--accent);background:color-mix(in oklab,var(--accent) 8%,var(--card-2))}
+  .exname{font-weight:600;font-size:14.5px}
+  .exmeta{font-family:'Space Mono',monospace;font-size:11.5px;color:var(--muted);margin-top:3px}
   .note{font-size:13px;color:var(--muted);line-height:1.65}
 
   .toolbar{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
@@ -349,7 +357,9 @@ function visibleSheets(){
   return (ORDER || []).filter(n => !HIDDEN.includes(n) && BOOK[n] && BOOK[n].rows && BOOK[n].rows.length);
 }
 function buildTabs(){
-  const all = ['Dashboard'].concat(visibleSheets());
+  // Export earns a tab of its own: wanting the file is not the same as being
+  // part-way through reading a sheet, and it should not depend on which one.
+  const all = ['Dashboard'].concat(visibleSheets()).concat(['Export']);
   if (!all.includes(ACTIVE)) ACTIVE = 'Dashboard';
   $('tabs').innerHTML = all.map(n =>
     '<button class="tab' + (n === ACTIVE ? ' on' : '') + '" data-t="' + esc(n) + '">' + esc(n) + '</button>').join('');
@@ -716,6 +726,56 @@ function exportBook(){
   toast('Downloaded ' + names.length + ' sheets');
 }
 
+/* The MOD list is worked out here rather than written down anywhere in the
+   workbook, so it is worth being able to carry out as a sheet of its own. */
+function exportMod(){
+  const mod = modSites();
+  if (!mod || !mod.list.length){ toast('No defence permissions to export'); return; }
+  const aoa = [['Site ID', 'Site Name', 'Permission', 'In this plan', 'Found on tabs',
+                'Time restrictions', 'Serves']];
+  mod.list.forEach(m => aoa.push([
+    m.id, m.name, m.perm, m.own ? 'Yes' : 'No (hop far end)',
+    (m.where || []).join(', '), m.restrict || '',
+    m.serves.map(([id, nm]) => id + (nm ? ' ' + nm : '')).join(', ')
+  ]));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), 'MOD permission sites');
+  XLSX.writeFile(wb, stem() + ' - MOD permission sites.xlsx');
+  toast('Downloaded ' + mod.list.length + ' sites');
+}
+
+function renderExport(){
+  if (!BOOK) return '<div class="empty"><div class="big">📄</div>Nothing loaded yet.</div>';
+  const names = visibleSheets();
+  const mod = modSites();
+  const totalRows = names.reduce((a, n) => a + BOOK[n].rows.length, 0);
+
+  let h = '<div class="panel"><h2><span class="dot"></span>Take the data away' +
+    '<span class="tag">' + ds().label + (SAVED ? ' · updated ' + SAVED : '') + '</span></h2>' +
+    '<div class="note" style="margin-bottom:14px">Real Excel files, not CSV – Sinhala names survive the trip ' +
+    'and nothing decides a site ID like KI0023 is a number.</div>' +
+    '<div class="exlist">';
+
+  h += '<div class="exrow whole"><div><div class="exname">Everything</div>' +
+       '<div class="exmeta">' + names.length + ' sheets · ' + totalRows + ' rows</div></div>' +
+       '<button class="btn on" data-ex="*">⬇ Excel</button></div>';
+
+  names.forEach(n => {
+    const sh = BOOK[n];
+    h += '<div class="exrow"><div><div class="exname">' + esc(n) + '</div>' +
+         '<div class="exmeta">' + sh.rows.length + ' rows · ' + sh.cols.filter(Boolean).length + ' cols</div></div>' +
+         '<button class="btn" data-ex="' + esc(n) + '">⬇ Excel</button></div>';
+  });
+
+  if (mod && mod.list.length)
+    h += '<div class="exrow"><div><div class="exname">MOD permission sites</div>' +
+         '<div class="exmeta">' + mod.list.length + ' sites · worked out, not in the workbook</div></div>' +
+         '<button class="btn" data-ex="#mod">⬇ Excel</button></div>';
+
+  h += '</div></div>';
+  return h;
+}
+
 /* ---------- grid ---------- */
 function renderGrid(name){
   const sh = BOOK[name];
@@ -814,7 +874,15 @@ function renderFooter(){
 
 /* ---------- render ---------- */
 function render(){
-  $('view').innerHTML = ACTIVE === 'Dashboard' ? renderDashboard() : renderGrid(ACTIVE);
+  $('view').innerHTML = ACTIVE === 'Dashboard' ? renderDashboard()
+                      : ACTIVE === 'Export'    ? renderExport()
+                      : renderGrid(ACTIVE);
+  [...document.querySelectorAll('[data-ex]')].forEach(b => b.onclick = () => {
+    const k = b.dataset.ex;
+    if (k === '*') exportBook();
+    else if (k === '#mod') exportMod();
+    else exportSheet(k);
+  });
   const q = $('q');
   if (q){
     let t;
