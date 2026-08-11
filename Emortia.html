@@ -465,34 +465,47 @@ html.bk-reading-on,html.bk-reading-on body{overflow:hidden;}
             <span style="width:7px;height:7px;border-radius:50%;background:#e87a94;flex-shrink:0;animation:termLed 1.6s ease-in-out infinite;"></span>
             <span style="font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:0.1em;color:var(--dim);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;">Now spinning</span>
           </div>
-          <div style="padding:16px 14px 18px;">
-            <div style="font-family:'Space Mono',monospace;font-size:12.5px;color:var(--text);">play --last<span style="color:#d15873;animation:termCaret 1s steps(1,end) infinite;">&#9611;</span></div>
-            <div style="display:flex;gap:13px;align-items:center;margin-top:14px;">
-              <sc-if value="{{ curArtReady }}" hint-placeholder-val="{{ false }}">
-                {{ curArtImgSm }}
-              </sc-if>
-              <sc-if value="{{ curNoArt }}" hint-placeholder-val="{{ true }}">
-                <div style="width:52px;height:52px;border-radius:8px;flex-shrink:0;display:grid;place-items:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:22px;color:rgba(247,237,240,.32);background:{{ curTone }};">{{ curInitial }}</div>
-              </sc-if>
-              <div style="min-width:0;">
-                <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:17px;letter-spacing:-0.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ curTitle }}</div>
-                <div style="color:var(--mute);font-size:13px;font-family:'Space Mono',monospace;">{{ hmNowMeta }}</div>
+          <div style="padding:16px 14px 18px;display:flex;flex-direction:column;gap:11px;">
+            <div style="display:inline-block;height:1.6em;overflow:hidden;vertical-align:bottom;font-family:'Space Mono',monospace;font-size:12.5px;line-height:1.6em;color:var(--text);">
+              <div style="animation:termRoll 5.4s ease-in-out infinite;">
+                <div>play --last</div>
+                <div style="color:#e87a94;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">&#9654; {{ curTitle }}</div>
               </div>
             </div>
-            <div style="margin-top:16px;height:3px;border-radius:2px;background:var(--line);overflow:hidden;"><div style="width:{{ pctLabel }};height:100%;background:#d15873;"></div></div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:34px;line-height:1;color:#d15873;">{{ hmSongCount }}</span>
+              <span style="font-size:13.5px;color:var(--dim);line-height:1.35;">{{ hmCatSummary }}</span>
+            </div>
+            <div style="height:1px;background:#4a2632;"></div>
+            <sc-for list="{{ hmTrackList }}" as="htr" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;gap:9px;font-family:'Space Mono',monospace;font-size:12px;color:var(--dim);"><span style="width:7px;height:7px;border-radius:50%;flex-shrink:0;background:{{ htr.dot }};"></span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ htr.name }}</span></div>
+            </sc-for>
           </div>
         </div>
 
-        <div class="hm-card" onClick="{{ nav.blog }}" style="--hmRGB:201,149,74;position:relative;border:1px solid #453518;border-radius:12px;background:#1c1610;overflow:hidden;cursor:pointer;">
+        <div class="hm-card" onClick="{{ nav.blog }}" style="--hmRGB:201,149,74;position:relative;border:1px solid #453518;border-radius:12px;background:#1c1610;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;">
           <div style="display:flex;align-items:center;gap:9px;padding:10px 14px;border-bottom:1px solid var(--line);background:rgba(0,0,0,.22);">
             <span style="width:7px;height:7px;border-radius:50%;background:#dfae63;flex-shrink:0;animation:termLed 1.6s ease-in-out .4s infinite;"></span>
             <span style="font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:0.1em;color:var(--dim);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;">Newest in the journal</span>
           </div>
-          <div style="padding:16px 14px 18px;">
-            <div style="font-family:'Space Mono',monospace;font-size:12.5px;color:var(--text);">open කවිය<span style="color:#c9954a;animation:termCaret 1s steps(1,end) infinite;">&#9611;</span></div>
-            <div style="font-family:'EB Garamond',serif;font-size:20px;line-height:1.4;margin:14px 0 8px;">{{ hmPoemTitle }}</div>
-            <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:15px;line-height:1.6;color:var(--dim);">{{ hmPoemExcerpt }}</div>
-            <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--faint);margin-top:14px;letter-spacing:0.06em;">{{ hmPoemMeta }}</div>
+          <div style="padding:16px 14px 18px;display:flex;flex-direction:column;gap:11px;flex:1;">
+            <div style="display:inline-block;height:1.6em;overflow:hidden;vertical-align:bottom;font-family:'Space Mono',monospace;font-size:12.5px;line-height:1.6em;color:var(--text);">
+              <div style="animation:termRoll 5.4s ease-in-out .4s infinite;">
+                <div>open කවිය</div>
+                <div style="color:#dfae63;">&#9654; {{ hmPoemCount }} poems</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:34px;line-height:1;color:#dfae63;">{{ hmPoemCount }}</span>
+              <span style="font-size:13.5px;color:var(--dim);line-height:1.35;">poems in the journal</span>
+            </div>
+            <div style="height:1px;background:#453518;"></div>
+            <sc-for list="{{ hmPoemList }}" as="hp" hint-placeholder-count="3">
+              <div style="display:flex;align-items:baseline;gap:9px;min-width:0;">
+                <span style="width:7px;height:7px;border-radius:50%;flex-shrink:0;background:{{ hp.dot }};"></span>
+                <span style="font-family:'EB Garamond',serif;font-size:16.5px;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ hp.title }}</span>
+              </div>
+            </sc-for>
           </div>
         </div>
 
@@ -502,6 +515,12 @@ html.bk-reading-on,html.bk-reading-on body{overflow:hidden;}
             <span style="font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:0.1em;color:var(--dim);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;">The office side</span>
           </div>
           <div style="padding:16px 14px 18px;display:flex;flex-direction:column;gap:11px;">
+            <div style="display:inline-block;height:1.6em;overflow:hidden;vertical-align:bottom;font-family:'Space Mono',monospace;font-size:12.5px;line-height:1.6em;color:var(--text);">
+              <div style="animation:termRoll 5.4s ease-in-out .8s infinite;">
+                <div>run --tools</div>
+                <div style="color:#3fbdd0;">&#9654; {{ hmToolCount }} utilities</div>
+              </div>
+            </div>
             <div style="display:flex;align-items:center;gap:10px;">
               <span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:34px;line-height:1;color:#3fbdd0;">{{ hmToolCount }}</span>
               <span style="font-size:13.5px;color:var(--dim);line-height:1.35;">small utilities, built for real work</span>
@@ -2596,6 +2615,14 @@ class Component extends DCLogic {
       })(),
       hmToolCount: 6,
       hmTools: [{name:'What To Do', dot:'#d4547a'},{name:'Project Update', dot:'#1f97a8'},{name:'Site Access Lookup', dot:'#2f8fd4'}],
+      hmSongCount: this.tracks.length,
+      hmCatSummary: (()=>{ const tot=this.tracks.reduce((a,b)=>a+(b.dur||0),0); const m=Math.round(tot/60);
+        return 'songs \u00b7 '+(m>0?m+' min of music':'a few minutes of music'); })(),
+      hmTrackList: (()=>{ const dots=['#e87a94','#c25a74','#8d3d52'];
+        return this.tracks.slice(0,3).map((x,i)=>({ name:x.t, dot:dots[i]||'#8d3d52' })); })(),
+      hmPoemCount: (s.poems||[]).length,
+      hmPoemList: (()=>{ const ps=(s.poems||[]).slice(-3).reverse(); const dots=['#dfae63','#c9954a','#8d6b34'];
+        return ps.map((p,i)=>({ title:p.title||'—', dot:dots[i]||'#8d6b34' })); })(),
       hmPoemTitle: (()=>{ const p=(s.poems||[])[(s.poems||[]).length-1]; return p?p.title:'—'; })(),
       hmPoemExcerpt: (()=>{ const p=(s.poems||[])[(s.poems||[]).length-1]; if(!p) return 'Loading…';
         const line=String(p.body||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean)[0]||'';
