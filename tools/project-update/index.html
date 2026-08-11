@@ -121,6 +121,11 @@
     padding:3px 10px;border:1px solid var(--warn);color:var(--warn);background:color-mix(in oklab,var(--warn) 14%,transparent)}
   .modcard .serves{margin-top:10px;font-size:12.5px;color:var(--muted);line-height:1.6}
   .modcard .serves b{color:var(--text);font-family:'Space Mono',monospace;font-weight:700;font-size:12px}
+  /* the tabs this site is written on */
+  .modcard .where{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+  .tabchip{font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:.03em;
+    border:1px solid var(--line3);border-radius:999px;padding:3px 9px;color:var(--text2);
+    background:color-mix(in oklab,var(--warn) 7%,transparent);white-space:nowrap}
   .note{font-size:13px;color:var(--muted);line-height:1.65}
 
   .toolbar{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
@@ -390,59 +395,106 @@ const statusColour = s => (BUCKETS.find(b => b.k === bucketOf(s)) || {}).c || 'v
    the only route when the lamp sites were still missing from that list. Check
    both against Site Access and flag whatever comes back. */
 const MOD_RE = /\b(mod|sla|slaf|sln|slarmy|army|navy|air\s*force|defen[cs]e|stf)\b/i;
+const SITE_ID_RE = /^[A-Z]{2}\d{3,5}$/;
+/* The far end of a hop is the other party's site; the near end is ours. Some
+   trackers carry nothing but a NEAR END and a FAR END column, so treating
+   every hop column alike would file our own lamp sites under somebody else's. */
+const FAR_COL_RE = /far\s*end/i;
+
+/* Every sheet in the book, not two of them. A site turns up wherever the work
+   took it — the MW removal tracker, the new locations, the AP data, the CR
+   update — and one that needs defence clearance needs it just as much when it
+   is written on a tab nobody thought to look at.
+
+   Columns are found by what they hold rather than by what they are called, so
+   a tab added to the workbook later is read without this having to be told
+   about it. A column of hop endpoints names somebody else's site; any other
+   column of ids names one of ours. */
+function harvestSites(){
+  // id -> {name, where:Set}     : sites this project works on
+  const own = new Map();
+  // id -> {serves:Map, where:Set} : the other end of a hop
+  const hubs = new Map();
+  let sheets = 0;
+  if (!BOOK) return { own, hubs, sheets };
+
+  for (const name of Object.keys(BOOK)){
+    const sh = BOOK[name];
+    if (!sh || !sh.rows || !sh.rows.length) continue;
+    const { cols, rows } = sh;
+
+    const idCols = [];
+    cols.forEach((c, i) => {
+      let n = 0;
+      for (const r of rows) if (SITE_ID_RE.test(String(r[i] || '').trim().toUpperCase())) n++;
+      // a fifth of the column, and never on one lucky cell
+      if (n >= Math.max(2, rows.length * 0.2)) idCols.push(i);
+    });
+    if (!idCols.length) continue;
+    sheets++;
+
+    const iName = cols.findIndex(c => /^site\s*name/i.test(c));
+    const farCols = idCols.filter(i => FAR_COL_RE.test(cols[i] || ''));
+    const ourCols = idCols.filter(i => !FAR_COL_RE.test(cols[i] || ''));
+    const iSelf = ourCols[0];          // the row's own site, for the serves link
+    rows.forEach(r => {
+      const selfId = iSelf == null ? '' : String(r[iSelf] || '').trim().toUpperCase();
+      const selfNm = iName >= 0 ? String(r[iName] || '').trim() : '';
+      ourCols.forEach(i => {
+        const id = String(r[i] || '').trim().toUpperCase();
+        if (!SITE_ID_RE.test(id)) return;
+        if (!own.has(id)) own.set(id, { name: selfNm, where: new Set() });
+        const o = own.get(id);
+        if (!o.name && selfNm) o.name = selfNm;
+        o.where.add(name);                        // the tab it was written on
+      });
+      farCols.forEach(i => {
+        const id = String(r[i] || '').trim().toUpperCase();
+        if (!SITE_ID_RE.test(id)) return;
+        if (!hubs.has(id)) hubs.set(id, { serves: new Map(), where: new Set() });
+        const hb = hubs.get(id);
+        hb.where.add(name);
+        if (selfId && selfId !== id) hb.serves.set(selfId, selfNm);
+      });
+    });
+  }
+  /* Ours is ours, even where it also appears as somebody's far end — but the
+     tabs it turned up on are worth keeping either way. */
+  own.forEach((o, id) => {
+    const hb = hubs.get(id);
+    if (hb){ hb.where.forEach(w => o.where.add(w)); hubs.delete(id); }
+  });
+  return { own, hubs, sheets };
+}
+
 function modSites(){
   if (!SITEACCESS || !BOOK) return null;
-  const tx = BOOK['Tx Design'];
   const ci = n => SITEACCESS.cols.indexOf(n);
   const iId = ci('Site_ID'), iPerm = ci('Access_Permission_providing_Party'),
         iName = ci('Site_Name'), iTime = ci('Time_Restrictions_final'), iTel = ci('Depot_Contact');
   if (iId < 0 || iPerm < 0) return null;
   const byId = {}; SITEACCESS.rows.forEach(r => { const k = String(r[iId] || '').trim().toUpperCase(); if (k) byId[k] = r; });
 
-  // every hop's far end, and who it serves
-  const hubs = new Map();   // hubId -> {serves:Map}
-  if (tx){
-    const farCols = [];
-    tx.cols.forEach((c, i) => { if (/far\s*end\s*site\s*id/i.test(c)) farCols.push(i); });
-    const iNear = tx.cols.findIndex(c => /^site\s*id/i.test(c));
-    const iNearName = tx.cols.findIndex(c => /^site\s*name/i.test(c));
-    tx.rows.forEach(r => {
-      farCols.forEach(i => {
-        const id = String(r[i] || '').trim().toUpperCase();
-        if (!id || !/[A-Z]/.test(id)) return;
-        if (!hubs.has(id)) hubs.set(id, { serves: new Map() });
-        const nid = String(r[iNear] || '').trim();
-        if (nid) hubs.get(id).serves.set(nid, String(r[iNearName] || '').trim());
-      });
-    });
-  }
-  // and the plan's own sites, which are in the operational list now
-  const plan = BOOK['Full Plan'];
-  const own = new Map();
-  if (plan){
-    const iS = colIdx(plan.cols, 'Site ID', 'Site  ID', 'SiteID');
-    const iN = colIdx(plan.cols, 'Site Name', 'Site  Name');
-    if (iS >= 0) plan.rows.forEach(r => {
-      const id = String(r[iS] || '').trim().toUpperCase();
-      if (id && /[A-Z]/.test(id)) own.set(id, iN >= 0 ? String(r[iN] || '').trim() : '');
-    });
-  }
+  const { own, hubs, sheets } = harvestSites();
 
   const seen = {}, out = [];
   let checked = 0, known = 0;
-  const test = (id, serves, isOwn) => {
+  const test = (id, serves, isOwn, where) => {
     if (seen[id]) return; seen[id] = 1; checked++;
     const m = byId[id]; if (!m) return; known++;
     const perm = String(m[iPerm] || '').trim();
     if (perm && MOD_RE.test(perm))
       out.push({ id, name: String(m[iName] || ''), perm, own: !!isOwn,
                  restrict: iTime >= 0 ? String(m[iTime] || '') : '',
+                 // the tabs it is written on, in the order the workbook has them
+                 where: (ORDER || []).filter(n => where && where.has(n))
+                          .concat([...(where || [])].filter(n => !(ORDER || []).includes(n))),
                  serves: serves ? [...serves.entries()] : [] });
   };
-  own.forEach((nm, id) => test(id, null, true));
-  hubs.forEach((v, id) => test(id, v.serves, false));
+  own.forEach((o, id) => test(id, null, true, o.where));
+  hubs.forEach((v, id) => test(id, v.serves, false, v.where));
   out.sort((a, b) => (a.own === b.own ? a.id.localeCompare(b.id) : (a.own ? -1 : 1)));
-  return { list: out, checked, known };
+  return { list: out, checked, known, sheets };
 }
 
 /* ---------- district from the Site ID prefix ----------
@@ -546,7 +598,8 @@ function renderDashboard(){
   /* MOD permission panel */
   const mod = modSites();
   h += '<div class="panel mod"><h2><span class="dot" style="background:var(--warn)"></span>MOD permission sites' +
-       (mod ? '<span class="tag">' + mod.known + ' of ' + mod.checked + ' sites checked</span>' : '') + '</h2>';
+       (mod ? '<span class="tag">' + mod.known + ' of ' + mod.checked + ' sites checked · ' +
+              mod.sheets + (mod.sheets === 1 ? ' tab' : ' tabs') + ' read</span>' : '') + '</h2>';
   if (!mod) h += '<div class="note">Couldn’t reach the Site Access data to check permissions.</div>';
   else if (!mod.list.length)
     h += '<div class="note">No defence permissions found. Every site in the plan is looked up in the Site Access list, and so is ' +
@@ -557,6 +610,10 @@ function renderDashboard(){
       h += '<div class="modcard"><div class="id">' + esc(m.id) + '</div><div class="nm">' + esc(m.name) + '</div>' +
            '<span class="perm">🛡 ' + esc(m.perm) + '</span>' +
            (m.restrict ? '<div class="serves" style="margin-top:8px">⏱ ' + esc(m.restrict) + '</div>' : '') +
+           // which tabs it is written on, so it can be found without hunting
+           (m.where && m.where.length
+             ? '<div class="where">' + m.where.map(w => '<span class="tabchip">' + esc(w) + '</span>').join('') + '</div>'
+             : '') +
            '<div class="serves">' + (m.own ? 'In this plan' : 'Hop far end') +
            (m.serves.length ? ' · serves ' + m.serves.map(([id, nm]) => '<b>' + esc(id) + '</b> ' + esc(nm)).join('<br>') : '') +
            '</div></div>';
@@ -622,6 +679,43 @@ function renderDashboard(){
   return h;
 }
 
+/* ---------- taking the data away ----------
+   Reading a table on a page is one thing; doing anything with it is another.
+   Both exports write a real .xlsx rather than a CSV, so the Sinhala names and
+   the leading zeros on a site id survive the trip — a spreadsheet opening a
+   CSV will happily turn KI0023 into a number and a date into whatever it
+   fancies. */
+function xlName(n, used){
+  // Excel refuses : \ / ? * [ ] and anything past 31 characters
+  let s = String(n || 'Sheet').replace(/[:\\\/\?\*\[\]]/g, '-').slice(0, 31) || 'Sheet';
+  let i = 2, base = s;
+  while (used.has(s.toLowerCase())){ const tail = ' (' + i++ + ')'; s = base.slice(0, 31 - tail.length) + tail; }
+  used.add(s.toLowerCase());
+  return s;
+}
+function stem(){
+  return 'Lamp Pole Update - ' + ds().label + (SAVED ? ' ' + SAVED : '');
+}
+function sheetToAoa(sh){ return [sh.cols].concat(sh.rows); }
+function exportSheet(name, rows){
+  const sh = BOOK && BOOK[name]; if (!sh) return;
+  const used = new Set();
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([sh.cols].concat(rows || sh.rows)), xlName(name, used));
+  XLSX.writeFile(wb, stem() + ' - ' + String(name).replace(/[\\\/:*?"<>|]/g, '-') + '.xlsx');
+  toast('Downloaded ' + (rows ? rows.length : sh.rows.length) + ' rows');
+}
+function exportBook(){
+  if (!BOOK) return;
+  const names = visibleSheets();
+  if (!names.length){ toast('Nothing to export yet'); return; }
+  const used = new Set();
+  const wb = XLSX.utils.book_new();
+  names.forEach(n => XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sheetToAoa(BOOK[n])), xlName(n, used)));
+  XLSX.writeFile(wb, stem() + '.xlsx');
+  toast('Downloaded ' + names.length + ' sheets');
+}
+
 /* ---------- grid ---------- */
 function renderGrid(name){
   const sh = BOOK[name];
@@ -634,6 +728,11 @@ function renderGrid(name){
   let h = '<div class="toolbar"><div class="search"><span class="ic">⌕</span>' +
     '<input id="q" type="search" placeholder="Filter rows…" value="' + esc(QUERY) + '" autocomplete="off" spellcheck="false"></div>' +
     '<button class="btn' + (WRAP ? ' on' : '') + '" id="wrapBtn">Wrap text</button>' +
+    // what you are looking at, then the lot — a filtered view is usually the
+    // reason someone wants the file at all
+    '<button class="btn" id="expSheet" title="This sheet as you have filtered it">⬇ Excel · this sheet' +
+      (parts.length ? ' (' + shown.length + ')' : '') + '</button>' +
+    '<button class="btn" id="expBook" title="Every sheet in one workbook">⬇ Excel · all sheets</button>' +
     '<span class="count">' + shown.length + ' of ' + rows.length + ' rows · ' + cols.filter(Boolean).length + ' cols</span></div>';
 
   h += '<div class="gridwrap"><table class="' + (WRAP ? 'wrap' : 'nowrap') + '"><thead><tr><th class="rn">#</th>' +
@@ -724,6 +823,17 @@ function render(){
         if (n){ n.focus(); n.setSelectionRange(n.value.length, n.value.length); } }, 140); });
   }
   const w = $('wrapBtn'); if (w) w.onclick = () => { WRAP = !WRAP; render(); };
+  const es = $('expSheet');
+  if (es) es.onclick = () => {
+    // exactly the rows on screen, filter and all
+    const sh = BOOK[ACTIVE];
+    const parts = QUERY.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    const shown = parts.length
+      ? sh.rows.filter(r => { const b = r.join(' ').toLowerCase(); return parts.every(p => b.includes(p)); })
+      : sh.rows;
+    exportSheet(ACTIVE, shown);
+  };
+  const eb = $('expBook'); if (eb) eb.onclick = () => exportBook();
   renderFooter();
 }
 load();
