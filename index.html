@@ -867,7 +867,7 @@ class Component extends DCLogic {
     // convenient there, wrong for a visitor arriving at the door.
     this.state = { page:'home', theme:'burgundy', menuOpen:false, poems:[], poemsLoaded:false,
       bkOpen:false, bkIdx:0, bkSpread:false, bkDrag:null, bkInk:0, bkVol:0, bkShelf:true, bkPer:10,
-      bkSingle:(window.matchMedia && window.matchMedia('(max-width:700px)').matches), playing:false, idx:0, progress:0, volume:pp.volume, muted:pp.muted, shuffle:pp.shuffle, repeat:pp.repeat, queueOpen:false, contact:{name:'',email:'',msg:''}, sent:false, audioMissing:false, syncTimes:[], lyricsOpen:false, fsOpen:false };
+      bkSingle:(window.matchMedia && window.matchMedia('(max-width:700px)').matches), playing:false, idx:0, progress:0, volume:pp.volume, muted:pp.muted, shuffle:pp.shuffle, repeat:pp.repeat, queueOpen:false, contact:{name:'',email:'',msg:''}, sent:false, audioMissing:false, syncTimes:[], lyricsOpen:false, fsOpen:false, wordsEdit:false, wordsText:'' };
     this.PLAYER_KEY='emortia_player_v1';
     this.moods=[
       {name:'Longing', color:'#d15873', rgb:'209,88,115', line:'#4a2632', glow:'rgba(209,88,115,.55)', wash:'linear-gradient(135deg,rgba(209,88,115,.12),transparent 70%)', track:0},
@@ -2134,10 +2134,52 @@ class Component extends DCLogic {
   loadLyrics(idx){
     const slug=this.tracks[idx].slug;
     if(this.lyricsCache[slug]!==undefined){ this.refreshSyncTimes(idx); return; }
+    const typed=this.savedWords(slug);
+    if(typed){ this.lyricsCache[slug]=typed; this._lastLyricIdx=-1; this.refreshSyncTimes(idx); return; }
     this.lyricsCache[slug]=null;   // loading
     fetch('audio/lyrics/'+slug+'.lrc').then(r=>r.ok?r.text():Promise.reject()).then(txt=>{
       this.lyricsCache[slug]=this.parseLyrics(txt); this._lastLyricIdx=-1; this.refreshSyncTimes(idx);
     }).catch(()=>{ this.lyricsCache[slug]=[]; this.refreshSyncTimes(idx); });
+  }
+
+  /* ---- the words themselves ----
+     The timings had a home already; the words did not, so a song without an
+     .lrc could only be fixed by making a file by hand — which is the one thing
+     you cannot do from the page you are looking at. Words typed onto the board
+     are kept here, they stand in for the file until you remove them, and the
+     sync panel times them like any other lines. */
+  wordsKey(slug){ return 'emortia_words_'+slug; }
+  savedWords(slug){
+    try{
+      const raw=localStorage.getItem(this.wordsKey(slug));
+      if(!raw) return null;
+      const a=JSON.parse(raw);
+      return Array.isArray(a) && a.length ? a.map(t=>({time:null, text:String(t)})) : null;
+    }catch(e){ return null; }
+  }
+  saveWords(){
+    const slug=this.tracks[this.state.idx].slug;
+    const lines=String(this.state.wordsText||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+    if(!lines.length){ this.clearWords(); return; }
+    try{ localStorage.setItem(this.wordsKey(slug), JSON.stringify(lines)); }catch(e){}
+    // the old timings counted different lines, so they cannot carry over
+    try{ localStorage.removeItem(this.draftKey(slug)); }catch(e){}
+    this.lyricsCache[slug]=lines.map(t=>({time:null, text:t}));
+    this._lastLyricIdx=-1;
+    this.setState({wordsEdit:false, wordsText:''}, ()=>this.refreshSyncTimes());
+  }
+  clearWords(){
+    const slug=this.tracks[this.state.idx].slug;
+    try{ localStorage.removeItem(this.wordsKey(slug)); localStorage.removeItem(this.draftKey(slug)); }catch(e){}
+    delete this.lyricsCache[slug];          // let the file be read again
+    this._lastLyricIdx=-1;
+    this.setState({wordsEdit:false, wordsText:''}, ()=>this.loadLyrics(this.state.idx));
+  }
+  hasWords(){ return !!this.savedWords(this.tracks[this.state.idx].slug); }
+  openWords(){
+    const ly=this.lyricsCache[this.tracks[this.state.idx].slug];
+    this.setState({ wordsEdit:true,
+      wordsText: (ly && ly.length) ? ly.map(l=>l.text).join('\n') : '' });
   }
 
   // ---- timing model: file times, overlaid with a local unsaved draft ----
@@ -2213,8 +2255,14 @@ class Component extends DCLogic {
     const t=this.tracks[this.state.idx];
     const ly=this.effectiveLines();
     const noteStyle={fontFamily:"'Space Mono',monospace",fontSize:'13px',color:'var(--mute)',padding:'26px 4px',lineHeight:1.6};
+    if(this.state.wordsEdit) return this.renderWordsEditor(t, ly);
     if(ly===undefined || ly===null) return React.createElement('div',{style:noteStyle},'Loading lyrics…');
-    if(!ly.length) return React.createElement('div',{style:noteStyle},'Lyrics coming soon – drop audio/lyrics/'+t.slug+'.lrc to add them.');
+    if(!ly.length) return React.createElement('div',{style:noteStyle},
+      window.IS_OWNER
+        ? React.createElement('div',null,
+            React.createElement('div',{style:{marginBottom:'16px'}},'No words for this one yet.'),
+            React.createElement('button',{onClick:()=>this.openWords(), style:this.boardBtn(true)},'Write the lyrics'))
+        : 'Lyrics coming soon.');
     const synced=ly.some(l=>l.time!=null);
     const active=synced?this.activeLyric(ly, this.state.progress):-1;
     const lines=ly.map((l,i)=>{
@@ -2232,8 +2280,42 @@ class Component extends DCLogic {
           textShadow:isA?'0 2px 22px rgba(0,0,0,0.8), 0 0 26px var(--glowSoft)':'0 2px 14px rgba(0,0,0,0.75)',
         }}, l.text || '♪');
     });
+    const ownerBar = window.IS_OWNER ? React.createElement('div',{key:'ob',
+      style:{display:'flex',gap:'9px',flexWrap:'wrap',justifyContent:'center',padding:'26px 4px 8px'}},
+      React.createElement('button',{onClick:()=>this.openWords(), style:this.boardBtn()},'Edit words'),
+      this.hasWords() ? React.createElement('button',{onClick:()=>this.clearWords(), style:this.boardBtn(),
+        title:'Forget what is typed here and read audio/lyrics/'+t.slug+'.lrc again'},'Use the file instead') : null,
+      React.createElement('span',{style:{fontFamily:"'Space Mono',monospace",fontSize:'11px',color:'var(--mute)',alignSelf:'center'}},
+        this.hasWords() ? 'your words · not in the repo yet' : 'from ' + t.slug + '.lrc')) : null;
     return React.createElement('div',{id:'lyricsBox', className:'lyrics-box'},
-      React.createElement('div',{style:{padding: synced?'140px 4px':'8px 4px'}}, lines));
+      React.createElement('div',{style:{padding: synced?'140px 4px':'8px 4px'}}, lines, ownerBar));
+  }
+  boardBtn(primary){
+    return {background:primary?'var(--accent)':'none', color:primary?'var(--bg)':'var(--text)',
+      border:'1px solid '+(primary?'transparent':'var(--line3)'), borderRadius:'10px',
+      padding:'9px 16px', fontFamily:"'Space Mono',monospace", fontSize:'12px', cursor:'pointer'};
+  }
+  /* One line of the song per line of the box — which is also one line of the
+     board, and one line the sync panel will ask you to tap. */
+  renderWordsEditor(t, ly){
+    const n=String(this.state.wordsText||'').split(/\r?\n/).filter(x=>x.trim()).length;
+    return React.createElement('div',{style:{padding:'10px 4px 30px',maxWidth:'620px',margin:'0 auto',textAlign:'left'}},
+      React.createElement('div',{style:{fontFamily:"'Space Mono',monospace",fontSize:'11px',letterSpacing:'0.14em',
+        textTransform:'uppercase',color:'var(--dim)',marginBottom:'10px'}}, 'Words · ' + t.t),
+      React.createElement('textarea',{
+        value:this.state.wordsText,
+        onChange:(e)=>this.setState({wordsText:e.target.value}),
+        placeholder:'One line of the song per line…',
+        spellCheck:false, autoFocus:true, rows:14,
+        style:{width:'100%',background:'rgba(0,0,0,.42)',color:'var(--text)',border:'1px solid var(--line3)',
+          borderRadius:'12px',padding:'14px 15px',fontFamily:"'Hanken Grotesk',system-ui,sans-serif",
+          fontSize:'16px',lineHeight:1.7,outline:'none',resize:'vertical'}}),
+      React.createElement('div',{style:{display:'flex',gap:'9px',flexWrap:'wrap',alignItems:'center',marginTop:'12px'}},
+        React.createElement('button',{onClick:()=>this.saveWords(), style:this.boardBtn(true)},
+          n ? 'Save ' + n + (n===1?' line':' lines') : 'Save'),
+        React.createElement('button',{onClick:()=>this.setState({wordsEdit:false,wordsText:''}), style:this.boardBtn()},'Cancel'),
+        React.createElement('span',{style:{fontFamily:"'Space Mono',monospace",fontSize:'11px',color:'var(--mute)'}},
+          'then Sync lyrics to time them')));
   }
   toggleLyrics(){
     const open=!this.state.lyricsOpen;
