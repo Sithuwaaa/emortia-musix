@@ -127,12 +127,37 @@
   .hdr .logo i:nth-child(3){height:9px}
   .hdr .logo i:nth-child(4){height:13px}
   @media (prefers-reduced-motion:reduce){.hdr .logo{transition:none}}
+
+  /* the site's name beside its mark, both leading home */
+  .hdr .brand{display:flex;align-items:center;gap:9px;text-decoration:none;color:inherit;
+    flex-shrink:0;transition:opacity .18s ease}
+  .hdr .brand:hover{opacity:.86}
+  .hdr .brand:focus-visible{outline:2px solid #f7edf0;outline-offset:4px;border-radius:10px}
+  .hdr .bname{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:16px;
+    letter-spacing:-0.02em;color:#fff;white-space:nowrap}
+  /* the site's name and the tool's are different things, so they are kept apart */
+  .hdr .hsep{width:1px;height:19px;background:rgba(255,255,255,.2);flex-shrink:0;margin:0 1px}
+  /* the mark is inside the link now, so the lift belongs to the whole brand */
+  .hdr .brand:hover .logo{transform:scale(1.06)}
+  /* on a narrow screen the tool's own name is the one worth keeping */
+
+  /* What a cramped header gives up, and in what order. The status pill is the
+     most expendable thing in it — it was taking half the bar and squeezing the
+     tool name down to "Site Ac…" long before the site name joined it. */
+  .hdr h1{flex:0 1 auto;min-width:7ch}
+  .hdr .pill{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  @media (max-width:820px){ .hdr .bname,.hdr .hsep{display:none} }
+  @media (max-width:700px){ .hdr .pill{display:none} }
 </style>
 <script src="../_lib/theme.js" defer></script>
 </head>
 <body>
 <header class="hdr">
-  <a class="logo" href="../../" title="Emortia · back to the site" aria-label="Emortia · back to the site"><i></i><i></i><i></i><i></i></a>
+  <a class="brand" href="../../" title="Emortia · back to the site" aria-label="Emortia · back to the site">
+    <span class="logo"><i></i><i></i><i></i><i></i></span>
+    <span class="bname">Emortia</span>
+  </a>
+  <span class="hsep" aria-hidden="true"></span>
   <h1>GIN Extractor</h1>
   <span class="pill" id="pill"><b>0</b> materials saved</span>
   <button class="theme" id="themeBtn" aria-label="Toggle theme">☾</button>
