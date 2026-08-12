@@ -73,12 +73,28 @@
     --glow:rgba(214,154,60,.5);--glowSoft:rgba(214,154,60,.28)}
   html[data-theme="light"]{--accent:#a8742a;--accentB:#d69a3c;--accentD:#8a5c1c;--accent-ink:#ffffff;
     --glow:rgba(168,116,42,.4);--glowSoft:rgba(168,116,42,.22)}
+
+  /* the site's mark, and the way back to it */
+  .hdr .logo{width:30px;height:30px;border-radius:50%;flex-shrink:0;
+    background:linear-gradient(150deg,#d15873,#87213c) !important;
+    display:flex;align-items:center;justify-content:center;gap:2.4px;
+    box-shadow:0 0 16px rgba(176,58,86,.45) !important;text-decoration:none;font-size:0;
+    padding:0;border:none;cursor:pointer;
+    transition:transform .18s ease,box-shadow .18s ease}
+  .hdr .logo:hover{transform:scale(1.09);box-shadow:0 0 24px rgba(176,58,86,.75)}
+  .hdr .logo:focus-visible{outline:2px solid #f7edf0;outline-offset:3px}
+  .hdr .logo i{width:2.6px;border-radius:2px;background:#170d10;display:block}
+  .hdr .logo i:nth-child(1){height:7px}
+  .hdr .logo i:nth-child(2){height:12px}
+  .hdr .logo i:nth-child(3){height:9px}
+  .hdr .logo i:nth-child(4){height:13px}
+  @media (prefers-reduced-motion:reduce){.hdr .logo{transition:none}}
 </style>
 <script src="../_lib/theme.js" defer></script>
 </head>
 <body>
 <header class="hdr">
-  <div class="logo">R</div>
+  <a class="logo" href="../../" title="Emortia · back to the site" aria-label="Emortia · back to the site"><i></i><i></i><i></i><i></i></a>
   <h1>RF Jumper Colour Codes</h1>
   <button class="theme" id="themeBtn" aria-label="Toggle theme">☾</button>
 </header>
