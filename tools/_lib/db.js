@@ -310,9 +310,89 @@
       .subscribe();
   }
 
+  /* ---------- BOMs ----------
+     A bill of materials is read and written whole, so its lines travel as one
+     jsonb column rather than a table of their own. Same bargain as the todos:
+     a failed read still hands back the cache, and says why. */
+  const BOM_CACHE = 'boms_cache', PORT_CACHE = 'bom_ports_cache';
+
+  async function listBoms(){
+    const cached = async () => (await cacheGet(BOM_CACHE)) || [];
+    const c = await client();
+    if (!c) return { items: await cached(),
+      error: configured() ? 'Could not reach Supabase.'
+                          : 'Not syncing — the anon key is missing from tools/_lib/supabase-config.js.' };
+    const { data, error } = await c.from('boms')
+      .select('id,site_id,site_name,tx_plan,sectors,rrus,note,lines,updated_at')
+      .order('updated_at', { ascending: false });
+    if (error){
+      const missing = /schema cache|does not exist/i.test(error.message);
+      return { items: await cached(),
+        error: missing ? 'The boms table does not exist yet — run supabase/005_boms.sql in the SQL Editor.'
+                       : error.message };
+    }
+    await cacheSet(BOM_CACHE, data || []);
+    return { items: data || [], error: null };
+  }
+
+  async function saveBom(b){
+    const c = await client();
+    if (!c) throw new Error('Supabase is not configured — the anon key is missing.');
+    const s = await session();
+    if (!s) throw new Error('Sign in first — a BOM is saved to the shared list.');
+    const row = { site_id: b.site_id, site_name: b.site_name || null, tx_plan: b.tx_plan || null,
+                  sectors: b.sectors == null ? null : +b.sectors,
+                  rrus: b.rrus == null ? null : +b.rrus,
+                  note: b.note || null, lines: b.lines || [],
+                  updated_at: new Date().toISOString(), updated_by: s.user.id };
+    const q = b.id ? c.from('boms').update(row).eq('id', b.id).select().single()
+                   : c.from('boms').insert(row).select().single();
+    const { data, error } = await q;
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  async function deleteBom(id){
+    const c = await client();
+    if (!c) throw new Error('Supabase is not configured — the anon key is missing.');
+    const s = await session();
+    if (!s) throw new Error('Sign in first — deleting changes the shared list.');
+    const { error } = await c.from('boms').delete().eq('id', id);
+    if (error) throw new Error(error.message);
+  }
+
+  async function listPortTypes(){
+    const cached = async () => (await cacheGet(PORT_CACHE)) || [];
+    const c = await client();
+    if (!c) return { items: await cached(), error: null };
+    const { data, error } = await c.from('bom_port_types').select('name,kind,port');
+    if (error) return { items: await cached(), error: error.message };
+    await cacheSet(PORT_CACHE, data || []);
+    return { items: data || [], error: null };
+  }
+
+  async function savePortType(p){
+    const c = await client();
+    if (!c) throw new Error('Supabase is not configured — the anon key is missing.');
+    const s = await session();
+    if (!s) throw new Error('Sign in first — port types are shared.');
+    const { error } = await c.from('bom_port_types').upsert({
+      name: p.name, kind: p.kind, port: p.port,
+      updated_at: new Date().toISOString(), updated_by: s.user.id }, { onConflict: 'name' });
+    if (error) throw new Error(error.message);
+  }
+
+  async function subscribeBoms(fn){
+    const c = await client(); if (!c) return;
+    c.channel('boms')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'boms' }, () => fn())
+      .subscribe();
+  }
+
   window.DB = { configured, client, session, signIn, signOut, onAuth,
                 load, publish, subscribe,
                 publishBook, loadBook, subscribeBook,
                 listTodos, addTodo, setTodoDone, subscribeTodos,
+                listBoms, saveBom, deleteBom, listPortTypes, savePortType, subscribeBoms,
                 cacheSet, cacheGet };
 })();

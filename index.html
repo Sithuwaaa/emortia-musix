@@ -39,6 +39,7 @@ header,footer{--accent:#b03a56;--accentB:#d15873;--accentD:#87213c;--glow:rgba(1
 [data-theme="burgundy"][data-section="tools"]{--accent:#1f97a8;--accentB:#3fbdd0;--accentD:#12707e;--glow:rgba(31,151,168,0.5);--glow0:rgba(31,151,168,0);--glowSoft:rgba(31,151,168,0.28);--stripe:rgba(31,151,168,0.06);--dot:rgba(63,189,208,0.7);}
 [data-theme="burgundy"][data-section="about"]{--accent:#6b5ce0;--accentB:#8a7cf0;--accentD:#4a3cb8;--glow:rgba(107,92,224,0.5);--glow0:rgba(107,92,224,0);--glowSoft:rgba(107,92,224,0.28);--stripe:rgba(107,92,224,0.06);--dot:rgba(138,124,240,0.7);}
 .term-card{--tc:var(--accent);--tcB:var(--accentB);--tcGrid:rgba(255,255,255,.05);--tcLine:var(--line2);--tcBg:var(--surface2);--tcRGB:255,255,255;}
+.tool-bom{--tc:#d1622e;--tcB:#e88350;--tcGrid:rgba(209,98,46,.10);--tcLine:#3d2618;--tcBg:#1c1009;--tcRGB:209,98,46;}
 .tool-todo{--tc:#d4547a;--tcB:#e87b9c;--tcGrid:rgba(212,84,122,.10);--tcLine:#3d2029;--tcBg:#1c0f14;--tcRGB:212,84,122;}
 .tool-update{--tc:#1f97a8;--tcB:#3fbdd0;--tcGrid:rgba(31,151,168,.10);--tcLine:#1c3a42;--tcBg:#0e1a1e;--tcRGB:31,151,168;}
 .tool-access{--tc:#2f8fd4;--tcB:#5fb0ea;--tcGrid:rgba(47,143,212,.10);--tcLine:#1b3245;--tcBg:#0d1620;--tcRGB:47,143,212;}
@@ -2579,6 +2580,8 @@ class Component extends DCLogic {
     return {
       isHome:s.page==='home', isMusic:s.page==='music', isBlog:s.page==='blog', isTools:s.page==='tools', isAbout:s.page==='about', isContact:s.page==='contact',
       tools:[
+        {name:'BOM Builder', initial:'B', tag:'Dialog · lamp pole materials', href:'tools/bom/',
+         desc:'Build a bill of materials for a lamp pole site from the real catalogue of 95 materials. Say which port is on the antenna and which on the RRU and the jumper follows; adding an antenna or an RRU offers what usually travels with it.'},
         {name:'What To Do', initial:'W', tag:'Jobs · reminders', href:'tools/whattodo/',
          desc:'The running list of what still needs doing, shared across every device. Add a job on one, tick it off on another, and it leaves both. Nudges every 15 minutes while the page is open.'},
         {name:'Project Update', initial:'P', tag:'Dialog · lamp pole rollout', href:'tools/project-update/',
@@ -2591,7 +2594,7 @@ class Component extends DCLogic {
          desc:'The official RF jumper labelling chart for Dialog sites. Search any band combination and jump straight to its colour code per sector.'},
         {name:'GIN Extractor', initial:'G', tag:'Dialog Axiata · SAP', href:'tools/gin-extractor/',
          desc:'Drop SAP Goods Issue Note PDFs and pull every material line into one clean Excel sheet. Runs entirely on your device, works offline, nothing is uploaded.'},
-      ].map(t=>({...t, cmd:'$ '+t.href.replace(/^tools\//,'').replace(/\/$/,'')+' --open', cls:'tool-'+({'whattodo':'todo','project-update':'update','site-access':'access','site-data':'data','rf-jumper':'jumper','gin-extractor':'gin'}[t.href.replace(/^tools\//,'').replace(/\/$/,'')]||'access')})),
+      ].map(t=>({...t, cmd:'$ '+t.href.replace(/^tools\//,'').replace(/\/$/,'')+' --open', cls:'tool-'+({'bom':'bom','whattodo':'todo','project-update':'update','site-access':'access','site-data':'data','rf-jumper':'jumper','gin-extractor':'gin'}[t.href.replace(/^tools\//,'').replace(/\/$/,'')]||'access')})),
       page:s.page,
 
       navItems: navDefs.map(([k,label])=>({ key:k, label, active:s.page===k, onClick:this.go(k) })),
@@ -2641,13 +2644,13 @@ class Component extends DCLogic {
           hmDoors: [
             {label:'Hear the songs', count:this.tracks.length+' tracks \u2192', border:'#4a2632', bg:'rgba(209,88,115,0.07)', tone:'#e87a94', go:goPage('music')},
             {label:'Read the journal', count:((s.poems||[]).length)+' poems \u2192', border:'#453518', bg:'rgba(223,174,99,0.07)', tone:'#dfae63', go:goPage('blog')},
-            {label:'Try the tools', count:'6 utilities \u2192', border:'#1c3a42', bg:'rgba(63,189,208,0.07)', tone:'#3fbdd0', go:goPage('tools')},
+            {label:'Try the tools', count:'7 utilities \u2192', border:'#1c3a42', bg:'rgba(63,189,208,0.07)', tone:'#3fbdd0', go:goPage('tools')},
           ],
           hmMoods: this.moods.map(m=>{ const mt=this.tracks[m.track]; return { ...m,
             meta: mt?mt.t:'', go: ()=>{ this.loadTrack(m.track, true); this.setState({page:'music', menuOpen:false}); } }; }),
         };
       })(),
-      hmToolCount: 6,
+      hmToolCount: 7,
       hmTools: [{name:'What To Do', dot:'#d4547a'},{name:'Project Update', dot:'#1f97a8'},{name:'Site Access Lookup', dot:'#2f8fd4'}],
       hmSongCount: this.tracks.length,
       hmCatSummary: (()=>{ const tot=this.tracks.reduce((a,b)=>a+(b.dur||0),0); const m=Math.round(tot/60);
