@@ -198,6 +198,7 @@ const CAT = window.BOM_CATALOGUE || [];
 const COMPANIONS = window.BOM_COMPANIONS || [];
 
 let ACTIVE = 'Build', BOMS = [], PORTS = {}, LOAD_ERR = null, QUERY = '';
+let SITES = null;   // the Site Access list, once it has loaded
 let BOM = null;                       // the one being edited
 
 /* ---------- theme ---------- */
@@ -212,12 +213,35 @@ let tt; function toast(m, ms){ const t = $('toast'); t.textContent = m; t.classL
 
 /* ---------- a working copy, kept locally so nothing is lost on a refresh ---------- */
 const DRAFT_KEY = 'bom_draft_v1';
-function blankBom(){ return { id:null, site_id:'', site_name:'', tx_plan:'MW-HYB', sectors:3, rrus:5, note:'', lines:[] }; }
+function blankBom(){ return { id:null, site_id:'', site_name:'', tx_plan:'MW-HYB', sectors:3, rrus:5, note:'', lines:[], ports:{} }; }
 function loadDraft(){
   try { const raw = localStorage.getItem(DRAFT_KEY); if (raw) return JSON.parse(raw); } catch(e){}
   return blankBom();
 }
 function saveDraft(){ try { localStorage.setItem(DRAFT_KEY, JSON.stringify(BOM)); } catch(e){} }
+
+/* ---------- the site list ----------
+   Every Dialog site is already in Site Access, so a site ID is enough — the
+   name comes from there rather than being typed twice and spelt two ways.
+   The tool's own upload wins if there is one, else the published snapshot. */
+function idb(name, store){ return new Promise((res, rej) => { const r = indexedDB.open(name, 1);
+  r.onupgradeneeded = () => { if (!r.result.objectStoreNames.contains(store)) r.result.createObjectStore(store); };
+  r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+async function idbGet(name, store, k){ try { const db = await idb(name, store);
+  return await new Promise(res => { const t = db.transaction(store).objectStore(store).get(k);
+    t.onsuccess = () => res(t.result); t.onerror = () => res(null); }); } catch(e){ return null; } }
+
+async function loadSites(){
+  let ds = await idbGet('site_access_db', 'ds', 'dataset');
+  if (!ds || !ds.cols){ try { ds = await (await fetch('../site-access/data.json')).json(); } catch(e){ ds = null; } }
+  if (!ds || !ds.cols) return;
+  const iId = ds.cols.indexOf('Site_ID'), iNm = ds.cols.indexOf('Site_Name');
+  if (iId < 0) return;
+  SITES = {};
+  ds.rows.forEach(r => { const k = String(r[iId] || '').trim().toUpperCase();
+    if (k && !SITES[k]) SITES[k] = iNm >= 0 ? String(r[iNm] || '').trim() : ''; });
+}
+function siteName(id){ return SITES ? (SITES[String(id || '').trim().toUpperCase()] || null) : null; }
 
 /* ---------- the catalogue ---------- */
 const byName = {}; CAT.forEach(m => byName[m.n] = m);
@@ -257,6 +281,21 @@ function jumpersFor(antPort, rruPort){
   if (!antPort || !rruPort) return [];
   return jumperParts().filter(j =>
     (j.a === antPort && j.b === rruPort) || (j.a === rruPort && j.b === antPort));
+}
+
+const ANT_CATS = ['GSM Antenna'];
+const RRU_CATS = ['RRU with Brackets & Power Connectors'];
+function gearOn(cats){ return BOM.lines.filter(l => cats.includes(l.cat)); }
+/* The port for one piece of gear: what this BOM says, else what the Ports tab
+   says, else nothing — and it is asked for per model, because a site can carry
+   two RRU types and they need not share a connector. */
+function portOf(name){
+  return (BOM.ports && BOM.ports[name]) || (PORTS[name] || {}).port || '';
+}
+function setPort(name, port){
+  BOM.ports = BOM.ports || {};
+  if (port) BOM.ports[name] = port; else delete BOM.ports[name];
+  saveDraft();
 }
 
 /* The sheet's own arithmetic: two 3m jumpers and four 5m jumpers per sector.
@@ -306,7 +345,7 @@ function renderBuild(){
     '<span class="tag">' + (BOM.id ? 'saved' : 'not saved yet') + '</span></h2>' +
     '<div class="row">' +
       '<div class="field"><label for="fid">Site ID</label><input id="fid" value="' + esc(BOM.site_id) + '" placeholder="MU5051"></div>' +
-      '<div class="field"><label for="fname">Site name</label><input id="fname" value="' + esc(BOM.site_name) + '" placeholder="Iyankankulam_Lamp"></div>' +
+      '<div class="field"><label for="fname">Site name' + (siteName(BOM.site_id) ? ' · from Site Access' : '') + '</label><input id="fname" value="' + esc(BOM.site_name) + '" placeholder="Iyankankulam_Lamp"></div>' +
       '<div class="field"><label for="ftx">Tx plan</label><select id="ftx">' +
         ['MW-HYB','WiBAS','OFN'].map(t => '<option' + (BOM.tx_plan === t ? ' selected' : '') + '>' + t + '</option>').join('') +
       '</select></div>' +
@@ -319,31 +358,80 @@ function renderBuild(){
       '<button class="btn" id="xlsBtn">⬇ Excel</button>' +
     '</div></div>';
 
-  // the jumper question, in the words it was asked in
-  const jp = jumperParts(), ports = portTypes();
+  /* The jumper question, asked per piece of gear rather than once. A site can
+     carry two RRU models and they need not share a connector, so each is asked
+     separately and each answer produces its own jumper. */
+  const ports = portTypes();
+  const ants = gearOn(ANT_CATS), rrus = gearOn(RRU_CATS);
+  const sel = (name, label) => '<div class="field"><label>' + esc(label) + '</label>' +
+    '<select data-gear="' + esc(name) + '"><option value="">—</option>' +
+    ports.map(x => '<option' + (portOf(name) === x ? ' selected' : '') + '>' + x + '</option>').join('') +
+    '</select></div>';
+
   h += '<div class="panel"><h2><span class="dot"></span>Jumpers</h2>' +
-    '<p class="note" style="margin-bottom:12px">Say what is on each end and the jumper follows – it is named for the two ports it joins.</p>' +
-    '<div class="row">' +
+    '<p class="note" style="margin-bottom:12px">Say what is on each end and the jumper follows – it is named for the two ports it joins.</p>';
+
+  if (!ants.length && !rrus.length){
+    h += '<div class="row">' +
       '<div class="field"><label for="pant">Antenna port</label><select id="pant"><option value="">—</option>' +
-        ports.map(p => '<option' + (BOM.antPort === p ? ' selected' : '') + '>' + p + '</option>').join('') + '</select></div>' +
+        ports.map(x => '<option' + (BOM.antPort === x ? ' selected' : '') + '>' + x + '</option>').join('') + '</select></div>' +
       '<div class="field"><label for="prru">RRU port</label><select id="prru"><option value="">—</option>' +
-        ports.map(p => '<option' + (BOM.rruPort === p ? ' selected' : '') + '>' + p + '</option>').join('') + '</select></div>' +
-    '</div>';
-  const js = jumpersFor(BOM.antPort, BOM.rruPort);
-  if (!BOM.antPort || !BOM.rruPort)
-    h += '<p class="note">Pick both ends.</p>';
-  else if (!js.length)
-    h += '<p class="note">No jumper in the catalogue joins ' + esc(BOM.antPort) + ' to ' + esc(BOM.rruPort) +
-         '. Either a converter is needed, or that jumper is one to add to the catalogue.</p>';
-  else {
-    h += '<div class="sug"><h3>' + esc(BOM.antPort) + ' at the antenna, ' + esc(BOM.rruPort) + ' at the RRU</h3>';
-    js.forEach(j => {
-      const q = jumperQty(j.len, BOM.sectors);
-      h += '<div class="sugrow"><span class="nm">' + esc(j.name) + '</span>' +
-           '<span class="why">' + (/^3/.test(j.len) ? '2' : '4') + ' per sector × ' + esc(BOM.sectors) + '</span>' +
-           '<span class="qt">' + q + '</span>' +
-           '<button class="btn sm" data-add="' + esc(j.name) + '" data-qty="' + q + '">' +
-             (onBom(j.name) ? 'on the BOM' : 'Add') + '</button></div>';
+        ports.map(x => '<option' + (BOM.rruPort === x ? ' selected' : '') + '>' + x + '</option>').join('') + '</select></div>' +
+      '</div><p class="note">Put an antenna and an RRU on the BOM and each one gets asked for its own port.</p>';
+  } else {
+    h += '<div class="row">';
+    ants.forEach(a => h += sel(a.name, 'Antenna · ' + a.name));
+    rrus.forEach(r => h += sel(r.name, 'RRU · ' + r.name + ' (×' + r.qty + ')'));
+    h += '</div>';
+  }
+
+  /* One suggestion per pair of ends that are both known. Where two RRU models
+     answer differently the per-sector total is split between them by how many
+     of each there are, because the run count follows the radios. */
+  const pairs = [];
+  const antList = ants.length ? ants : (BOM.antPort ? [{ name:'(antenna)', qty:1, _p:BOM.antPort }] : []);
+  const rruList = rrus.length ? rrus : (BOM.rruPort ? [{ name:'(RRU)', qty:1, _p:BOM.rruPort }] : []);
+  /* Group the radios by the port they carry before splitting anything. Two
+     RRU models on the same connector want one jumper between them, not two
+     halves rounded up separately — which is how 12 became 13. */
+  const groups = {};
+  rruList.forEach(r => { const port = r._p || portOf(r.name); if (!port) return;
+    (groups[port] = groups[port] || { port, qty:0, names:[] });
+    groups[port].qty += (+r.qty || 1); groups[port].names.push(r.name); });
+  const gs = Object.values(groups);
+  const totalRru = gs.reduce((n, g) => n + g.qty, 0) || 1;
+  antList.forEach(a => gs.forEach(g => {
+    const ap = a._p || portOf(a.name);
+    if (!ap) return;
+    jumpersFor(ap, g.port).forEach(j => {
+      const whole = jumperQty(j.len, BOM.sectors);
+      const share = gs.length > 1 ? Math.round(whole * g.qty / totalRru) : whole;
+      pairs.push({ j, ap, rp: g.port, qty: share, split: gs.length > 1,
+                   rru: g.names.join(" + "), per: /^3/.test(j.len) ? 2 : 4 });
+    });
+  }));
+
+  if (!pairs.length){
+    const anyPort = antList.some(a => a._p || portOf(a.name)) && rruList.some(r => r._p || portOf(r.name));
+    h += '<p class="note">' + (anyPort
+      ? 'No jumper in the catalogue joins those two ports. Either a converter is needed, or that is a jumper to add to the catalogue.'
+      : 'Set a port on each end.') + '</p>';
+  } else {
+    // the same jumper asked for twice is one line, added up
+    const rolled = {};
+    pairs.forEach(x => {
+      const k = x.j.name;
+      if (!rolled[k]) rolled[k] = { name:k, qty:0, why:[], per:x.per, ap:x.ap, rp:x.rp };
+      rolled[k].qty += x.qty;
+      rolled[k].why.push(x.split ? x.rru + ' ' + x.qty : x.per + ' per sector × ' + BOM.sectors);
+    });
+    h += '<div class="sug"><h3>What joins those ends</h3>';
+    Object.values(rolled).forEach(r => {
+      h += '<div class="sugrow"><span class="nm">' + esc(r.name) + '</span>' +
+           '<span class="why">' + esc(r.ap) + ' → ' + esc(r.rp) + ' · ' + esc(r.why.join(', ')) + '</span>' +
+           '<span class="qt">' + r.qty + '</span>' +
+           '<button class="btn sm" data-add="' + esc(r.name) + '" data-qty="' + r.qty + '">' +
+             (onBom(r.name) ? 'on the BOM' : 'Add') + '</button></div>';
     });
     h += '</div>';
   }
@@ -460,10 +548,27 @@ function render(){
   // the site fields
   const bind = (id, key, num) => { const el = $(id); if (!el) return;
     el.onchange = () => { BOM[key] = num ? (+el.value || 0) : el.value; saveDraft(); render(); }; };
-  bind('fid','site_id'); bind('fname','site_name'); bind('ftx','tx_plan');
+    const fid = $('fid');
+  if (fid) fid.onchange = () => {
+    BOM.site_id = fid.value.trim();
+    // the name is already written down in Site Access; don't type it twice
+    const known = siteName(BOM.site_id);
+    // A name looked up for one site must not linger on the next. Only a name
+    // that was typed by hand survives an ID that is not on the list.
+    if (known){ BOM.site_name = known; BOM.nameFromList = true; }
+    else if (BOM.nameFromList){ BOM.site_name = ""; BOM.nameFromList = false; }
+    saveDraft(); render();
+    if (known) toast(BOM.site_id + ' — ' + known);
+    else if (SITES && BOM.site_id) toast('Not in the Site Access list', 3000);
+  };
+  const fn = $('fname');
+  if (fn) fn.onchange = () => { BOM.site_name = fn.value; BOM.nameFromList = false; saveDraft(); render(); };
+  bind('ftx','tx_plan');
   bind('fsec','sectors',true); bind('frru','rrus',true);
   const pa = $('pant'); if (pa) pa.onchange = () => { BOM.antPort = pa.value; saveDraft(); render(); };
   const pr = $('prru'); if (pr) pr.onchange = () => { BOM.rruPort = pr.value; saveDraft(); render(); };
+  [...document.querySelectorAll('[data-gear]')].forEach(el => el.onchange = () => {
+    setPort(el.dataset.gear, el.value); render(); });
 
   [...document.querySelectorAll('[data-add]')].forEach(b => b.onclick = () => {
     addLine(b.dataset.add, +b.dataset.qty); toast('Added ' + b.dataset.add); });
@@ -567,6 +672,8 @@ function renderFooter(){
   BOM = loadDraft();
   try { PORTS = JSON.parse(localStorage.getItem('bom_ports_v1') || '{}'); } catch(e){ PORTS = {}; }
   buildTabs();
+  render();
+  await loadSites();
   render();
   await refresh();
   window.DB.onAuth(() => renderFooter());

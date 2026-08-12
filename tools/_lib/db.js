@@ -316,6 +316,15 @@
      a failed read still hands back the cache, and says why. */
   const BOM_CACHE = 'boms_cache', PORT_CACHE = 'bom_ports_cache';
 
+  /* "Could not find the table 'public.boms' in the schema cache" is Postgres
+     telling you the migration has not been run. Say that instead — the reader
+     of this message is the person who can fix it in a minute. */
+  function bomErr(msg){
+    return /schema cache|does not exist/i.test(msg || '')
+      ? 'The boms tables are not created yet — run supabase/005_boms.sql in the Supabase SQL Editor.'
+      : msg;
+  }
+
   async function listBoms(){
     const cached = async () => (await cacheGet(BOM_CACHE)) || [];
     const c = await client();
@@ -348,7 +357,7 @@
     const q = b.id ? c.from('boms').update(row).eq('id', b.id).select().single()
                    : c.from('boms').insert(row).select().single();
     const { data, error } = await q;
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(bomErr(error.message));
     return data;
   }
 
@@ -358,7 +367,7 @@
     const s = await session();
     if (!s) throw new Error('Sign in first — deleting changes the shared list.');
     const { error } = await c.from('boms').delete().eq('id', id);
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(bomErr(error.message));
   }
 
   async function listPortTypes(){
@@ -379,7 +388,7 @@
     const { error } = await c.from('bom_port_types').upsert({
       name: p.name, kind: p.kind, port: p.port,
       updated_at: new Date().toISOString(), updated_by: s.user.id }, { onConflict: 'name' });
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(bomErr(error.message));
   }
 
   async function subscribeBoms(fn){
