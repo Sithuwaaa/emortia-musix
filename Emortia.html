@@ -340,6 +340,7 @@ html.bk-reading-on,html.bk-reading-on body{overflow:hidden;}
 .term-card:hover::after{opacity:1;}
 .term-card>*{position:relative;z-index:1;}
 @keyframes tickerRun{to{transform:translateX(-50%);}}
+@media (max-width:700px){.hm-feature{grid-template-columns:1fr !important;}}
 @keyframes termRoll{0%,42%{transform:translateY(0);}50%,92%{transform:translateY(-1.6em);}100%{transform:translateY(0);}}
 .hm-card{transition:border-color .22s ease,transform .22s ease,box-shadow .3s ease;}
 .hm-card:hover{transform:translateY(-2px);border-color:rgba(var(--hmRGB),.7) !important;box-shadow:0 20px 48px -22px rgba(var(--hmRGB),.6);}
@@ -535,15 +536,38 @@ html.bk-reading-on,html.bk-reading-on body{overflow:hidden;}
 
       </div>
 
-      <!-- 1a · what's new spine -->
-      <div style="margin-top:46px;border:1px solid var(--line2);border-radius:18px;background:var(--surface2);padding:clamp(20px,3vw,30px);">
+      <!-- 1a · newest release feature -->
+      <div style="margin-top:46px;border:1px solid var(--line2);border-radius:18px;background:var(--surface2);overflow:hidden;display:grid;grid-template-columns:minmax(200px,290px) 1fr;" class="hm-feature">
+        <div style="position:relative;min-height:260px;background:{{ hmNewTone }};">
+          <sc-if value="{{ hmNewArtReady }}" hint-placeholder-val="{{ false }}">
+            {{ hmNewArtImg }}
+          </sc-if>
+          <sc-if value="{{ hmNewNoArt }}" hint-placeholder-val="{{ true }}">
+            <div style="position:absolute;inset:0;display:grid;place-items:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:86px;color:rgba(247,237,240,.16);">{{ hmNewInitial }}</div>
+          </sc-if>
+        </div>
+        <div style="padding:clamp(24px,3vw,34px) clamp(22px,3vw,36px);display:flex;flex-direction:column;justify-content:center;gap:13px;">
+          <div style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:var(--accent);">Newest release</div>
+          <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(30px,4.4vw,44px);letter-spacing:-0.03em;line-height:1.02;">{{ hmNewTitle }}</div>
+          <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:18px;color:var(--dim);max-width:50ch;line-height:1.5;">The last one out of the room.</div>
+          <div style="display:flex;align-items:center;gap:16px;margin-top:8px;flex-wrap:wrap;">
+            <button onClick="{{ hmPlayNewest }}" style="display:inline-flex;align-items:center;gap:9px;background:var(--accent);color:var(--bg);border:none;font-weight:700;font-size:14.5px;padding:12px 20px;border-radius:999px;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;" style-hover="opacity:0.88;">
+              <svg width="13" height="13" viewBox="0 0 24 24"><polygon points="7,4 20,12 7,20" fill="var(--bg)"></polygon></svg> Play it now
+            </button>
+            <span style="font-family:'Space Mono',monospace;font-size:12px;color:var(--faint);">{{ hmNewMeta }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 1c · invitation, not inventory -->
+      <div style="margin-top:16px;border:1px solid var(--line2);border-radius:18px;background:var(--surface2);padding:clamp(24px,3vw,36px);">
         <div style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.2em;color:var(--accent);text-transform:uppercase;">Since you were last here</div>
-        <div style="margin-top:18px;border-left:2px solid var(--line2);padding-left:18px;display:flex;flex-direction:column;">
-          <sc-for list="{{ hmFeed }}" as="fd" hint-placeholder-count="3">
-            <div onClick="{{ fd.go }}" style="position:relative;padding:13px 0;border-top:1px solid {{ fd.sep }};cursor:pointer;">
-              <span style="position:absolute;left:-23px;top:18px;width:8px;height:8px;border-radius:50%;background:{{ fd.dot }};box-shadow:0 0 10px {{ fd.glow }};"></span>
-              <div style="font-family:'Space Mono',monospace;font-size:10px;letter-spacing:0.1em;color:var(--mute);text-transform:uppercase;">{{ fd.kind }}</div>
-              <div style="font-size:15px;margin-top:4px;color:var(--text2);line-height:1.5;">{{ fd.title }}</div>
+        <div style="font-family:'EB Garamond',serif;font-size:clamp(22px,3vw,30px);line-height:1.4;margin:16px 0 28px;max-width:44ch;text-wrap:pretty;">{{ hmInviteLine }}</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
+          <sc-for list="{{ hmDoors }}" as="dr" hint-placeholder-count="3">
+            <div onClick="{{ dr.go }}" style="border:1px solid {{ dr.border }};border-radius:12px;background:{{ dr.bg }};padding:18px 20px;display:flex;flex-direction:column;gap:6px;cursor:pointer;" style-hover="opacity:0.82;">
+              <span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:15px;">{{ dr.label }}</span>
+              <span style="font-family:'Space Mono',monospace;font-size:11.5px;color:{{ dr.tone }};">{{ dr.count }}</span>
             </div>
           </sc-for>
         </div>
@@ -2599,16 +2623,25 @@ class Component extends DCLogic {
       socialLinks: this.socials(),
       socialLinksLarge: this.socials(true),
       hmTicker: (()=>{ const t=this.tracks.map(x=>x.t).slice(0,6); return t.length?t.concat(['new music','emortia']):['emortia','new music']; })(),
-      hmNowMeta: t.durLabel+' \u00b7 '+this.fmt(s.progress),
+      hmNowMeta: s.playing ? (t.durLabel+' \u00b7 '+this.fmt(s.progress)) : t.durLabel,
       ...(()=>{
         const goPage=(p)=>()=>this.setState({page:p, menuOpen:false});
-        const lastPoem=(s.poems||[])[(s.poems||[]).length-1];
         const newest=this.tracks[this.tracks.length-1];
         return {
-          hmFeed: [
-            {kind:'Music \u00b7 newest', title:newest.t, dot:'#d15873', glow:'rgba(209,88,115,.7)', sep:'transparent', go:goPage('music')},
-            {kind:'Journal \u00b7 latest entry', title: lastPoem?lastPoem.title:'\u2014', dot:'#c9954a', glow:'rgba(201,149,74,.6)', sep:'var(--line)', go:goPage('blog')},
-            {kind:'Tools \u00b7 now live', title:'6 small utilities, built for real work', dot:'#1f97a8', glow:'rgba(31,151,168,.6)', sep:'var(--line)', go:goPage('tools')},
+          hmNewTitle: newest.t,
+          hmNewTone: newest.tone,
+          hmNewInitial: newest.initial,
+          hmNewArtReady: (typeof newest.img==='string' && newest.img.length>0),
+          hmNewNoArt: !newest.img,
+          hmNewArtImg: this.artImg(newest.img,{position:'absolute',inset:0,width:'100%',height:'100%'}),
+          hmNewMeta: newest.durLabel+' \u00b7 newest of '+this.tracks.length+' songs',
+          hmPlayNewest: this.play(newest.i),
+          hmInviteLine: (()=>{ const ns=this.tracks.length, np=(s.poems||[]).length;
+            return ns+' songs and '+np+' poems live here now \u2013 plus a few small tools I built to get my own work done.'; })(),
+          hmDoors: [
+            {label:'Hear the songs', count:this.tracks.length+' tracks \u2192', border:'#4a2632', bg:'rgba(209,88,115,0.07)', tone:'#e87a94', go:goPage('music')},
+            {label:'Read the journal', count:((s.poems||[]).length)+' poems \u2192', border:'#453518', bg:'rgba(223,174,99,0.07)', tone:'#dfae63', go:goPage('blog')},
+            {label:'Try the tools', count:'6 utilities \u2192', border:'#1c3a42', bg:'rgba(63,189,208,0.07)', tone:'#3fbdd0', go:goPage('tools')},
           ],
           hmMoods: this.moods.map(m=>{ const mt=this.tracks[m.track]; return { ...m,
             meta: mt?mt.t:'', go: ()=>{ this.loadTrack(m.track, true); this.setState({page:'music', menuOpen:false}); } }; }),
