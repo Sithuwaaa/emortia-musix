@@ -8,3 +8,13 @@ poems/*.txt.bak
 # The DNS site list is the raw source for the two lookup tools. They read the
 # extracted data.json, so the 3 MB workbook itself never needs publishing.
 tools/site-access/*.xlsx
+
+# Source workbooks. The repository is public and GitHub Pages serves it, so a
+# design sheet committed here is a design sheet published at emortia.com —
+# 245 sites with their coordinates, vendors and planned builds. They stay on
+# the machine that needs them.
+samples/
+
+# SheetJS, vendored so the parser tests can run under node. See
+# tools/design-extractor/README.md for the one line that fetches it.
+.tools/

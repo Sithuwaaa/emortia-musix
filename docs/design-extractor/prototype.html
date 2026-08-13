@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design Sheet Extractor — Emortia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --ink:#0d1520; --panel:#141e2b; --line:#233246; --line-soft:#1b2836;
+  --fg:#dfe7f0; --fg-dim:#8697ab; --signal:#38d6c4; --amber:#f0a92e; --rose:#e2607a;
+  --r:3px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  background:var(--ink); color:var(--fg);
+  font:14px/1.5 "IBM Plex Sans",system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+code,.mono,td,th,input,select{font-family:"IBM Plex Mono",ui-monospace,monospace}
+
+/* ---------- shell ---------- */
+.wrap{max-width:1400px;margin:0 auto;padding:28px 22px 80px}
+header.top{display:flex;align-items:flex-end;gap:18px;flex-wrap:wrap;
+  border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:22px}
+h1{margin:0;font-size:19px;font-weight:600;letter-spacing:-.01em}
+.sub{color:var(--fg-dim);font-size:12.5px;margin-top:3px}
+.badge{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--signal);border:1px solid var(--line);
+  padding:3px 8px;border-radius:var(--r)}
+.spacer{flex:1}
+
+/* ---------- drop ---------- */
+#drop{border:1px dashed var(--line);border-radius:6px;padding:34px 20px;text-align:center;
+  background:var(--panel);cursor:pointer;transition:border-color .15s,background .15s}
+#drop:hover,#drop.hot{border-color:var(--signal);background:#16222f}
+#drop b{display:block;font-size:15px;margin-bottom:5px}
+#drop span{color:var(--fg-dim);font-size:12.5px}
+#file{display:none}
+
+/* ---------- controls ---------- */
+.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:18px 0 14px}
+select,input[type=search]{background:var(--panel);color:var(--fg);border:1px solid var(--line);
+  border-radius:var(--r);padding:6px 9px;font-size:12.5px;min-width:140px}
+input[type=search]{min-width:200px}
+button{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:var(--r);
+  padding:6px 12px;font:500 12.5px/1 "IBM Plex Sans",sans-serif;cursor:pointer}
+button:hover{border-color:var(--signal);color:var(--signal)}
+button.go{background:var(--signal);border-color:var(--signal);color:#07120f;font-weight:600}
+button.go:hover{filter:brightness(1.1);color:#07120f}
+:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+
+/* ---------- stats ---------- */
+.stats{display:flex;gap:26px;flex-wrap:wrap;padding:12px 0;border-block:1px solid var(--line-soft);margin-bottom:16px}
+.stat b{font-family:"IBM Plex Mono",monospace;font-size:19px;font-weight:500;display:block}
+.stat span{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--fg-dim)}
+
+/* ---------- table ---------- */
+.tablewrap{border:1px solid var(--line);border-radius:6px;overflow:auto;max-height:56vh}
+table{border-collapse:collapse;width:100%;font-size:12px}
+th{position:sticky;top:0;background:#0f1926;text-align:left;padding:9px 10px;
+  font-weight:500;color:var(--fg-dim);letter-spacing:.05em;font-size:10.5px;
+  text-transform:uppercase;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid var(--line-soft);white-space:nowrap}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:#17222f}
+tbody tr.sel{background:#16262c;box-shadow:inset 2px 0 0 var(--signal)}
+.warn{color:var(--amber)}
+.chip{display:inline-block;padding:1px 5px;border:1px solid var(--line);border-radius:2px;
+  font-size:10.5px;margin-right:3px}
+
+/* ---------- detail ---------- */
+.detail{margin-top:20px;display:none;grid-template-columns:260px 1fr;gap:22px;
+  border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:18px}
+.detail.on{display:grid}
+@media(max-width:840px){.detail.on{grid-template-columns:1fr}}
+.detail h2{margin:0 0 2px;font-size:16px}
+.kv{font-size:12px;margin-top:12px}
+.kv div{display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-bottom:1px solid var(--line-soft)}
+.kv span:first-child{color:var(--fg-dim)}
+.kv span:last-child{font-family:"IBM Plex Mono",monospace;text-align:right}
+h3.sec{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--fg-dim);
+  margin:0 0 8px;font-weight:500}
+.secgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
+.seccard{border:1px solid var(--line);border-radius:4px;padding:11px 12px}
+.seccard h4{margin:0 0 8px;font-size:12px;font-weight:600;display:flex;justify-content:space-between}
+.seccard h4 em{font-style:normal;color:var(--signal);font-family:"IBM Plex Mono",monospace}
+.seccard p{margin:0 0 4px;font-size:11.5px;font-family:"IBM Plex Mono",monospace;color:var(--fg-dim);word-break:break-all}
+.seccard p b{color:var(--fg);font-weight:500}
+
+/* signature: azimuth compass */
+.compass{width:100%;aspect-ratio:1;max-width:230px;margin:0 auto;display:block}
+.compass .ring{fill:none;stroke:var(--line);stroke-width:1}
+.compass .tick{stroke:var(--line-soft);stroke-width:1}
+.compass .lab{fill:var(--fg-dim);font:9px "IBM Plex Mono",monospace}
+.compass .beam{fill:var(--signal);fill-opacity:.16;stroke:var(--signal);stroke-width:1}
+.compass .num{fill:var(--fg);font:600 10px "IBM Plex Mono",monospace}
+
+.log{margin-top:16px;font-size:11.5px;font-family:"IBM Plex Mono",monospace;color:var(--amber)}
+.log div{padding:2px 0}
+.hidden{display:none}
+footer{margin-top:26px;color:var(--fg-dim);font-size:11.5px;border-top:1px solid var(--line-soft);padding-top:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div>
+    <h1>Design Sheet Extractor</h1>
+    <div class="sub">Reads the MBB New Sites design workbook and pulls the fields the BOM needs.</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="badge">Emortia · Lamp Pole</div>
+</header>
+
+<div id="drop" tabindex="0" role="button" aria-label="Choose a design workbook">
+  <b>Drop the design workbook here</b>
+  <span>or click to choose a file &nbsp;·&nbsp; .xlsx / .xlsm &nbsp;·&nbsp; read in your browser, nothing is uploaded</span>
+  <input id="file" type="file" accept=".xlsx,.xlsm,.xls">
+</div>
+
+<div id="app" class="hidden">
+  <div class="bar">
+    <select id="fBatch"><option value="">All batches</option></select>
+    <select id="fType"><option value="">All site types</option></select>
+    <select id="fRegion"><option value="">All regions</option></select>
+    <select id="fVendor"><option value="">All vendors</option></select>
+    <input id="q" type="search" placeholder="Site ID or name">
+    <div class="spacer"></div>
+    <button id="csv">Download CSV</button>
+    <button id="json">Download JSON</button>
+    <button id="send" class="go">Send to BOM Builder</button>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr>
+        <th>Site ID</th><th>Site name</th><th>Batch</th><th>Region</th><th>Vendor</th>
+        <th>Type</th><th>Ht</th><th>TX</th><th>Tech</th><th>Sec</th><th>Ant</th><th>RRU</th>
+        <th>RRU models</th><th>BBU</th><th>Baseband</th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <section class="detail" id="detail"></section>
+  <div class="log" id="log"></div>
+</div>
+
+<footer>Counts are read from the design sheet. Rows flagged in amber disagree with the sheet's own net-addition columns — check those by hand before releasing materials.</footer>
+</div>
+
+<script>
+/* ============================================================
+   1. CONSTANTS
+   ============================================================ */
+const TECHS = ['G900','G1800','L850','L900','L1800','L2100','L2600','L2300(HBB)','L2300(MBB)'];
+const BLANK = new Set(['','-','–','n/a','#n/a','na','null','none']);
+const SHARE = /^\s*shared?\b/i;          // "Share sec 2 L21 RRU" = reuse, not new hardware
+const SOURCE_NOISE = /^(dap wh|inhouse|in-house)/i;  // source strings pasted into model cells
+const BOM_BUILDER_URL = '/bom-builder/';  // <-- point at the real path on emortia.com
+const HANDOFF_KEY = 'emortia.bom.designPayload';
+
+/* ============================================================
+   2. HELPERS
+   ============================================================ */
+const norm = v => v==null ? '' : String(v).replace(/\s+/g,' ').trim();
+const isBlank = v => v==null || BLANK.has(norm(v).toLowerCase());
+const val = v => isBlank(v) ? null : (typeof v==='number' ? v : norm(v));
+const num = v => { const n = parseFloat(val(v)); return Number.isFinite(n) ? n : null; };
+const esc = s => String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+/* ============================================================
+   3. PARSE WORKBOOK
+   ============================================================ */
+function pickSheet(wb){
+  const named = wb.SheetNames.find(n => /design\s*sheet/i.test(n));
+  return named || wb.SheetNames[0];
+}
+
+// Header row = the row that carries both "Site ID" and "Operation Region".
+function findHeader(grid){
+  for (let i=0; i<Math.min(grid.length,20); i++){
+    const set = new Set(grid[i].map(c=>norm(c).toLowerCase()));
+    if (set.has('site id') && set.has('operation region')) return i;
+  }
+  return -1;
+}
+
+// First occurrence wins — "New AP Batch Name" appears twice in the sheet.
+function indexHeaders(row){
+  const idx = {};
+  row.forEach((h,i)=>{ const k = norm(h); if (k && !(k in idx)) idx[k] = i; });
+  return idx;
+}
+
+function parseWorkbook(wb){
+  const name = pickSheet(wb);
+  const grid = XLSX.utils.sheet_to_json(wb.Sheets[name], {header:1, raw:true, defval:null});
+  const h = findHeader(grid);
+  if (h < 0) throw new Error('No header row found. Expected a row containing "Site ID" and "Operation Region".');
+  const idx = indexHeaders(grid[h]);
+  const rows = grid.slice(h+1).filter(r => r && !isBlank(r[idx['Site ID']])
+                                         && norm(r[idx['Site ID']]).toLowerCase()!=='site id');
+  const tx = parseTx(wb);
+  return {sheetName:name, headerRow:h+1, idx, rows, tx};
+}
+
+// TX sheet gives TX Mode (MW-HYB / OFN / WiBAS) and MW Mapping (18G3345 -> band 18G).
+function parseTx(wb){
+  const map = {};
+  const n = wb.SheetNames.find(s => /^tx$/i.test(s));
+  if (!n) return map;
+  const g = XLSX.utils.sheet_to_json(wb.Sheets[n], {header:1, raw:true, defval:null});
+  if (!g.length) return map;
+  const idx = indexHeaders(g[0]);
+  g.slice(1).forEach(r=>{
+    const id = norm(r[idx['Site ID']]).replace(/\.$/,'').toUpperCase();
+    if (!id) return;
+    map[id] = {
+      txMode:    val(r[idx['TX Mode']]),
+      mwMapping: val(r[idx['MW Mapping']]),
+      woId:      val(r[idx['WO ID']])
+    };
+  });
+  return map;
+}
+
+/* ============================================================
+   4. EXTRACT ONE SITE
+   ============================================================ */
+function extractSite(ctx, row){
+  const g  = k => { const i = ctx.idx[k]; return i===undefined ? null : val(row[i]); };
+  const gn = k => { const i = ctx.idx[k]; return i===undefined ? null : num(row[i]); };
+
+  const s = {
+    siteId:          g('Site ID'),
+    siteName:        g('Site Name'),
+    batchName:       g('New AP Batch Name'),
+    index:           g('Index'),
+    operationRegion: g('Operation Region'),
+    apRegion:        g('AP Region'),
+    district:        g('District'),
+    ftkOrInhouse:    g('FTK or In-House'),
+    ftkVendor:       g('FTK Vendor'),
+    siteOwner:       g('Site Owner'),
+    siteType:        g('Site Type'),
+    siteHeight:      gn('Site Height'),
+    projectScope:    g('AP_Project_Scope'),
+    latitude:        gn('Finalized Latitude'),
+    longitude:       gn('Finalized Longitude'),
+    flags: []
+  };
+
+  const tx = ctx.tx[String(s.siteId).replace(/\.$/,'').toUpperCase()] || {};
+  s.txMode = tx.txMode || null;
+  s.mwMapping = tx.mwMapping || null;
+  const b = /(\d{2})\s*G/.exec(s.mwMapping || '');
+  s.mwBand = b ? b[1] + 'G' : null;
+
+  // -- technologies -------------------------------------------------
+  s.technologies = TECHS.filter(t => /^y/i.test(g('AP_Upgrade_Flag_' + t) || ''));
+
+  // -- sectors ------------------------------------------------------
+  s.sectors = [];
+  for (let n=1; n<=4; n++){
+    const sec = {
+      sector: n,
+      changeScope:      g(`AP_Sector_Antenna/AAU_Change Scope Sec ${n}`),
+      antennaAdd:       g(`AP_Sector_Antenna_Addition Type Sec ${n}`),
+      antennaAddCount:  gn(`AP_Sector_Antenna_Addition Count Sec ${n}`),
+      antennaSource:    g(`AP_Sector_Antenna_Addition Source Sec ${n}`),
+      antennaFinal:     g(`AP_Sector_Antenna_Final Types Sec ${n}`),
+      antennaFinalCount:gn(`AP_Sector_Antenna_Final Count Sec ${n}`),
+      combinerType:     g(`AP_Sector_Antenna_Combiner Addition Type Sec ${n}`),
+      combinerCount:    gn(`AP_Sector_Antenna_Combiner Addition Count Sec ${n}`),
+      azimuth:          gn(`AP_Sector_Antenna_Final Azimuth Sec ${n}`),
+      height:           gn(`AP_Sector_Antenna_Final Height Sec ${n}`),
+      eTilt:            gn(`AP_Sector_Antenna_Final E-Tilt Sec ${n}`),
+      mTilt:            gn(`AP_Sector_Antenna_Final M-Tilt Sec ${n}`),
+      netAnt:           gn(`AP_Sector_Antenna_Net Addition Ant Sec ${n}`) || 0,
+      netAau:           gn(`AP_Sector_Antenna_Net Addition AAU Sec ${n}`) || 0,
+      netRru:           gn(`AP_Sector_Antenna_Net Addition RRU Sec ${n}`) || 0,
+      radios: []
+    };
+    TECHS.forEach(t=>{
+      const m = g(`AP_${t}_Radio addition Sec ${n}`);
+      if (!m) return;
+      sec.radios.push({
+        tech: t,
+        model: m,
+        shared: SHARE.test(m),
+        noise: SOURCE_NOISE.test(m),
+        source: g(`AP_${t}_Radio addition source Sec ${n}`)
+      });
+    });
+    sec.active = !!(sec.antennaFinal || sec.antennaAdd || sec.radios.length || sec.azimuth!=null);
+    s.sectors.push(sec);
+  }
+  s.sectorCount = s.sectors.filter(x=>x.active).length;
+
+  // -- RRU rollup ---------------------------------------------------
+  // One physical radio per DISTINCT model per sector. A multi-band unit is
+  // written once per technology it carries (G900 + L900 + L2100 -> RRU5909),
+  // so counting raw cells triples it.
+  const rru = {}, sharedRefs = {};
+  s.sectors.forEach(sec=>{
+    const seen = new Set();
+    sec.radios.forEach(r=>{
+      if (r.noise) return;
+      if (r.shared){ sharedRefs[r.model] = (sharedRefs[r.model]||0)+1; return; }
+      if (seen.has(r.model)) return;
+      seen.add(r.model);
+      rru[r.model] = (rru[r.model]||0) + 1;
+    });
+    sec.rruModels = [...seen];
+  });
+  s.rruByModel = rru;
+  s.sharedRruRefs = sharedRefs;
+  s.rruCount = Object.values(rru).reduce((a,b)=>a+b,0);
+
+  // -- antenna rollup -----------------------------------------------
+  const ant = {};
+  s.sectors.forEach(sec=>{
+    const t = sec.antennaFinal || sec.antennaAdd;
+    if (!t) return;
+    const base = t.replace(/\(.*?\)/g,'').trim();          // strip "(GSM_1, L21_A)"
+    const c = sec.antennaFinalCount ?? sec.antennaAddCount ?? 1;
+    ant[base] = (ant[base]||0) + c;
+  });
+  s.antennaByModel = ant;
+  s.antennaCount = Object.values(ant).reduce((a,b)=>a+b,0);
+  s.combiners = {};
+  s.sectors.forEach(sec=>{
+    if (sec.combinerType) s.combiners[sec.combinerType] = (s.combiners[sec.combinerType]||0) + (sec.combinerCount||1);
+  });
+
+  // -- cross-check against the sheet's own net columns ---------------
+  s.netRruTotal = s.sectors.reduce((a,x)=>a+(x.netRru||0),0);
+  s.netAntTotal = s.sectors.reduce((a,x)=>a+(x.netAnt||0),0);
+  s.netAauTotal = s.sectors.reduce((a,x)=>a+(x.netAau||0),0);
+  if (s.netRruTotal && s.netRruTotal !== s.rruCount)
+    s.flags.push(`RRU ${s.rruCount} vs net ${s.netRruTotal}`);
+  if (s.netAntTotal && s.netAntTotal !== s.antennaCount)
+    s.flags.push(`Ant ${s.antennaCount} vs net ${s.netAntTotal}`);
+  if (!s.sectorCount) s.flags.push('no active sector');
+  s.sectors.forEach(sec=>{ if (sec.active && sec.azimuth==null) s.flags.push(`Sec ${sec.sector} azimuth missing`); });
+
+  // -- BBU + baseband ------------------------------------------------
+  const bank = pre => {
+    const cards = k => {
+      const out = [];
+      for (let i=1;i<=6;i++){
+        // header text has a newline before "(slot 0)" on the first card only
+        const v = g(`${pre}_Baseband ${k} ${i} (slot ${i-1})`) ?? g(`${pre}_Baseband ${k} ${i}(slot ${i-1})`);
+        if (v) out.push({slot:i-1, card:v});
+      }
+      return out;
+    };
+    return {
+      bbuExisting:      g(`${pre}_BBU Existing`),
+      bbuAddition:      g(`${pre}_BBU Addition`),
+      bbuFinal:         g(`${pre}_BBU Final`),
+      controlCardAdd:   g(`${pre}_Control Board Card Addition Card Type`),
+      controlCardFinal: g(`${pre}_Control Board Card Final Card Type`),
+      basebandAddCount: gn(`${pre}_Baseband Addition Amount`),
+      basebandAdd:      cards('Addition'),
+      basebandFinal:    cards('Final'),
+      gpsAntennaAdd:    g(`${pre}_GPS Antenna Addition`)
+    };
+  };
+  s.lteMbb = bank('AP_LTE_MBB');
+  s.lteHbb = bank('AP_LTE_HBB');
+  s.g2 = {
+    bbuExisting:   g('AP_2G_BBU Existing'),
+    bbuAddition:   g('AP_2G_BBU Addition'),
+    bbuFinal:      g('AP_2G_BBU Final'),
+    basebandAdd:   g('AP_2G_Baseband card addition'),
+    basebandFinal: g('AP_2G_Final Baseband configuration')
+  };
+
+  // flattened for the table / BOM rules
+  s.bbuAddition = [s.lteMbb.bbuAddition, s.lteHbb.bbuAddition, s.g2.bbuAddition]
+                    .filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i);
+  s.basebandCards = [...s.lteMbb.basebandAdd, ...s.lteHbb.basebandAdd].map(c=>c.card);
+  s.controlCards  = [s.lteMbb.controlCardAdd, s.lteHbb.controlCardAdd]
+                    .filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i);
+  return s;
+}
+
+/* ============================================================
+   5. STATE + RENDER
+   ============================================================ */
+let SITES = [], VIEW = [], PICK = null, CTX = null;
+
+const $ = id => document.getElementById(id);
+
+function fillFilters(){
+  const opts = (el, key) => {
+    const vals = [...new Set(SITES.map(s=>s[key]).filter(Boolean))].sort();
+    el.length = 1;
+    vals.forEach(v=>{ const o=document.createElement('option'); o.value=o.textContent=v; el.appendChild(o); });
+  };
+  opts($('fBatch'),'batchName'); opts($('fType'),'siteType');
+  opts($('fRegion'),'operationRegion'); opts($('fVendor'),'ftkVendor');
+}
+
+function applyFilters(){
+  const b=$('fBatch').value, t=$('fType').value, r=$('fRegion').value,
+        v=$('fVendor').value, q=$('q').value.trim().toLowerCase();
+  VIEW = SITES.filter(s =>
+    (!b||s.batchName===b) && (!t||s.siteType===t) &&
+    (!r||s.operationRegion===r) && (!v||s.ftkVendor===v) &&
+    (!q || `${s.siteId} ${s.siteName}`.toLowerCase().includes(q)));
+  render();
+}
+
+function render(){
+  const sum = k => VIEW.reduce((a,s)=>a+(s[k]||0),0);
+  $('stats').innerHTML = [
+    ['Sites', VIEW.length], ['Sectors', sum('sectorCount')],
+    ['Antennas', sum('antennaCount')], ['RRUs', sum('rruCount')],
+    ['Flagged', VIEW.filter(s=>s.flags.length).length]
+  ].map(([l,n])=>`<div class="stat"><b>${n}</b><span>${l}</span></div>`).join('');
+
+  $('rows').innerHTML = VIEW.map((s,i)=>`
+    <tr data-i="${i}" class="${PICK===s?'sel':''}">
+      <td><b>${esc(s.siteId)}</b></td><td>${esc(s.siteName||'')}</td>
+      <td>${esc((s.batchName||'').replace(/^2026_MBB_/,''))}</td>
+      <td>${esc(s.operationRegion||'')}</td><td>${esc(s.ftkVendor||'')}</td>
+      <td>${esc(s.siteType||'')}</td><td>${s.siteHeight??''}</td>
+      <td>${esc(s.txMode||'')}${s.mwBand?' <span class="chip">'+s.mwBand+'</span>':''}</td>
+      <td>${s.technologies.map(t=>`<span class="chip">${t}</span>`).join('')}</td>
+      <td>${s.sectorCount}</td><td>${s.antennaCount}</td>
+      <td class="${s.flags.some(f=>f.startsWith('RRU'))?'warn':''}">${s.rruCount}</td>
+      <td>${esc(Object.entries(s.rruByModel).map(([m,c])=>`${m}×${c}`).join(', '))}</td>
+      <td>${esc(s.bbuAddition.join(', '))}</td>
+      <td>${esc([...new Set(s.basebandCards.concat(s.controlCards))].join(', '))}</td>
+    </tr>`).join('');
+
+  [...$('rows').rows].forEach(tr => tr.onclick = () => { PICK = VIEW[+tr.dataset.i]; render(); detail(); });
+
+  const flagged = VIEW.filter(s=>s.flags.length);
+  $('log').innerHTML = flagged.length
+    ? `<div>${flagged.length} site(s) need a manual check:</div>` +
+      flagged.slice(0,25).map(s=>`<div>&nbsp;&nbsp;${esc(s.siteId)} — ${esc(s.flags.join('; '))}</div>`).join('') +
+      (flagged.length>25?`<div>&nbsp;&nbsp;… ${flagged.length-25} more</div>`:'')
+    : '';
+}
+
+/* signature element: azimuth rose with tilts */
+function compass(sectors){
+  const R=100, C=115, beams = sectors.filter(s=>s.active && s.azimuth!=null).map(s=>{
+    const w=32, a0=(s.azimuth-w)*Math.PI/180, a1=(s.azimuth+w)*Math.PI/180;
+    const p=(a,r)=>[C+r*Math.sin(a), C-r*Math.cos(a)];
+    const [x0,y0]=p(a0,R), [x1,y1]=p(a1,R), [lx,ly]=p(s.azimuth*Math.PI/180, R*0.62);
+    return `<path class="beam" d="M${C} ${C} L${x0.toFixed(1)} ${y0.toFixed(1)} A${R} ${R} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)} Z"/>
+            <text class="num" x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle">S${s.sector}·${s.azimuth}°</text>`;
+  }).join('');
+  const ticks = [0,45,90,135,180,225,270,315].map(d=>{
+    const a=d*Math.PI/180;
+    return `<line class="tick" x1="${C+92*Math.sin(a)}" y1="${C-92*Math.cos(a)}" x2="${C+100*Math.sin(a)}" y2="${C-100*Math.cos(a)}"/>`;
+  }).join('');
+  return `<svg class="compass" viewBox="0 0 230 230" aria-label="Sector azimuths">
+    <circle class="ring" cx="${C}" cy="${C}" r="${R}"/><circle class="ring" cx="${C}" cy="${C}" r="${R*0.5}"/>
+    ${ticks}${beams}
+    <text class="lab" x="${C}" y="12" text-anchor="middle">N</text>
+    <text class="lab" x="226" y="${C+3}" text-anchor="end">E</text>
+    <text class="lab" x="${C}" y="228" text-anchor="middle">S</text>
+    <text class="lab" x="4" y="${C+3}">W</text></svg>`;
+}
+
+function detail(){
+  const s = PICK; const d = $('detail');
+  if (!s){ d.className='detail'; return; }
+  d.className='detail on';
+  const kv = rows => `<div class="kv">${rows.filter(r=>r[1]!=null&&r[1]!=='')
+      .map(([k,v])=>`<div><span>${k}</span><span>${esc(v)}</span></div>`).join('')}</div>`;
+  d.innerHTML = `
+    <div>
+      ${compass(s.sectors)}
+      ${kv([['Batch',(s.batchName||'').replace(/^2026_MBB_/,'')],['Region',s.operationRegion],
+            ['District',s.district],['Vendor',s.ftkVendor],['Supply',s.ftkOrInhouse],
+            ['Site type',s.siteType],['Height',s.siteHeight?s.siteHeight+' m':null],
+            ['TX',s.txMode],['MW band',s.mwBand],['Owner',s.siteOwner]])}
+    </div>
+    <div>
+      <h2>${esc(s.siteId)} — ${esc(s.siteName||'')}</h2>
+      <div class="sub">${s.technologies.join(' · ')||'no technology flagged'} &nbsp;|&nbsp;
+        ${s.sectorCount} sectors · ${s.antennaCount} antennas · ${s.rruCount} RRUs</div>
+
+      <h3 class="sec" style="margin-top:18px">Sectors</h3>
+      <div class="secgrid">
+        ${s.sectors.filter(x=>x.active).map(x=>`
+          <div class="seccard">
+            <h4>Sector ${x.sector}<em>${x.azimuth??'—'}°</em></h4>
+            <p><b>Ant</b> ${esc(x.antennaFinal||x.antennaAdd||'—')}</p>
+            <p><b>Qty</b> ${x.antennaFinalCount??x.antennaAddCount??'—'} &nbsp; <b>Ht</b> ${x.height??'—'} m</p>
+            <p><b>E-tilt</b> ${x.eTilt??'—'}° &nbsp; <b>M-tilt</b> ${x.mTilt??'—'}°</p>
+            <p><b>RRU</b> ${esc(x.rruModels.join(', ')||'—')}</p>
+            ${x.combinerType?`<p><b>Comb</b> ${esc(x.combinerType)} ×${x.combinerCount||1}</p>`:''}
+            <p><b>Net</b> ant ${x.netAnt} / aau ${x.netAau} / rru ${x.netRru}</p>
+          </div>`).join('')}
+      </div>
+
+      <h3 class="sec" style="margin-top:18px">Equipment rollup</h3>
+      ${kv([
+        ['Antennas', Object.entries(s.antennaByModel).map(([m,c])=>`${m} ×${c}`).join('  |  ')],
+        ['RRUs', Object.entries(s.rruByModel).map(([m,c])=>`${m} ×${c}`).join('  |  ')],
+        ['Shared RRU refs', Object.keys(s.sharedRruRefs).join(', ')],
+        ['Combiners', Object.entries(s.combiners).map(([m,c])=>`${m} ×${c}`).join(', ')],
+        ['BBU (LTE MBB)', s.lteMbb.bbuAddition], ['BBU (LTE HBB)', s.lteHbb.bbuAddition],
+        ['BBU (2G)', s.g2.bbuAddition],
+        ['Control card', s.controlCards.join(', ')],
+        ['Baseband cards', s.lteMbb.basebandAdd.concat(s.lteHbb.basebandAdd).map(c=>`slot ${c.slot}: ${c.card}`).join('  |  ')],
+        ['GPS antenna', s.lteMbb.gpsAntennaAdd],
+        ['Checks', s.flags.join('; ')]
+      ])}
+    </div>`;
+  d.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+/* ============================================================
+   6. EXPORTS + HANDOFF
+   ============================================================ */
+function payload(){
+  return {
+    schema: 'emortia.design-extract/1',
+    generatedAt: new Date().toISOString(),
+    source: {sheet: CTX.sheetName, headerRow: CTX.headerRow},
+    sites: VIEW
+  };
+}
+function download(name, text, mime){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], {type:mime}));
+  a.download = name; a.click(); URL.revokeObjectURL(a.href);
+}
+const CSV_COLS = ['siteId','siteName','batchName','operationRegion','district','ftkVendor',
+  'ftkOrInhouse','siteType','siteHeight','txMode','mwBand','sectorCount','antennaCount','rruCount'];
+function toCsv(){
+  const head = CSV_COLS.concat(['technologies','antennaModels','rruModels','azimuths','eTilts','mTilts',
+                                'bbu','controlCard','basebandCards','flags']);
+  const q = v => `"${String(v??'').replace(/"/g,'""')}"`;
+  const body = VIEW.map(s=>{
+    const act = s.sectors.filter(x=>x.active);
+    return head.map(h=>{
+      if (CSV_COLS.includes(h)) return q(s[h]);
+      switch(h){
+        case 'technologies':  return q(s.technologies.join(' '));
+        case 'antennaModels': return q(Object.entries(s.antennaByModel).map(([m,c])=>`${m}x${c}`).join(' | '));
+        case 'rruModels':     return q(Object.entries(s.rruByModel).map(([m,c])=>`${m}x${c}`).join(' | '));
+        case 'azimuths':      return q(act.map(x=>x.azimuth).join('/'));
+        case 'eTilts':        return q(act.map(x=>x.eTilt).join('/'));
+        case 'mTilts':        return q(act.map(x=>x.mTilt).join('/'));
+        case 'bbu':           return q(s.bbuAddition.join(' '));
+        case 'controlCard':   return q(s.controlCards.join(' '));
+        case 'basebandCards': return q(s.basebandCards.join(' '));
+        case 'flags':         return q(s.flags.join('; '));
+      }
+    }).join(',');
+  });
+  return [head.join(','), ...body].join('\n');
+}
+
+/* ============================================================
+   7. WIRING
+   ============================================================ */
+function load(file){
+  const fr = new FileReader();
+  fr.onload = e => {
+    try{
+      const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+      CTX = parseWorkbook(wb);
+      SITES = CTX.rows.map(r => extractSite(CTX, r));
+      $('app').classList.remove('hidden');
+      $('drop').querySelector('b').textContent = `${file.name} — ${SITES.length} sites`;
+      fillFilters(); applyFilters();
+    }catch(err){
+      $('drop').querySelector('b').textContent = 'Could not read that workbook';
+      $('drop').querySelector('span').textContent = err.message;
+    }
+  };
+  fr.readAsArrayBuffer(file);
+}
+
+$('drop').onclick = () => $('file').click();
+$('drop').onkeydown = e => { if (e.key==='Enter'||e.key===' ') { e.preventDefault(); $('file').click(); } };
+$('file').onchange = e => e.target.files[0] && load(e.target.files[0]);
+['dragover','dragenter'].forEach(t=>$('drop').addEventListener(t, e=>{e.preventDefault();$('drop').classList.add('hot');}));
+['dragleave','drop'].forEach(t=>$('drop').addEventListener(t, e=>{e.preventDefault();$('drop').classList.remove('hot');}));
+$('drop').addEventListener('drop', e => e.dataTransfer.files[0] && load(e.dataTransfer.files[0]));
+
+['fBatch','fType','fRegion','fVendor'].forEach(id => $(id).onchange = applyFilters);
+$('q').oninput = applyFilters;
+$('csv').onclick  = () => download('design-extract.csv', toCsv(), 'text/csv');
+$('json').onclick = () => download('design-extract.json', JSON.stringify(payload(),null,2), 'application/json');
+$('send').onclick = () => {
+  try{ localStorage.setItem(HANDOFF_KEY, JSON.stringify(payload())); }catch(e){}
+  window.open(BOM_BUILDER_URL + '?src=design', '_blank');
+};
+</script>
+</body>
+</html>
