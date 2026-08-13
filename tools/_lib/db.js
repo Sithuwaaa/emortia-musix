@@ -262,7 +262,7 @@
     const c = await client();
     if (!c) return { items: await cached(),
       error: configured() ? 'Could not reach Supabase.'
-                          : 'Not syncing — the anon key is missing from tools/_lib/supabase-config.js.' };
+                          : 'Not syncing – the anon key is missing from tools/_lib/supabase-config.js.' };
     const { data, error } = await c.from('todos')
       .select('id,title,note,due,done,done_at,created_at')
       .order('done', { ascending: true })
@@ -272,7 +272,7 @@
       console.warn('Todo read failed, using the cached list:', error.message);
       const missing = /schema cache|does not exist/i.test(error.message);
       return { items: await cached(),
-        error: missing ? 'The todos table does not exist yet — run supabase/004_todos.sql in the SQL Editor.'
+        error: missing ? 'The todos table does not exist yet – run supabase/004_todos.sql in the SQL Editor.'
                        : error.message };
     }
     await cacheSet(TODO_CACHE, data || []);
@@ -321,7 +321,7 @@
      of this message is the person who can fix it in a minute. */
   function bomErr(msg){
     return /schema cache|does not exist/i.test(msg || '')
-      ? 'The boms tables are not created yet — run supabase/005_boms.sql in the Supabase SQL Editor.'
+      ? 'The boms tables are not created yet – run supabase/005_boms.sql in the Supabase SQL Editor.'
       : msg;
   }
 
@@ -330,14 +330,14 @@
     const c = await client();
     if (!c) return { items: await cached(),
       error: configured() ? 'Could not reach Supabase.'
-                          : 'Not syncing — the anon key is missing from tools/_lib/supabase-config.js.' };
+                          : 'Not syncing – the anon key is missing from tools/_lib/supabase-config.js.' };
     const { data, error } = await c.from('boms')
       .select('id,site_id,site_name,tx_plan,sectors,rrus,note,lines,updated_at')
       .order('updated_at', { ascending: false });
     if (error){
       const missing = /schema cache|does not exist/i.test(error.message);
       return { items: await cached(),
-        error: missing ? 'The boms table does not exist yet — run supabase/005_boms.sql in the SQL Editor.'
+        error: missing ? 'The boms table does not exist yet – run supabase/005_boms.sql in the SQL Editor.'
                        : error.message };
     }
     await cacheSet(BOM_CACHE, data || []);

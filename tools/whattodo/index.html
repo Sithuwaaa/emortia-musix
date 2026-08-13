@@ -591,7 +591,7 @@ function remindBar(){
       ? '<button class="btn stop" id="stopBtn">⏹ Stop alarm · <span id="almLeft">' + alarmLeft() + '</span></button>'
       : '<button class="btn" id="stopBtn" disabled title="Nothing is ringing">⏹ Stop alarm</button>') +
     (canNotify() && Notification.permission === 'denied'
-      ? '<span class="note">notifications blocked — reminders show on the page</span>' : '') +
+      ? '<span class="note">notifications blocked – reminders show on the page</span>' : '') +
     '<span class="next" id="nextIn">' + countdown() + '</span></div>';
 }
 function renderCalendar(){
@@ -736,7 +736,7 @@ function render(){
   renderFooter();
 }
 function renderFooter(){
-  const lead = window.DB.configured() ? 'Shared across every device' : 'Not syncing yet — anon key missing';
+  const lead = window.DB.configured() ? 'Shared across every device' : 'Not syncing yet – anon key missing';
   let h = lead + ' · reminders run while this page is open';
   h += '<br><a href="#" id="acct">…</a>';
   document.querySelector('footer').innerHTML = h;

@@ -654,7 +654,7 @@ function renderDashboard(){
   if (!mod) h += '<div class="note">Couldn’t reach the Site Access data to check permissions.</div>';
   else if (!mod.list.length)
     h += '<div class="note">No defence permissions found. Every site in the plan is looked up in the Site Access list, and so is ' +
-         'the far end of each MW hop — clearance can sit on either.</div>';
+         'the far end of each MW hop – clearance can sit on either.</div>';
   else {
     h += '<div class="note" style="margin-bottom:12px">These need defence clearance before access – plan lead time for them and for anything they serve.</div><div class="modlist">';
     mod.list.forEach(m => {
@@ -869,7 +869,7 @@ $('file').addEventListener('change', async e => {
   let s;
   try { s = await window.AuthGate.require(); }
   catch (err){ toast(err.message, 7000); return; }
-  if (!s){ toast('Cancelled — nothing was published'); return; }
+  if (!s){ toast('Cancelled – nothing was published'); return; }
 
   const book = { sheets: p.sheets, order: p.order,
                  savedAt: new Date().toISOString().slice(0, 10), bytes: buf.byteLength };
@@ -888,9 +888,9 @@ $('file').addEventListener('change', async e => {
 
 function renderFooter(){
   const where = ORIGIN === 'server' ? 'shared across every device'
-              : ORIGIN === 'bundled' ? 'nothing published yet — showing <b>' + esc(SOURCE) + '</b> from this folder'
+              : ORIGIN === 'bundled' ? 'nothing published yet – showing <b>' + esc(SOURCE) + '</b> from this folder'
               : 'offline copy';
-  const lead = window.DB.configured() ? where : 'not syncing yet — anon key missing';
+  const lead = window.DB.configured() ? where : 'not syncing yet – anon key missing';
   const bits = ['<b>' + esc(ds().label) + '</b> · ' + lead];
   if (window.IS_OWNER){
     bits.push('<a href="#" id="upBtn">Update ' + esc(ds().label) + ' from Excel…</a>' +

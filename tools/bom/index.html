@@ -355,6 +355,8 @@ function renderBuild(){
     '<div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:4px">' +
       '<button class="btn on" id="saveBtn">Save this BOM</button>' +
       '<button class="btn" id="newBtn">Start a new one</button>' +
+      '<button class="btn del" id="clearBtn"' + (BOM.lines.length ? '' : ' disabled') +
+        '>Clear all' + (BOM.lines.length ? ' (' + BOM.lines.length + ')' : '') + '</button>' +
       '<button class="btn" id="xlsBtn">⬇ Excel</button>' +
     '</div></div>';
 
@@ -558,7 +560,7 @@ function render(){
     if (known){ BOM.site_name = known; BOM.nameFromList = true; }
     else if (BOM.nameFromList){ BOM.site_name = ""; BOM.nameFromList = false; }
     saveDraft(); render();
-    if (known) toast(BOM.site_id + ' — ' + known);
+    if (known) toast(BOM.site_id + ' – ' + known);
     else if (SITES && BOM.site_id) toast('Not in the Site Access list', 3000);
   };
   const fn = $('fname');
@@ -587,7 +589,7 @@ function render(){
     PORTS[name] = { name, kind, port };
     try { localStorage.setItem('bom_ports_v1', JSON.stringify(PORTS)); } catch(e){}
     try { await window.AuthGate.require(); await window.DB.savePortType({ name, kind, port }); }
-    catch(err){ toast('Kept here only — ' + err.message, 4000); }
+    catch(err){ toast('Kept here only – ' + err.message, 4000); }
   });
 
   const q = $('q');
@@ -596,6 +598,18 @@ function render(){
       if (n){ n.focus(); n.setSelectionRange(n.value.length, n.value.length); } }, 140); }); }
 
   const sb = $('saveBtn'); if (sb) sb.onclick = saveBom;
+  /* Emptying the list is not the same as starting a new BOM: the site and the
+     ports it carries stay, so a BOM can be stripped back and rebuilt without
+     typing the site in again. */
+  const cb = $('clearBtn');
+  if (cb) cb.onclick = () => {
+    const n = BOM.lines.length;
+    if (!n) return;
+    if (!confirm('Take all ' + n + (n === 1 ? ' line' : ' lines') + ' off this BOM?\n\nThe site and its ports stay, so you can build it up again.')) return;
+    BOM.lines = [];
+    saveDraft(); render();
+    toast(n + (n === 1 ? ' line' : ' lines') + ' cleared');
+  };
   const nb = $('newBtn'); if (nb) nb.onclick = () => {
     if (BOM.lines.length && !confirm('Start a new BOM? The one on screen is kept only if you have saved it.')) return;
     BOM = blankBom(); saveDraft(); render(); toast('Fresh BOM'); };
@@ -652,7 +666,7 @@ async function refresh(){
 }
 
 function renderFooter(){
-  const lead = window.DB.configured() ? 'Saved BOMs are shared across every device' : 'Not syncing — anon key missing';
+  const lead = window.DB.configured() ? 'Saved BOMs are shared across every device' : 'Not syncing – anon key missing';
   document.querySelector('footer').innerHTML = lead +
     ' · the one you are building is kept in this browser until you save it' +
     '<br><a href="#" id="acct">…</a>';
