@@ -1,68 +1,90 @@
-# Design Sheet Extractor
+# Design Extractor
 
-Reads the Dialog MBB new-sites design workbook and pulls out what a BOM needs:
-sectors, radios, antennas, and the Tx plan from the TX sheet.
+Reads the Dialog MBB new-sites design workbook and pulls out what a bill of
+materials needs: how many sectors, how many radios and of which model, how many
+antennas, the TX plan, the BBU and baseband cards.
 
-Built to `docs/design-extractor/BUILD_SPEC.md`. The counting rules come from
-`docs/design-extractor/prototype.html`, which was already verified against the
-BOM database — they were ported, not re-derived.
-
-## Where things are
-
-| File | What it is |
-|---|---|
-| `parser.js` | The whole of it. No DOM, no network — takes a SheetJS workbook, returns plain objects, so the same code runs in the page and under node. |
-| `parser.test.js` | Assertions against the real workbook. |
+- `parser.js` — the reading. No DOM, no network; SheetJS is handed in rather
+  than imported, which is what lets the same file run in the browser and under
+  node against the real workbook.
+- `parser.test.js` — runs the parser against a real batch and checks the counts.
+- `index.html` — the tool.
 
 ## Running the tests
 
-The workbooks are not in the repository — it is public, and a design sheet
-committed here is a design sheet published on the web. Put the file at
-`samples/2026_MBB_New_Sites_Design__9_.xlsx` yourself, fetch SheetJS once, then
-run:
+The workbook is **not** in the repository. Everything here is served, so
+committing it would publish a Dialog design sheet — coordinates and all — at
+`emortia.com/samples/`. Put a batch workbook here yourself:
+
+```
+samples/2026_MBB_New_Sites_Design__9_.xlsx
+```
+
+then:
 
 ```bash
-mkdir -p .tools && curl -sL -o .tools/xlsx.js https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js
 node tools/design-extractor/parser.test.js
 ```
 
-Note it is SheetJS 0.20.2, not the 0.18.5 the browser tools load from cdnjs —
-that build throws when required into node. And `XLSX.readFile` does not work
-from the browser bundle either; read the bytes yourself and use `XLSX.read`.
+SheetJS is found automatically if it is installed or cached; otherwise point at
+a copy:
+
+```bash
+node tools/design-extractor/parser.test.js --sheetjs path/to/xlsx.full.min.js
+```
+
+To look at one site rather than assert anything:
+
+```bash
+node tools/design-extractor/parser.test.js MU5051
+```
 
 ## The rule that matters
 
 A multi-band radio is written into the sheet **once per technology it carries**.
-`RRU5909` serving G900 + L900 + L2100 in one sector fills three cells and is one
-unit. Count distinct models per sector, never cells, or every count comes out
-two to three times too high.
+`RRU5909` serving G900, L900 and L2100 in sector 1 fills three cells and is one
+physical unit. Counting cells triples the site.
 
-Two more exclusions before counting:
+So a radio is counted **once per distinct model per sector**, after dropping:
 
-- anything reading `Share sec 2 …` names a radio already up the pole. Set aside
-  into `sharedRruRefs`, not counted.
-- `DAP WH` and friends are where a radio came from, pasted into the column for
-  what the radio is. Dropped.
+- anything matching `/^shared?\b/i` — that sector is fed from a radio already on
+  the pole, so it is not hardware to order. Kept in `sharedRruRefs`.
+- source strings that leaked into the model column (`DAP WH`).
 
-## Verified against
+MU5051 is the worked example, and it is why the rule is written this way:
 
-Three sites whose answers are known independently of this code:
+```
+sec 1   G900=RRU5910, L900=RRU5910, L2100=RRU5909      → 2 radios
+sec 2   G900=RRU5910, L900=RRU5910, L2100=RRU5909      → 2 radios
+sec 3   G900=Share sec 2 L9 RRU, L900=Share…, L2100=RRU5909 → 1 radio
+```
 
-| Site | Expected | From |
-|---|---|---|
-| MU5051 | 3 sectors, 5 RRUs, `RRU5909×3 + RRU5910×2`, 3 antennas | the BOM database |
-| KI5032 | 4 sectors, 6 RRUs | the BOM database |
-| VA5038 | 3 sectors, 6 RRUs, L21×3 / L18×1 / GL900×2, sector 3 sharing sector 2's GL900 | read off the sheet by hand |
+Nine cells, five radios. The July Target BOM, built by hand from the same
+design, says `3 Sectors / 5 RRUs` with `RRU 5909(L21)` × 3 and
+`RRU5910 (GL900)` × 2. The parser agrees, and `KI5032` agrees at 4 sectors /
+6 RRUs. Those two sites are the only ones whose answers are known
+independently, which is why the tests assert on them and nothing else.
 
-VA5038 is the one that exercises the shared-radio path — without it, six radios
-could be counted as seven and both other sites would still pass.
+## What is not trusted
 
-The whole-book figures also match the spec's own survey: 245 sites, sector
-spread 3×221 / 4×18 / 2×6, and 49 sites with no TX row.
+The sheet carries its own net-addition summary columns. They are stale on most
+sites — on MU5051 they read 0 where five radios are planned. They are never
+used, only compared, and a disagreement becomes a flag for a person to settle.
+53 of 245 sites in batch 9 carry at least one.
 
-## Do not trust
+Also expected, and flagged rather than fixed:
 
-The sheet's net-addition summary columns (691–712) are stale and disagree with
-the sector blocks on most sites. The parser computes from the blocks, compares,
-and raises a flag on the difference rather than quietly picking one. 103 of the
-245 sites carry at least one flag.
+- 49 of 245 sites have no row on the TX sheet, so `txMode` is null
+- `Addition Type` holds a bare `1` on some sectors — a slip in the source
+- vendor is spelled `Ericssion` in places; normalised on read
+- some site IDs carry a trailing `.` on the TX sheet only
+
+## Output
+
+One versioned envelope, `emortia.design-extract/1`, so the BOM Builder can
+refuse a stale shape. The tool hands it over in
+`localStorage['emortia.bom.designPayload']`, or as a downloaded `.json` when the
+two tools are open on different machines.
+
+The extractor's job ends there. It supplies inputs; it does not decide
+materials — those rules belong to the BOM Builder.

@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#111a0d">
+<title>Design Extractor</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b03a56'/%3E%3Cg fill='%23170d10'%3E%3Crect x='8' y='13' width='3' height='8' rx='1.5'/%3E%3Crect x='13' y='9' width='3' height='14' rx='1.5'/%3E%3Crect x='18' y='11' width='3' height='10' rx='1.5'/%3E%3Crect x='23' y='8' width='3' height='15' rx='1.5'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="../_lib/owner-config.js"></script>
+<script src="../_lib/owner.js"></script>
+<script src="parser.js"></script>
+<style>
+  :root{
+    /* moss — the one cool green the other tools had not taken */
+    --navy:#1c2a13;--navy-2:#26391a;--accent:#8fae3e;--accentB:#a9c957;--accentD:#6b8a24;--accent-ink:#0f1607;
+    --bg:#111a0d;--card:#1a2614;--card-2:#152010;--line:#2b3d1f;--line3:#3f5730;
+    --text:#eef4e6;--muted:#9aab88;--zebra:rgba(255,255,255,.018);
+    --ok:#34c98b;--warn:#f2a33a;--bad:#e2607a;--info:#4f9bf0;--idle:#7f8d70;
+    --glow:rgba(143,174,62,.5);--glowSoft:rgba(143,174,62,.28);
+  }
+  html[data-theme="light"]{
+    --navy:#26391a;--navy-2:#334c22;--accent:#5d7a20;--accentB:#7a9c31;--accentD:#445c14;--accent-ink:#ffffff;
+    --bg:#f6f8f1;--card:#ffffff;--card-2:#fafcf6;--line:#dde5d2;--line3:#c3d0b4;
+    --text:#1c2a13;--muted:#5f6d51;--zebra:rgba(0,0,0,.022);
+    --ok:#1f9a68;--warn:#b8721c;--bad:#c2405c;--info:#2f6fd0;--idle:#5f6d51;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);
+    font-family:'Hanken Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;line-height:1.5}
+
+  .hdr{position:sticky;top:0;z-index:30;background:linear-gradient(180deg,var(--navy-2),var(--navy));
+    color:#fff;padding:calc(env(safe-area-inset-top) + 12px) 16px 12px;display:flex;align-items:center;gap:10px;
+    border-bottom:1px solid var(--line3);box-shadow:0 6px 26px rgba(0,0,0,.5);overflow:hidden}
+  .hdr::before{content:'';position:absolute;inset:-24px 0;pointer-events:none;opacity:.5;
+    background-image:linear-gradient(rgba(169,201,87,.10) 1px,transparent 1px),linear-gradient(90deg,rgba(169,201,87,.07) 1px,transparent 1px);
+    background-size:24px 24px;animation:tGrid 2.8s linear infinite}
+  @keyframes tGrid{to{transform:translateY(24px)}}
+  .hdr>*{position:relative;z-index:1}
+  .hdr h1{font-family:'Bricolage Grotesque',sans-serif;font-size:18px;font-weight:700;margin-right:auto;
+    white-space:nowrap;color:#fff;overflow:hidden;text-overflow:ellipsis}
+  .pill{font-family:'Space Mono',monospace;font-size:11.5px;background:rgba(0,0,0,.32);border:1px solid var(--line3);
+    color:#e2eed0;border-radius:999px;padding:5px 12px;white-space:nowrap;display:inline-flex;align-items:center;gap:7px}
+  .pill::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--accentB);animation:tLed 1.6s ease-in-out infinite}
+  @keyframes tLed{0%,100%{opacity:.35}50%{opacity:1}}
+  .pill b{color:var(--accentB)}
+  .theme{background:none;border:1px solid var(--line3);color:#fff;border-radius:9px;width:34px;height:34px;
+    font-size:15px;cursor:pointer;flex-shrink:0;transition:border-color .2s ease,transform .2s ease}
+  .theme:hover{border-color:var(--accentB);transform:scale(1.06)}
+
+  .tabs{position:sticky;top:55px;z-index:25;display:flex;gap:4px;overflow-x:auto;padding:10px 14px;
+    background:var(--bg);border-bottom:1px solid var(--line);scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{flex-shrink:0;border:1px solid var(--line);background:var(--card-2);color:var(--muted);border-radius:9px;
+    padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit;
+    transition:transform .15s ease,border-color .15s ease,color .15s ease}
+  .tab:hover{transform:translateY(-1px);border-color:var(--accent);color:var(--text)}
+  .tab.on{background:var(--accent);color:var(--accent-ink);border-color:transparent;box-shadow:0 6px 16px var(--glowSoft)}
+
+  main{max-width:1500px;margin:0 auto;padding:18px 14px calc(env(safe-area-inset-bottom) + 40px)}
+  @keyframes rise{0%{opacity:0;transform:translateY(12px)}100%{opacity:1;transform:none}}
+
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px;
+    animation:rise .4s ease both}
+  .panel h2{font-family:'Bricolage Grotesque',sans-serif;font-size:17px;margin-bottom:6px;display:flex;
+    align-items:center;gap:9px;flex-wrap:wrap}
+  .panel h2 .dot{width:7px;height:7px;border-radius:50%;background:var(--accentB);flex-shrink:0}
+  .panel h2 .tag{margin-left:auto;font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);font-weight:400}
+  .note{color:var(--muted);font-size:13px;line-height:1.6}
+
+  .btn{border:1px solid var(--line3);background:none;color:var(--text);border-radius:9px;padding:7px 13px;
+    font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;
+    transition:border-color .18s ease,transform .18s ease,background .18s ease}
+  .btn:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .btn.on{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+  .btn:disabled{opacity:.4;cursor:default;transform:none;border-color:var(--line)}
+  .btn.sm{padding:4px 9px;font-size:11.5px}
+
+  /* the drop zone */
+  #drop{border:1px dashed var(--line3);border-radius:14px;padding:38px 20px;text-align:center;
+    background:var(--card);cursor:pointer;transition:border-color .18s ease,background .18s ease}
+  #drop:hover,#drop.hot{border-color:var(--accent);background:var(--card-2)}
+  #drop b{display:block;font-family:'Bricolage Grotesque',sans-serif;font-size:17px;margin-bottom:6px}
+  #drop span{color:var(--muted);font-size:13px}
+  #file{display:none}
+
+  /* filters */
+  .bar{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  select,input[type=search]{background:var(--card-2);color:var(--text);border:1px solid var(--line);
+    border-radius:9px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;min-width:140px;
+    transition:border-color .18s ease}
+  select:focus,input:focus{border-color:var(--accent)}
+  input[type=search]{min-width:190px;flex:1}
+
+  /* stats */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 15px;
+    position:relative;overflow:hidden;animation:rise .4s ease both}
+  .kpi::after{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--k,var(--accent))}
+  .kpi .k{font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .kpi .v{font-family:'Bricolage Grotesque',sans-serif;font-size:30px;font-weight:800;line-height:1.1;margin-top:3px;color:var(--k,var(--text))}
+
+  /* table */
+  .gridwrap{border:1px solid var(--line);border-radius:12px;overflow:auto;max-height:56vh;background:var(--card)}
+  table{border-collapse:collapse;width:100%;font-size:12.5px}
+  th{position:sticky;top:0;background:var(--navy);color:var(--muted);text-align:left;padding:9px 10px;
+    font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;
+    border-bottom:1px solid var(--line3);white-space:nowrap;z-index:1}
+  td{padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+  tbody tr{cursor:pointer}
+  tbody tr:nth-child(even){background:var(--zebra)}
+  tbody tr:hover{background:var(--card-2)}
+  tbody tr.sel{background:rgba(143,174,62,.12);box-shadow:inset 3px 0 0 var(--accent)}
+  td.k1{font-family:'Space Mono',monospace;color:var(--accentB)}
+  .warn{color:var(--warn)}
+  .chip{display:inline-block;padding:1px 6px;border:1px solid var(--line3);border-radius:5px;
+    font-family:'Space Mono',monospace;font-size:10.5px;margin-right:3px;color:var(--muted)}
+
+  /* the reading */
+  .read{font-family:'Space Mono',monospace;font-size:13px;line-height:1.8;white-space:pre-wrap;
+    background:var(--card-2);border:1px solid var(--line);border-radius:11px;padding:14px 16px}
+  .cols{display:grid;grid-template-columns:250px 1fr;gap:20px}
+  @media(max-width:820px){.cols{grid-template-columns:1fr}}
+  .kv{font-size:12.5px}
+  .kv div{display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px solid var(--line)}
+  .kv span:first-child{color:var(--muted)}
+  .kv span:last-child{font-family:'Space Mono',monospace;text-align:right}
+  .secgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:11px;margin-top:10px}
+  .seccard{border:1px solid var(--line);border-radius:10px;padding:11px 12px;background:var(--card-2)}
+  .seccard h4{margin-bottom:7px;font-size:12.5px;font-weight:700;display:flex;justify-content:space-between}
+  .seccard h4 em{font-style:normal;color:var(--accentB);font-family:'Space Mono',monospace}
+  .seccard p{font-size:11.5px;font-family:'Space Mono',monospace;color:var(--muted);word-break:break-word;margin-bottom:3px}
+  .seccard p b{color:var(--text);font-weight:400}
+  h3.sec{font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--muted);margin:18px 0 4px;font-weight:400}
+
+  /* azimuth rose */
+  .compass{width:100%;aspect-ratio:1;max-width:230px;margin:0 auto;display:block}
+  .compass .ring{fill:none;stroke:var(--line3);stroke-width:1}
+  .compass .tick{stroke:var(--line);stroke-width:1}
+  .compass .lab{fill:var(--muted);font:9px 'Space Mono',monospace}
+  .compass .beam{fill:var(--accent);fill-opacity:.18;stroke:var(--accent);stroke-width:1}
+  .compass .num{fill:var(--text);font:700 10px 'Space Mono',monospace}
+
+  .flags{margin-top:12px;font-family:'Space Mono',monospace;font-size:11.5px;color:var(--warn);line-height:1.7}
+  .empty{text-align:center;color:var(--muted);padding:44px 20px;font-size:14.5px;line-height:1.6}
+  .empty .big{font-size:36px;margin-bottom:10px;opacity:.6}
+  .err{border:1px solid var(--bad);border-radius:12px;padding:14px 16px;background:rgba(226,96,122,.08);
+    font-size:14px;line-height:1.6;margin-bottom:16px}
+
+  .exrow{display:flex;align-items:center;gap:12px;background:var(--card-2);border:1px solid var(--line);
+    border-radius:11px;padding:12px 14px;margin-bottom:8px}
+  .exrow>div:first-child{flex:1;min-width:0}
+  .exname{font-weight:600;font-size:14.5px}
+  .exmeta{font-family:'Space Mono',monospace;font-size:11.5px;color:var(--muted);margin-top:3px}
+
+  footer{max-width:1500px;margin:0 auto;padding:0 14px 30px;color:var(--muted);font-size:12.5px;line-height:1.7}
+  footer a{color:var(--accent);text-decoration:none}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:var(--navy-2);
+    color:#fff;border:1px solid var(--line3);border-radius:10px;padding:11px 18px;font-size:13.5px;
+    opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;z-index:120;max-width:90vw;text-align:center}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+  @media (prefers-reduced-motion:reduce){*{animation:none !important}}
+
+  /* the site's mark, and the way back to it */
+  .hdr .brand{display:flex;align-items:center;gap:9px;text-decoration:none;color:inherit;
+    flex-shrink:0;transition:opacity .18s ease}
+  .hdr .brand:hover{opacity:.86}
+  .hdr .brand:focus-visible{outline:2px solid #f7edf0;outline-offset:4px;border-radius:10px}
+  .hdr .logo{width:30px;height:30px;border-radius:50%;flex-shrink:0;
+    background:linear-gradient(150deg,#d15873,#87213c) !important;
+    display:flex;align-items:center;justify-content:center;gap:2.4px;
+    box-shadow:0 0 16px rgba(176,58,86,.45) !important;text-decoration:none;font-size:0;
+    padding:0;border:none;cursor:pointer;transition:transform .18s ease}
+  .hdr .brand:hover .logo{transform:scale(1.06)}
+  .hdr .logo i{width:2.6px;border-radius:2px;background:#170d10;display:block}
+  .hdr .logo i:nth-child(1){height:7px}
+  .hdr .logo i:nth-child(2){height:12px}
+  .hdr .logo i:nth-child(3){height:9px}
+  .hdr .logo i:nth-child(4){height:13px}
+  .hdr .bname{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:16px;
+    letter-spacing:-0.02em;color:#fff;white-space:nowrap}
+  .hdr .hsep{width:1px;height:19px;background:rgba(255,255,255,.2);flex-shrink:0;margin:0 1px}
+  .hdr h1{flex:0 1 auto;min-width:7ch}
+  .hdr .pill{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  @media (max-width:820px){ .hdr .bname,.hdr .hsep{display:none} }
+  @media (max-width:700px){ .hdr .pill{display:none} }
+</style>
+</head>
+<body>
+<header class="hdr">
+  <a class="brand" href="../../" title="Emortia · back to the site" aria-label="Emortia · back to the site">
+    <span class="logo"><i></i><i></i><i></i><i></i></span>
+    <span class="bname">Emortia</span>
+  </a>
+  <span class="hsep" aria-hidden="true"></span>
+  <h1>Design Extractor</h1>
+  <span class="pill" id="pill">no workbook</span>
+  <button class="theme" id="themeBtn" aria-label="Toggle theme">☾</button>
+</header>
+<div class="tabs" id="tabs"></div>
+<main><div id="view"></div></main>
+<footer id="foot"></footer>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   Design Extractor — reads the Dialog MBB design workbook and
+   pulls out what a BOM needs.
+
+   The parsing lives in parser.js, which knows nothing about this
+   page: it takes a workbook and returns objects. Everything here
+   is presentation. The counting rules are covered by
+   parser.test.js against three sites whose answers are known
+   independently — see README.md.
+   ============================================================ */
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+let SITES = [], VIEW = [], PICK = null, CTX = null, ACTIVE = 'Sites', SRC = '';
+const F = { batch:'', type:'', region:'', vendor:'', q:'' };
+
+const HANDOFF_KEY = 'emortia.bom.designPayload';
+const BOM_URL = '../bom/';
+
+/* ---------- theme, shared with the other tools ---------- */
+const THEME_KEY = 'office_tool_theme';
+function applyTheme(t){ document.documentElement.dataset.theme = t; $('themeBtn').textContent = t === 'dark' ? '☀' : '☾';
+  try { localStorage.setItem(THEME_KEY, t); } catch(e){} }
+applyTheme(localStorage.getItem(THEME_KEY) || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+$('themeBtn').onclick = () => applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+
+let tt; function toast(m, ms){ const t = $('toast'); t.textContent = m; t.classList.add('show');
+  clearTimeout(tt); tt = setTimeout(() => t.classList.remove('show'), ms || 2400); }
+
+/* ---------- tabs ---------- */
+function buildTabs(){
+  const all = SITES.length ? ['Sites', 'Export'] : ['Sites'];
+  if (!all.includes(ACTIVE)) ACTIVE = 'Sites';
+  $('tabs').innerHTML = all.map(n =>
+    '<button class="tab' + (n === ACTIVE ? ' on' : '') + '" data-t="' + n + '">' + n + '</button>').join('');
+  [...$('tabs').children].forEach(b => b.onclick = () => { ACTIVE = b.dataset.t; buildTabs(); render(); });
+}
+function refreshPill(){
+  $('pill').innerHTML = SITES.length
+    ? '<b>' + VIEW.length + '</b> of ' + SITES.length + ' sites'
+    : 'no workbook';
+}
+
+/* ---------- reading the file ---------- */
+function readFile(file){
+  const fr = new FileReader();
+  fr.onload = e => {
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      const out = DesignParser.extract(wb, XLSX);
+      CTX = out.ctx; SITES = out.sites; SRC = file.name;
+      PICK = null;
+      applyFilters();
+      buildTabs();
+      toast(SITES.length + ' sites read from ' + file.name);
+    } catch(err){
+      SITES = []; CTX = null;
+      render();
+      toast(err.message, 6000);
+      const v = $('view');
+      v.insertAdjacentHTML('afterbegin',
+        '<div class="err"><b>Could not read that workbook.</b><br>' + esc(err.message) + '</div>');
+    }
+  };
+  fr.readAsArrayBuffer(file);
+}
+
+/* ---------- filters ---------- */
+function applyFilters(){
+  const q = F.q.trim().toLowerCase();
+  VIEW = SITES.filter(s =>
+    (!F.batch  || s.batchName === F.batch) &&
+    (!F.type   || s.siteType === F.type) &&
+    (!F.region || s.operationRegion === F.region) &&
+    (!F.vendor || s.ftkVendor === F.vendor) &&
+    (!q || (String(s.siteId) + ' ' + String(s.siteName || '')).toLowerCase().includes(q)));
+  refreshPill();
+  render();
+}
+const distinct = k => [...new Set(SITES.map(s => s[k]).filter(Boolean))].sort();
+
+/* ---------- the reading, in the words it gets described in ----------
+   "Sector 3යි, RRU 6යි, 10P Antenna 3යි" — the engineer names a radio by the
+   job it does, so the summary leads with GL900 / L21 / L18 and keeps the part
+   number alongside rather than instead. */
+function reading(s){
+  const v = DesignParser.summarise(s);
+  const L = [];
+  L.push(v.siteId + (v.siteName ? '-' + v.siteName : ''));
+  if (v.heightM != null) L.push('Tower Height - ' + v.heightM + 'm');
+  L.push('Tx Mode - ' + (v.txMode || 'not on the TX sheet') + (v.mwBand ? ' · ' + v.mwBand : ''));
+  L.push('');
+  L.push('Sector ' + v.sectors + ', RRU ' + v.rrus + ', ' +
+    (v.antennas.length
+      ? v.antennas.map(a => { const m = /(\d+P)$/.exec(a.model); return (m ? m[1] : a.model) + ' Antenna ' + a.count; }).join(', ')
+      : 'no antenna'));
+  L.push('');
+  v.radios.forEach(r =>
+    L.push('  ' + r.label + ' RRU ' + r.count + '  (' + r.model + ')  sector ' + r.sectors.join(', ')));
+  v.shared.forEach(sh =>
+    L.push('  shared into sector ' + sh.sectors.join(', ') + '  (' + sh.model + ')'));
+  return L.join('\n');
+}
+
+/* the signature element the prototype earned: where the sectors point */
+function compass(sectors){
+  const R = 100, C = 115;
+  const beams = sectors.filter(s => s.active && s.azimuth != null).map(s => {
+    const w = 32, a0 = (s.azimuth - w) * Math.PI / 180, a1 = (s.azimuth + w) * Math.PI / 180;
+    const p = (a, r) => [C + r * Math.sin(a), C - r * Math.cos(a)];
+    const [x0, y0] = p(a0, R), [x1, y1] = p(a1, R), [lx, ly] = p(s.azimuth * Math.PI / 180, R * 0.62);
+    return '<path class="beam" d="M' + C + ' ' + C + ' L' + x0.toFixed(1) + ' ' + y0.toFixed(1) +
+           ' A' + R + ' ' + R + ' 0 0 1 ' + x1.toFixed(1) + ' ' + y1.toFixed(1) + ' Z"/>' +
+           '<text class="num" x="' + lx.toFixed(1) + '" y="' + ly.toFixed(1) + '" text-anchor="middle">S' +
+           s.sector + '·' + s.azimuth + '°</text>';
+  }).join('');
+  const ticks = [0,45,90,135,180,225,270,315].map(d => {
+    const a = d * Math.PI / 180;
+    return '<line class="tick" x1="' + (C + 92 * Math.sin(a)).toFixed(1) + '" y1="' + (C - 92 * Math.cos(a)).toFixed(1) +
+           '" x2="' + (C + 100 * Math.sin(a)).toFixed(1) + '" y2="' + (C - 100 * Math.cos(a)).toFixed(1) + '"/>';
+  }).join('');
+  return '<svg class="compass" viewBox="0 0 230 230" aria-label="Sector azimuths">' +
+    '<circle class="ring" cx="' + C + '" cy="' + C + '" r="' + R + '"/>' +
+    '<circle class="ring" cx="' + C + '" cy="' + C + '" r="' + (R * 0.5) + '"/>' +
+    ticks + beams +
+    '<text class="lab" x="' + C + '" y="12" text-anchor="middle">N</text>' +
+    '<text class="lab" x="226" y="' + (C + 3) + '" text-anchor="end">E</text>' +
+    '<text class="lab" x="' + C + '" y="228" text-anchor="middle">S</text>' +
+    '<text class="lab" x="4" y="' + (C + 3) + '">W</text></svg>';
+}
+
+/* ---------- views ---------- */
+function renderDrop(){
+  return '<div id="drop" tabindex="0" role="button" aria-label="Choose a design workbook">' +
+    '<b>' + (SRC ? esc(SRC) + ' · ' + SITES.length + ' sites' : 'Drop the design workbook here') + '</b>' +
+    '<span>' + (SRC ? 'drop another to replace it' :
+      'or click to choose one · .xlsx / .xlsm · read in this browser, nothing is uploaded') + '</span>' +
+    '<input id="file" type="file" accept=".xlsx,.xlsm,.xls"></div>';
+}
+
+function renderSites(){
+  let h = renderDrop();
+  if (!SITES.length) return h;
+
+  const sel = (id, label, key, vals) =>
+    '<select id="' + id + '"><option value="">' + label + '</option>' +
+    vals.map(v => '<option' + (F[key] === v ? ' selected' : '') + '>' + esc(v) + '</option>').join('') + '</select>';
+
+  h += '<div class="bar" style="margin-top:16px">' +
+    sel('fBatch','All batches','batch',distinct('batchName')) +
+    sel('fType','All site types','type',distinct('siteType')) +
+    sel('fRegion','All regions','region',distinct('operationRegion')) +
+    sel('fVendor','All vendors','vendor',distinct('ftkVendor')) +
+    '<input id="q" type="search" placeholder="Site ID or name" value="' + esc(F.q) + '">' +
+    '</div>';
+
+  const sum = k => VIEW.reduce((a, s) => a + (s[k] || 0), 0);
+  h += '<div class="kpis">' +
+    [['Sites', VIEW.length, 'var(--accent)'],
+     ['Sectors', sum('sectorCount'), 'var(--info)'],
+     ['Antennas', sum('antennaCount'), 'var(--ok)'],
+     ['RRUs', sum('rruCount'), 'var(--accentB)'],
+     ['Need a look', VIEW.filter(s => s.flags.length).length, 'var(--warn)']]
+    .map(([k, v, c]) => '<div class="kpi" style="--k:' + c + '"><div class="k">' + k + '</div><div class="v">' + v + '</div></div>').join('') +
+    '</div>';
+
+  if (!VIEW.length) return h + '<div class="empty"><div class="big">🔍</div>Nothing matches those filters.</div>';
+
+  h += '<div class="gridwrap"><table><thead><tr>' +
+    ['Site ID','Site name','Batch','Region','Vendor','Type','Ht','TX','Sec','Ant','RRU','RRU models','BBU']
+      .map(c => '<th>' + c + '</th>').join('') +
+    '</tr></thead><tbody>' +
+    VIEW.map((s, i) => '<tr data-i="' + i + '"' + (PICK === s ? ' class="sel"' : '') + '>' +
+      '<td class="k1">' + esc(s.siteId) + '</td>' +
+      '<td>' + esc(s.siteName || '') + '</td>' +
+      '<td>' + esc(String(s.batchName || '').replace(/^2026_MBB_/, '')) + '</td>' +
+      '<td>' + esc(s.operationRegion || '') + '</td>' +
+      '<td>' + esc(s.ftkVendor || '') + '</td>' +
+      '<td>' + esc(s.siteType || '') + '</td>' +
+      '<td>' + (s.siteHeight ?? '') + '</td>' +
+      '<td>' + esc(s.txMode || '') + (s.mwBand ? ' <span class="chip">' + s.mwBand + '</span>' : '') + '</td>' +
+      '<td>' + s.sectorCount + '</td><td>' + s.antennaCount + '</td>' +
+      '<td class="' + (s.flags.some(f => f.startsWith('RRU')) ? 'warn' : '') + '">' + s.rruCount + '</td>' +
+      '<td>' + esc(Object.entries(s.rruByModel).map(([m, c]) => m + '×' + c).join(', ')) + '</td>' +
+      '<td>' + esc(s.bbuAddition.join(', ')) + '</td></tr>').join('') +
+    '</tbody></table></div>';
+
+  if (PICK) h += renderDetail(PICK);
+  return h;
+}
+
+function renderDetail(s){
+  const kv = rows => '<div class="kv">' + rows.filter(r => r[1] != null && r[1] !== '')
+    .map(([k, v]) => '<div><span>' + esc(k) + '</span><span>' + esc(v) + '</span></div>').join('') + '</div>';
+  const act = s.sectors.filter(x => x.active);
+  return '<div class="panel" style="margin-top:16px"><h2><span class="dot"></span>' +
+      esc(s.siteId) + ' · ' + esc(s.siteName || '') +
+      '<span class="tag">' + s.sectorCount + ' sectors · ' + s.rruCount + ' RRUs · ' + s.antennaCount + ' antennas</span></h2>' +
+    '<div class="cols" style="margin-top:12px"><div>' +
+      compass(s.sectors) +
+      kv([['Batch', String(s.batchName || '').replace(/^2026_MBB_/, '')],
+          ['Region', s.operationRegion], ['District', s.district],
+          ['Vendor', s.ftkVendor], ['Supply', s.ftkOrInhouse],
+          ['Site type', s.siteType], ['Height', s.siteHeight ? s.siteHeight + ' m' : null],
+          ['TX', s.txMode], ['MW band', s.mwBand], ['Owner', s.siteOwner],
+          ['Technologies', s.technologies.join(' ')]]) +
+    '</div><div>' +
+      '<h3 class="sec">The reading</h3><div class="read">' + esc(reading(s)) + '</div>' +
+      '<h3 class="sec">Sectors</h3><div class="secgrid">' +
+        act.map(x => '<div class="seccard"><h4>Sector ' + x.sector + '<em>' + (x.azimuth ?? '—') + '°</em></h4>' +
+          '<p><b>Ant</b> ' + esc(x.antennaFinal || x.antennaAdd || '—') + '</p>' +
+          '<p><b>Qty</b> ' + (x.antennaFinalCount ?? x.antennaAddCount ?? '—') + '   <b>Ht</b> ' + (x.height ?? '—') + 'm</p>' +
+          '<p><b>Tilt</b> e ' + (x.eTilt ?? '—') + '° / m ' + (x.mTilt ?? '—') + '°</p>' +
+          '<p><b>RRU</b> ' + esc(x.rruModels.join(', ') || '—') + '</p>' +
+          (x.combinerType ? '<p><b>Comb</b> ' + esc(x.combinerType) + ' ×' + (x.combinerCount || 1) + '</p>' : '') +
+          '</div>').join('') +
+      '</div>' +
+      (s.bbuAddition.length || s.controlCards.length || s.basebandCards.length
+        ? '<h3 class="sec">BBU and baseband</h3>' + kv([
+            ['BBU', s.bbuAddition.join(', ')],
+            ['Control card', s.controlCards.join(', ')],
+            ['Baseband', s.basebandCards.join(', ')],
+            ['GPS antenna', s.lteMbb.gpsAntennaAdd]])
+        : '') +
+      (s.flags.length ? '<div class="flags">! ' + s.flags.map(esc).join('<br>! ') + '</div>' : '') +
+    '</div></div></div>';
+}
+
+function renderExport(){
+  const flagged = VIEW.filter(s => s.flags.length).length;
+  return '<div class="panel"><h2><span class="dot"></span>Hand it on' +
+      '<span class="tag">' + VIEW.length + ' of ' + SITES.length + ' sites</span></h2>' +
+    '<p class="note" style="margin-bottom:14px">Whatever the filters are showing is what leaves – ' +
+      'filter to one batch and only that batch goes.' +
+      (flagged ? ' <b>' + flagged + '</b> of them disagree with the sheet\'s own summary columns; they still go, carrying their flags.' : '') +
+    '</p>' +
+    '<div class="exrow"><div><div class="exname">Send to the BOM Builder</div>' +
+      '<div class="exmeta">hands it over in this browser, then opens the builder</div></div>' +
+      '<button class="btn on" id="bSend">Send</button></div>' +
+    '<div class="exrow"><div><div class="exname">JSON</div>' +
+      '<div class="exmeta">emortia.design-extract/1 · the same thing as a file, for another device</div></div>' +
+      '<button class="btn" id="bJson">⬇ JSON</button></div>' +
+    '<div class="exrow"><div><div class="exname">CSV</div>' +
+      '<div class="exmeta">one row per site, for a spreadsheet</div></div>' +
+      '<button class="btn" id="bCsv">⬇ CSV</button></div>' +
+    '</div>';
+}
+
+function render(){
+  $('view').innerHTML = ACTIVE === 'Export' ? renderExport() : renderSites();
+  wire();
+  $('foot').innerHTML = SITES.length
+    ? 'Read from <b>' + esc(CTX.sheetName) + '</b>, header row ' + CTX.headerRow + ' · ' +
+      'counts come from the sector blocks, not the sheet\'s summary columns · ' +
+      '<a href="../bom/">BOM Builder</a>'
+    : 'Reads the Dialog MBB new-sites design workbook · nothing leaves this browser';
+}
+
+/* ---------- export ---------- */
+function payload(){
+  return DesignParser.envelope(VIEW, CTX);
+}
+function download(name, text, mime){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type: mime }));
+  a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+const CSV_COLS = ['siteId','siteName','batchName','operationRegion','district','ftkVendor',
+  'ftkOrInhouse','siteType','siteHeight','txMode','mwBand','sectorCount','antennaCount','rruCount'];
+function toCsv(){
+  const head = CSV_COLS.concat(['technologies','antennaModels','rruModels','azimuths','flags']);
+  const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+  const body = VIEW.map(s => {
+    const act = s.sectors.filter(x => x.active);
+    return head.map(h => {
+      if (CSV_COLS.includes(h)) return q(s[h]);
+      if (h === 'technologies')  return q(s.technologies.join(' '));
+      if (h === 'antennaModels') return q(Object.entries(s.antennaByModel).map(([m, c]) => m + 'x' + c).join(' | '));
+      if (h === 'rruModels')     return q(Object.entries(s.rruByModel).map(([m, c]) => m + 'x' + c).join(' | '));
+      if (h === 'azimuths')      return q(act.map(x => x.azimuth).join('/'));
+      if (h === 'flags')         return q(s.flags.join('; '));
+      return q('');
+    }).join(',');
+  });
+  return [head.join(','), ...body].join('\n');
+}
+
+/* ---------- wiring ---------- */
+function wire(){
+  const drop = $('drop'), file = $('file');
+  if (drop){
+    drop.onclick = () => file.click();
+    drop.onkeydown = e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); file.click(); } };
+    file.onchange = e => e.target.files[0] && readFile(e.target.files[0]);
+    ['dragover','dragenter'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('hot'); }));
+    ['dragleave','drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('hot'); }));
+    drop.addEventListener('drop', e => e.dataTransfer.files[0] && readFile(e.dataTransfer.files[0]));
+  }
+  const bind = (id, key) => { const el = $(id); if (el) el.onchange = () => { F[key] = el.value; applyFilters(); }; };
+  bind('fBatch','batch'); bind('fType','type'); bind('fRegion','region'); bind('fVendor','vendor');
+  const q = $('q');
+  if (q){ let t; q.addEventListener('input', e => { clearTimeout(t); const v = e.target.value;
+    t = setTimeout(() => { F.q = v; applyFilters(); const n = $('q');
+      if (n){ n.focus(); n.setSelectionRange(n.value.length, n.value.length); } }, 140); }); }
+
+  [...document.querySelectorAll('tbody tr')].forEach(tr => tr.onclick = () => {
+    const s = VIEW[+tr.dataset.i];
+    PICK = (PICK === s) ? null : s;      // clicking the open one closes it
+    render();
+    if (PICK){ const d = document.querySelector('.panel'); if (d) d.scrollIntoView({ behavior:'smooth', block:'nearest' }); }
+  });
+
+  const send = $('bSend');
+  if (send) send.onclick = () => {
+    try { localStorage.setItem(HANDOFF_KEY, JSON.stringify(payload())); }
+    catch(e){ toast('Could not hand it over: ' + e.message, 5000); return; }
+    toast(VIEW.length + ' sites handed over');
+    window.open(BOM_URL + '?src=design', '_blank');
+  };
+  const js = $('bJson');
+  if (js) js.onclick = () => { download('design-extract.json', JSON.stringify(payload(), null, 2), 'application/json');
+    toast(VIEW.length + ' sites downloaded'); };
+  const cs = $('bCsv');
+  if (cs) cs.onclick = () => { download('design-extract.csv', toCsv(), 'text/csv'); toast('CSV downloaded'); };
+}
+
+/* ---------- boot ---------- */
+buildTabs();
+render();
+</script>
+</body>
+</html>

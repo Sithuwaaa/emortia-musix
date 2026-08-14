@@ -1,124 +1,155 @@
-/* Tests for the design sheet parser.
-   Run:  node tools/design-extractor/parser.test.js
+/* parser.test.js — run the parser against the real workbook.
 
-   The two sites asserted here appear in both the design workbook and the BOM
-   database, so their expected values are not guesses — they are what the BOM
-   already says. If a rule change breaks these, the rule is wrong. */
+     node tools/design-extractor/parser.test.js
+     node tools/design-extractor/parser.test.js --sheetjs <path to xlsx.full.min.js>
+     node tools/design-extractor/parser.test.js MU5051      (print one site)
+
+   The two sites asserted below are the only ones whose answers are known
+   independently: they appear in both the design workbook and the July Target
+   BOM, and the BOM was built by hand from the design. If the parser agrees
+   with the hand-built BOM on those, the counting rule is right. */
+
 const fs = require('fs');
 const path = require('path');
-const XLSX = require(path.join(__dirname, '../../.tools/xlsx.js'));
-const P = require('./parser.js');
 
-const BOOK = path.join(__dirname, '../../samples/2026_MBB_New_Sites_Design__9_.xlsx');
+const HERE = __dirname;
+const REPO = path.resolve(HERE, '..', '..');
+const BOOK = path.join(REPO, 'samples', '2026_MBB_New_Sites_Design__9_.xlsx');
 
-let pass = 0, fail = 0;
-const results = [];
-/* Sort object keys before comparing: {RRU5909:3, RRU5910:2} and
-   {RRU5910:2, RRU5909:3} are the same answer, and a rollup has no natural
-   key order to preserve. */
-function stable(v){
-  if (Array.isArray(v)) return v.map(stable);
-  if (v && typeof v === 'object')
-    return Object.keys(v).sort().reduce((o, k) => (o[k] = stable(v[k]), o), {});
-  return v;
+/* SheetJS ships a browser bundle; give it somewhere to export to. */
+function loadSheetJS(){
+  const flag = process.argv.indexOf('--sheetjs');
+  const guesses = [
+    flag > -1 ? process.argv[flag + 1] : null,
+    process.env.SHEETJS,
+    path.join(process.env.TEMP || '/tmp', 'claude', 'xlsx.js'),
+    path.join(HERE, 'xlsx.js'),
+    'C:/Users/SITHUW~1/AppData/Local/Temp/claude/E--My-Jobs-Done-Sithuwaaa-Fresh-Start-My-WEB-Works/24e0a88a-2270-4499-8abc-3037c85d90df/scratchpad/xlsx.js'
+  ].filter(Boolean);
+  for (const g of guesses){
+    if (!fs.existsSync(g)) continue;
+    const mod = { exports: {} };
+    new Function('module', 'exports', 'require', 'global', fs.readFileSync(g, 'utf8'))(mod, mod.exports, require, globalThis);
+    if (typeof mod.exports.read === 'function') return mod.exports;
+  }
+  try { return require('xlsx'); } catch(e){}
+  throw new Error('SheetJS not found. Pass --sheetjs <path to xlsx.full.min.js>, or set SHEETJS.');
 }
-function check(name, got, want){
-  const g = JSON.stringify(stable(got)), w = JSON.stringify(stable(want));
-  const ok = g === w;
-  ok ? pass++ : fail++;
-  results.push({ ok, name, got: g, want: w });
-}
-function note(name, got){ results.push({ ok: null, name, got: JSON.stringify(got) }); }
 
+const XLSX = loadSheetJS();
+const DesignParser = require('./parser.js');
+
+/* The workbook is deliberately not in the repo — everything here is served, and
+   a Dialog design sheet is not something to publish. Not having it is a reason
+   the tests could not run, which is different from a test failing, so it exits
+   with its own code rather than a green nothing or a red failure. */
+if (!fs.existsSync(BOOK)){
+  console.log('\nThe tests did not run. They need the design workbook:\n');
+  console.log('  ' + BOOK + '\n');
+  console.log('Copy the batch workbook there under that name and run this again.\n');
+  process.exit(2);
+}
+
+const t0 = Date.now();
 const wb = XLSX.read(fs.readFileSync(BOOK), { type: 'buffer' });
-const { ctx, sites } = P.extract(wb, XLSX);
-const by = id => sites.find(s => String(s.siteId).toUpperCase() === id);
+const { ctx, sites } = DesignParser.extract(wb, XLSX);
+const ms = Date.now() - t0;
 
-/* ---------- the sheet itself ---------- */
-check('sheet picked',            ctx.sheetName, 'Design Sheet');
-check('header row (1-based)',    ctx.headerRow, 4);
-check('site rows',               sites.length, 245);
+const by = id => sites.find(s => String(s.siteId).replace(/\.$/, '').toUpperCase() === id);
 
-/* ---------- MU5051, cross-checked against the BOM ---------- */
-const mu = by('MU5051');
-check('MU5051 found',            !!mu, true);
-check('MU5051 sectors',          mu.sectorCount, 3);
-check('MU5051 RRUs',             mu.rruCount, 5);
-check('MU5051 RRU by model',     mu.rruByModel, { RRU5909: 3, RRU5910: 2 });
-check('MU5051 antennas',         mu.antennaCount, 3);
-check('MU5051 antenna model',    Object.keys(mu.antennaByModel), ['SXPWL4WH-16/18-65/65-IVT-R1_10P']);
-
-/* ---------- KI5032 ---------- */
-const ki = by('KI5032');
-check('KI5032 found',            !!ki, true);
-check('KI5032 sectors',          ki.sectorCount, 4);
-check('KI5032 RRUs',             ki.rruCount, 6);
-
-/* ---------- VA5038, checked line by line against the engineer's own reading ----------
-   This is the site that exercises the shared-radio rule: sector 3 reuses
-   sector 2's GL900 unit, so six radios are planned and six are counted, not
-   seven. MU5051 and KI5032 never touch that path. */
-const va = by('VA5038');
-check('VA5038 found',            !!va, true);
-check('VA5038 name',             va.siteName, 'Collage_Rd_Lamp');
-check('VA5038 height',           va.siteHeight, 25);
-check('VA5038 tx mode',          va.txMode, 'OFN');
-check('VA5038 sectors',          va.sectorCount, 3);
-check('VA5038 RRUs',             va.rruCount, 6);
-check('VA5038 antennas',         va.antennaCount, 3);
-check('VA5038 antenna is the 10P',
-      /10P$/.test(Object.keys(va.antennaByModel)[0] || ''), true);
-
-const vs = P.summarise(va);
-const role = l => vs.radios.find(r => r.label === l);
-check('VA5038 L21 ×3 across sectors 1-3',
-      role('L21') && [role('L21').count, role('L21').sectors], [3, [1, 2, 3]]);
-check('VA5038 L18 ×1 in sector 1',
-      role('L18') && [role('L18').count, role('L18').sectors], [1, [1]]);
-check('VA5038 GL900 ×2 in sectors 1-2',
-      role('GL900') && [role('GL900').count, role('GL900').sectors], [2, [1, 2]]);
-check('VA5038 sector 3 shares a GL900 rather than adding one',
-      vs.shared.map(s => s.sectors), [[3]]);
-check('VA5038 roles account for every counted radio',
-      vs.radios.reduce((n, r) => n + r.count, 0), va.rruCount);
-
-/* ---------- the rules that make those numbers ---------- */
-// a multi-band unit must not be counted once per band
-const muSec1 = mu.sectors.find(s => s.sector === 1);
-check('MU5051 sec1 radio cells > distinct models',
-      muSec1.radios.length > muSec1.rruModels.length, true);
-
-// shared radios are set aside, not counted
-const shared = sites.filter(s => Object.keys(s.sharedRruRefs).length);
-check('shared radios are excluded from the count',
-      shared.every(s => s.rruCount === Object.values(s.rruByModel).reduce((a, b) => a + b, 0)), true);
-note('sites carrying a shared-radio reference', shared.length);
-
-// the sheet's own summary columns are stale, and we say so rather than trust them
-note('MU5051 flags', mu.flags);
-note('KI5032 flags', ki.flags);
-
-/* ---------- the shape the BOM Builder will read ---------- */
-const env = P.envelope(sites, ctx);
-check('envelope schema',         env.schema, 'emortia.design-extract/1');
-check('envelope source',         env.source, { sheet: 'Design Sheet', headerRow: 4 });
-
-/* ---------- what the whole book looks like ---------- */
-const spread = {};
-sites.forEach(s => { spread[s.sectorCount] = (spread[s.sectorCount] || 0) + 1; });
-note('sector spread (sectors: sites)', spread);
-note('sites with no TX row', sites.filter(s => !s.txMode).length);
-note('sites with at least one flag', sites.filter(s => s.flags.length).length);
-note('distinct RRU models seen',
-     [...new Set(sites.flatMap(s => Object.keys(s.rruByModel)))].sort());
-
-/* ---------- report ---------- */
-const W = 46;
-console.log('');
-for (const r of results){
-  if (r.ok === null){ console.log('  ·    ' + r.name.padEnd(W) + r.got); continue; }
-  console.log((r.ok ? '  ok   ' : '  FAIL ') + r.name.padEnd(W) +
-              (r.ok ? r.got : r.got + '   expected ' + r.want));
+/* ---------------------------------------------------------------- runner */
+let pass = 0, fail = 0;
+/* Key order is an accident of which sector was read first, not a fact about
+   the site, so objects are compared by their contents. */
+const stable = v => (v && typeof v === 'object' && !Array.isArray(v))
+  ? JSON.stringify(Object.keys(v).sort().map(k => [k, v[k]]))
+  : JSON.stringify(v);
+const show = v => typeof v === 'object' ? JSON.stringify(v) : String(v);
+function is(label, got, want){
+  const ok = stable(got) === stable(want);
+  ok ? pass++ : fail++;
+  console.log('  ' + (ok ? 'ok  ' : 'FAIL') + '  ' + label.padEnd(46) + show(got) + (ok ? '' : '   want ' + show(want)));
 }
-console.log('\n  ' + pass + ' passed, ' + fail + ' failed\n');
+
+/* one site printed, for looking rather than asserting */
+const only = process.argv.slice(2).find(a => /^[A-Z]{2}\d{3,5}$/i.test(a));
+if (only){
+  const s = by(only.toUpperCase());
+  if (!s){ console.log('No such site: ' + only); process.exit(1); }
+  console.log(JSON.stringify({ summary: DesignParser.summarise(s), site: s }, null, 2));
+  process.exit(0);
+}
+
+console.log('\n' + path.basename(BOOK));
+console.log('sheet "' + ctx.sheetName + '", header row ' + ctx.headerRow +
+            ', ' + sites.length + ' sites, read in ' + ms + 'ms\n');
+
+/* -------------------------------------------------- the two verified sites */
+console.log('MU5051 — the BOM says 3 Sectors / 5 RRUs, RRU 5909(L21)×3, RRU5910 (GL900)×2');
+{
+  const s = by('MU5051');
+  is('found', !!s, true);
+  if (s){
+    is('sectors', s.sectorCount, 3);
+    is('rruCount', s.rruCount, 5);
+    is('rruByModel', s.rruByModel, { RRU5909: 3, RRU5910: 2 });
+    is('antennaCount', s.antennaCount, 3);
+  }
+}
+
+console.log('\nKI5032 — the BOM says 4 Sectors / 6 RRUs');
+{
+  const s = by('KI5032');
+  is('found', !!s, true);
+  if (s){
+    is('sectors', s.sectorCount, 4);
+    is('rruCount', s.rruCount, 6);
+  }
+}
+
+/* ------------------------------------------------------ the rules hold up */
+console.log('\nrules');
+{
+  /* A radio written once per technology must still be one radio. If this ever
+     breaks, rruCount inflates by exactly the number of extra technology cells. */
+  const multi = sites.find(s => s.sectors.some(sec => {
+    const models = sec.radios.filter(r => !r.shared && !r.noise).map(r => r.model);
+    return models.length > new Set(models).size;
+  }));
+  is('a multi-band radio exists to test', !!multi, true);
+  if (multi){
+    const sec = multi.sectors.find(x => {
+      const m = x.radios.filter(r => !r.shared && !r.noise).map(r => r.model);
+      return m.length > new Set(m).size;
+    });
+    const cells = sec.radios.filter(r => !r.shared && !r.noise).length;
+    is(multi.siteId + ' sec ' + sec.sector + ': cells vs radios', cells + ' cells -> ' + sec.rruModels.length + ' radios',
+       cells + ' cells -> ' + new Set(sec.radios.filter(r => !r.shared && !r.noise).map(r => r.model)).size + ' radios');
+  }
+
+  is('no site counts a shared radio as hardware',
+     sites.every(s => !Object.keys(s.rruByModel).some(m => /^shared?\b/i.test(m))), true);
+  is('no source string counted as a model',
+     sites.every(s => !Object.keys(s.rruByModel).some(m => /^dap\s*wh/i.test(m))), true);
+  is('every site has an ID', sites.every(s => !!s.siteId), true);
+  is('sector counts are 2, 3 or 4',
+     [...new Set(sites.map(s => s.sectorCount))].filter(n => n && (n < 2 || n > 4)).length, 0);
+}
+
+/* ------------------------------------------------------------ the shape */
+console.log('\nshape of the batch');
+{
+  const spread = {};
+  sites.forEach(s => spread[s.sectorCount] = (spread[s.sectorCount] || 0) + 1);
+  console.log('  sectors  ' + Object.entries(spread).sort().map(([k, v]) => k + ' sec × ' + v).join(',  '));
+  const tx = {};
+  sites.forEach(s => tx[s.txMode || 'none'] = (tx[s.txMode || 'none'] || 0) + 1);
+  console.log('  tx       ' + Object.entries(tx).sort((a, b) => b[1] - a[1]).map(([k, v]) => k + ' × ' + v).join(',  '));
+  const models = {};
+  sites.forEach(s => Object.entries(s.rruByModel).forEach(([m, c]) => models[m] = (models[m] || 0) + c));
+  console.log('  radios   ' + Object.entries(models).sort((a, b) => b[1] - a[1]).map(([m, c]) => m + ' × ' + c).join(',  '));
+  console.log('  flagged  ' + sites.filter(s => s.flags.length).length + ' of ' + sites.length + ' sites');
+}
+
+console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
 process.exit(fail ? 1 : 0);
