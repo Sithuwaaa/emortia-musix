@@ -18,10 +18,3 @@ samples/
 # SheetJS, vendored so the parser tests can run under node. See
 # tools/design-extractor/README.md for the one line that fetches it.
 .tools/
-
-# Sample workbooks for the design extractor's tests. Kept out of the repo
-# because everything here is served: committing them would publish a Dialog
-# design sheet, coordinates and all, at emortia.com/samples/.
-# parser.test.js says how to supply one.
-samples/*.xlsx
-samples/*.xlsm
