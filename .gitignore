@@ -18,3 +18,7 @@ samples/
 # SheetJS, vendored so the parser tests can run under node. See
 # tools/design-extractor/README.md for the one line that fetches it.
 .tools/
+
+# A design workbook dropped in for the parser tests. Everything here is served,
+# so keeping one in the repo would publish a Dialog design sheet.
+.work/
