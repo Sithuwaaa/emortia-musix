@@ -500,6 +500,9 @@ function renderExport(){
     '<div class="exrow"><div><div class="exname">The register on its own</div>' +
       '<div class="exmeta">' + Object.keys(REG).length + ' radios and what they carry</div></div>' +
       '<button class="btn" id="bReg">⬇ JSON</button></div>' +
+    '<div class="exrow"><div><div class="exname">Send it to the BOM Builder</div>' +
+      '<div class="exmeta">the radios, antennas and cards go across as they are – no file in between</div></div>' +
+      '<button class="btn" id="bBom">→ BOM Builder</button></div>' +
     '</div>';
 }
 
@@ -630,6 +633,20 @@ function wire(){
   const g = $('bReg');
   if (g) g.onclick = () => { download('radio-register.json',
     new Blob([JSON.stringify(REG, null, 2)], { type:'application/json' })); toast('Register downloaded'); };
+
+  /* Both tools sit at the same origin, so the handoff is a shelf, not a file:
+     what the filters are showing is put down here and the BOM Builder picks
+     it up on the way in. */
+  const bom = $('bBom');
+  if (bom) bom.onclick = async () => {
+    if (!VIEW.length){ toast('Nothing is showing to send'); return; }
+    try {
+      await window.DB.cacheSet('bom_inbox_v1', {
+        sentAt: new Date().toISOString(), src: SRC, sites: VIEW });
+      toast(VIEW.length + ' sites sent');
+      setTimeout(() => { location.href = '../bom/'; }, 350);
+    } catch(e){ toast('Could not send them: ' + e.message, 5000); }
+  };
 }
 
 /* ---------- boot ---------- */
