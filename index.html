@@ -686,7 +686,7 @@ html.bk-reading-on,html.bk-reading-on body{overflow:hidden;}
     <section style="animation:fadeUp 0.5s ease;padding:40px 0 60px;">
       <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:0.2em;color:var(--accent);text-transform:uppercase;">Poems & writing</div>
       <h2 style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(40px,6vw,68px);letter-spacing:-0.03em;margin:6px 0 6px;">Journal</h2>
-      <p style="color:var(--dim);font-size:14px;margin:0 0 22px;">Three wire-bound books. Take one down, then click a bottom corner to roll the page over.</p>
+      <p style="color:var(--dim);font-size:14px;margin:0 0 22px;">A wire-bound book. Take it down, then click a bottom corner to roll the page over.</p>
       {{ journalContent }}
     </section>
     </sc-if>
@@ -1275,30 +1275,17 @@ class Component extends DCLogic {
      s>=1 is poem s-1: its title, date and song on the left, the verse facing
      it on the right. Turning is a click on a bottom corner — the leaf rolls
      off the wire on its own arc rather than chasing the pointer. */
-  /* The shelf. A poem picks its volume with "@book:" naming either the id or
-     the title; anything unmarked falls into the first one. */
+  /* The shelf. One book — කවිය, the poems in මගේ කවි පොත — so every poem in
+     poems.txt belongs to it and "@book:" no longer decides anything. The shelf
+     is still a list because it is built to hold more than one, and adding a
+     second volume here is all it would take. */
   bkVolumes(){ return [
     {id:'kaviya', title:'කවිය', sub:'poems, kept by hand',
      cover:'linear-gradient(154deg,#e3c096,#cda772 40%,#b78f57 72%,#a67f49)', ink:'#5b3d1e',
-     fold:'linear-gradient(225deg,#9c7442 42%,#e6c79f)'},
-    {id:'corona', title:'කොරෝනා කාලේ ආතල්', sub:'written through the lockdown',
-     cover:'linear-gradient(154deg,#dfae98,#c98d73 40%,#ae7056 72%,#98604a)', ink:'#5a2f1e',
-     fold:'linear-gradient(225deg,#8f5843 42%,#e3b6a1)'},
-    {id:'satahan', title:'සටහන්', sub:'notes from the studio',
-     cover:'linear-gradient(154deg,#cbc79c,#adaa79 40%,#93905e 72%,#7d7a4d)', ink:'#3f3f1d',
-     fold:'linear-gradient(225deg,#74713f 42%,#d2cfa6)'}
+     fold:'linear-gradient(225deg,#9c7442 42%,#e6c79f)'}
   ]; }
   bkVolIdx(){ const v=this.state.bkVol; return (v>=0 && v<this.bkVolumes().length) ? v : 0; }
-  bkPoemsIn(i){
-    const vols=this.bkVolumes(), v=vols[i];
-    if(!v) return [];
-    const known={}; vols.forEach(x=>{ known[x.id]=1; known[x.title.toLowerCase()]=1; });
-    return this.state.poems.filter(p=>{
-      const b=(p.book||'').trim().toLowerCase();
-      if(!b || !known[b]) return i===0;                    // unmarked, or a name we don't know
-      return b===v.id || b===v.title.toLowerCase();
-    });
-  }
+  bkPoemsIn(i){ return this.bkVolumes()[i] ? this.state.poems : []; }
   bkList(){ return this.bkPoemsIn(this.bkVolIdx()); }
   bkCount(){ return this.bkIndexSpreads() + this.bkList().length; }   // index spreads, then a spread per poem
   bkIsSingle(){ return (window.innerWidth||0) <= 700; }     // one page per leaf on a phone
@@ -2004,8 +1991,11 @@ class Component extends DCLogic {
     for(let j=lo; j<=hi; j++){
       const over = j < t;                     // this leaf has been turned over
       const isCover = (j===0);
-      const front = isCover ? coverFace()
-                  : (j<=last ? pageFace('R', j-1, 'front') : endpaper('front'));
+      /* The closing leaf has no spread of its own, so its back is the inside of
+         the endpaper — but its front still carries the last spread's right
+         page, which is the last poem's verse. Treating the whole leaf as
+         endpaper left every book ending on a blank page. */
+      const front = isCover ? coverFace() : pageFace('R', j-1, 'front');
       const back  = isCover ? pageFace('L', 0, 'back')
                   : (j<=last ? pageFace('L', j, 'back') : endpaper('back'));
       kids.push(React.createElement('div',{key:'leaf'+j,
