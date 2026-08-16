@@ -98,6 +98,7 @@ That document is the source; this one is what the site reads.
 
 @title: තිස්සෙම
 @date: 2026/08/16
+@track: Thissema
 තිස්සෙම වගේ දිස්සුන ලස්සන කෙල්ල
 හිත්තග මගේ ගත්තනෙ නෙත්තග බැල්ම
 ගැස්සෙන ලැමේ රැස්සුනු කෙස්සග රැල්ල
