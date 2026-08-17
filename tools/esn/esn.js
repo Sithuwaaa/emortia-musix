@@ -102,40 +102,29 @@
 
   /* --------------------------------------------------------- the pictures
 
-     Screenshots are mostly text — an ESN, an IP address — so they are resized
-     rather than squeezed, and encoded as WebP, which holds letters together at
-     a size JPEG cannot match. A very small image is left exactly as it came. */
-  const MAX_EDGE = 2000, KEEP_UNDER = 220 * 1024;
+     Kept exactly as they arrive. An ESN is a serial someone has to be able to
+     read back, and a resized screenshot is a screenshot you might have to ask
+     for again — so nothing is scaled, re-encoded or squeezed. What goes up is
+     the file that was pasted, byte for byte.
 
-  function shrink(file, opts) {
-    opts = opts || {};
-    const maxEdge = opts.maxEdge || MAX_EDGE;
+     The only work done here is reading the size and the type, so the tool can
+     say what it is holding and give the upload the right extension. */
+  const MAX_BYTES = 50 * 1024 * 1024;
+
+  function prepare(file) {
     return new Promise((resolve, reject) => {
       if (!file) return reject(new Error('No image.'));
       if (!/^image\//.test(file.type)) return reject(new Error('That is not an image.'));
-      if (file.size <= (opts.keepUnder || KEEP_UNDER))
-        return resolve({ blob: file, ext: extOf(file.type), w: null, h: null, from: file.size, to: file.size });
+      if (file.size > MAX_BYTES)
+        return reject(new Error('That picture is over ' + Math.round(MAX_BYTES / 1048576) + 'MB, which is more than the store will take.'));
 
+      const out = { blob: file, ext: extOf(file.type), w: null, h: null,
+                    from: file.size, to: file.size, untouched: true };
+      /* the dimensions are only for showing "3024 × 4032" next to it */
+      if (typeof Image === 'undefined') return resolve(out);
       const img = new Image();
       const url = URL.createObjectURL(file);
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        const scale = Math.min(1, maxEdge / Math.max(img.width, img.height));
-        const w = Math.max(1, Math.round(img.width * scale));
-        const h = Math.max(1, Math.round(img.height * scale));
-        const cv = document.createElement('canvas');
-        cv.width = w; cv.height = h;
-        const cx = cv.getContext('2d');
-        cx.imageSmoothingQuality = 'high';
-        cx.drawImage(img, 0, 0, w, h);
-        const done = (blob, ext) => blob
-          ? resolve({ blob, ext, w, h, from: file.size, to: blob.size })
-          : reject(new Error('The browser would not encode that image.'));
-        cv.toBlob(b => {
-          if (b && b.type === 'image/webp') return done(b, 'webp');
-          cv.toBlob(b2 => done(b2, 'jpg'), 'image/jpeg', 0.92);   // older Safari
-        }, 'image/webp', 0.92);
-      };
+      img.onload  = () => { URL.revokeObjectURL(url); out.w = img.width; out.h = img.height; resolve(out); };
       img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('That image would not open.')); };
       img.src = url;
     });
@@ -143,8 +132,12 @@
   function extOf(type) {
     if (/webp/.test(type)) return 'webp';
     if (/png/.test(type))  return 'png';
+    if (/gif/.test(type))  return 'gif';
+    if (/bmp/.test(type))  return 'bmp';
     return 'jpg';
   }
+  const sizeLabel = n => n == null ? ''
+    : n >= 1048576 ? (n / 1048576).toFixed(1) + 'MB' : Math.max(1, Math.round(n / 1024)) + 'kB';
 
   /* An image can arrive from the picker, from a drag, or — the way a print
      screen actually travels — from a paste. */
@@ -212,7 +205,7 @@
     norm, upper, siteKey,
     buildIndex, findSite,
     blank, liveCards, check, why,
-    shrink, imageFrom, extOf,
+    prepare, imageFrom, extOf, sizeLabel, MAX_BYTES,
     toRows, fromRow
   };
 });

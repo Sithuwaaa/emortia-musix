@@ -89,13 +89,16 @@ end $$;
 -- screenshot on a guessable URL, which is the thing this whole gate exists to
 -- avoid. The tool asks for a signed link when it needs to show one, and those
 -- expire.
+--
+-- Screenshots go up at the size they were taken — nothing is resized on the
+-- way — so the ceiling is 50MB, which is past any phone photo or print screen.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('esn', 'esn', false, 15728640,
-        array['image/png','image/jpeg','image/webp'])
+values ('esn', 'esn', false, 52428800,
+        array['image/png','image/jpeg','image/webp','image/gif','image/bmp'])
 on conflict (id) do update
   set public = false,
-      file_size_limit = 15728640,
-      allowed_mime_types = array['image/png','image/jpeg','image/webp'];
+      file_size_limit = 52428800,
+      allowed_mime_types = array['image/png','image/jpeg','image/webp','image/gif','image/bmp'];
 
 drop policy if exists "esn_obj_read"   on storage.objects;
 drop policy if exists "esn_obj_insert" on storage.objects;

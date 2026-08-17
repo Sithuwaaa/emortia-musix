@@ -458,7 +458,7 @@ function render(){
   $('foot').innerHTML = !SITES_READY ? 'Loading the site list…'
     : isOwner()
       /* the owner is the one who maintains it, so the owner sees how it works */
-      ? 'Site names from the Site Access list · screenshots resized in the browser, stored privately · ' +
+      ? 'Site names from the Site Access list · screenshots stored privately at their original size · ' +
         'signed in as <b>' + esc(Access.currentUser()) + '</b>'
       /* everyone else just needs to know it saved and who they are */
       : 'Site names fill in on their own · saved for the team · signed in as <b>' +
@@ -479,17 +479,18 @@ async function fillThumbs(){
 async function takeImage(uid, key, file){
   const d = DRAFTS.find(x => x.uid === uid); if (!d || !file) return;
   try {
-    const out = await E.shrink(file);
+    const out = await E.prepare(file);
     if (d.files[key] && d.files[key].url) URL.revokeObjectURL(d.files[key].url);
-    d.files[key] = { blob: out.blob, ext: out.ext, url: URL.createObjectURL(out.blob) };
+    d.files[key] = { blob: out.blob, ext: out.ext, url: URL.createObjectURL(out.blob),
+                     size: out.to, w: out.w, h: out.h };
     /* the record only counts a picture once it is actually held */
     if (key === 'esn')  d.esnPhoto  = 'pending';
     if (key === 'full') d.esnFull   = 'pending';
     if (key === 'om')   d.omIpPhoto = 'pending';
     d.saved = false;
     render();
-    if (out.to < out.from) toast('Picture added · ' + Math.round(out.from/1024) + 'kB → ' + Math.round(out.to/1024) + 'kB');
-    else toast('Picture added');
+    /* say what was taken, so nobody wonders whether it was shrunk */
+    toast('Picture added · ' + (out.w ? out.w + '×' + out.h + ' · ' : '') + E.sizeLabel(out.to) + ' · original size');
   } catch(e){ toast(e.message, 4500); }
 }
 function dropImage(uid, key){

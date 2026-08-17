@@ -145,6 +145,18 @@ console.log('\nthe export');
   is('and the path stands in when there is not', linked[0][6], 'p/b.webp');
 }
 
+console.log('\nthe pictures are left exactly as they arrive');
+{
+  is('a png keeps its extension',  E.extOf('image/png'), 'png');
+  is('a jpeg does too',            E.extOf('image/jpeg'), 'jpg');
+  is('and a webp',                 E.extOf('image/webp'), 'webp');
+  is('anything odd becomes a jpg', E.extOf('image/heic'), 'jpg');
+  is('the ceiling is 50MB',        E.MAX_BYTES, 50 * 1024 * 1024);
+  is('sizes read the way people say them',
+     [E.sizeLabel(2048), E.sizeLabel(11 * 1048576)], ['2kB', '11.0MB']);
+  is('nothing in here resizes any more', typeof E.shrink, 'undefined');
+}
+
 console.log('\ncoming back from the database');
 {
   const r = E.fromRow({ id:'u1', site_id:'AM5155', site_name:'Muwangala', run_om:false,
