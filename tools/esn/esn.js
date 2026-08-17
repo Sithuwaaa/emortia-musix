@@ -1,4 +1,4 @@
-/* esn.js — the parts of the ESN tool that are worth testing on their own.
+/* esn.js - the parts of the ESN tool that are worth testing on their own.
 
    No DOM beyond the image work, which needs a canvas and says so. Everything
    else is data in, data out: what a record has to have before it can be filed,
@@ -50,7 +50,7 @@
     };
 
     /* Two passes, and the order matters. Real site IDs go down first, then the
-       aliases fill the gaps around them — because 14 sites in this list have
+       aliases fill the gaps around them - because 14 sites in this list have
        their own ID sitting in another site's "Other_Site_IDS", and a single
        pass let whoever came first win. A site that cannot find its own name is
        the one failure this field must not have. */
@@ -80,7 +80,7 @@
   const liveCards = rec => (rec.cards || []).filter(c => norm(c.serial) || norm(c.type));
 
   /* What has to be there before it can be filed. The O&M screenshot is only
-     asked for when the box is ticked — that is the whole point of the box. */
+     asked for when the box is ticked - that is the whole point of the box. */
   function check(rec) {
     const missing = [];
     if (!norm(rec.siteId)) missing.push('a site ID');
@@ -104,7 +104,7 @@
 
      Kept exactly as they arrive. An ESN is a serial someone has to be able to
      read back, and a resized screenshot is a screenshot you might have to ask
-     for again — so nothing is scaled, re-encoded or squeezed. What goes up is
+     for again - so nothing is scaled, re-encoded or squeezed. What goes up is
      the file that was pasted, byte for byte.
 
      The only work done here is reading the size and the type, so the tool can
@@ -139,8 +139,8 @@
   const sizeLabel = n => n == null ? ''
     : n >= 1048576 ? (n / 1048576).toFixed(1) + 'MB' : Math.max(1, Math.round(n / 1024)) + 'kB';
 
-  /* An image can arrive from the picker, from a drag, or — the way a print
-     screen actually travels — from a paste. */
+  /* An image can arrive from the picker, from a drag, or - the way a print
+     screen actually travels - from a paste. */
   function imageFrom(evt) {
     const d = evt.clipboardData || evt.dataTransfer;
     if (!d) return null;
@@ -179,7 +179,7 @@
         links[r.esnFull || r.esn_full] || (r.esnFull || r.esn_full || ''),
         links[r.omIpPhoto || r.om_ip_photo] || (r.omIpPhoto || r.om_ip_photo || ''),
         r.note || '',
-        r.createdEmail || r.created_email || '',
+        r.createdName || r.created_name || (r.createdEmail || r.created_email || '').split('@')[0] || '',
         (r.createdAt || r.created_at || '').replace('T', ' ').slice(0, 19)
       ];
       if (!cards.length) out.push(base.concat(['', '']).concat(tail));
@@ -188,6 +188,45 @@
     return out;
   }
 
+  /* ------------------------------------------------------- who may change it
+
+     A filed record is a record. It can be corrected for five minutes by the
+     person who filed it - long enough to catch a serial typed wrong or the
+     wrong screenshot pasted, short enough that it is not quietly rewritten a
+     week later. After that it stands.
+
+     Deleting is the owner's, always, with no window: it is the one action that
+     cannot be taken back, so it belongs to one person. */
+  const EDIT_MS = 5 * 60 * 1000;
+
+  function editableFor(rec, opts) {
+    const o = opts || {};
+    if (!rec || !rec.id) return { can: false, msLeft: 0, reason: 'not filed yet' };
+    if (o.isOwner) return { can: true, msLeft: Infinity, reason: 'owner' };
+    const mine = !o.email || !rec.createdEmail ||
+                 String(rec.createdEmail).toLowerCase() === String(o.email).toLowerCase();
+    if (!mine) return { can: false, msLeft: 0, reason: 'somebody else filed it' };
+    const filed = Date.parse(rec.createdAt || rec.created_at || '');
+    if (!isFinite(filed)) return { can: false, msLeft: 0, reason: 'no time on it' };
+    const left = EDIT_MS - ((o.now || Date.now()) - filed);
+    return left > 0
+      ? { can: true, msLeft: left, reason: 'within the window' }
+      : { can: false, msLeft: 0, reason: 'the five minutes are up' };
+  }
+
+  /* "4 min left", "40 sec left" - a countdown somebody can act on */
+  function leftLabel(ms) {
+    if (!isFinite(ms)) return '';
+    if (ms <= 0) return '';
+    const s = Math.ceil(ms / 1000);
+    return s >= 60 ? Math.ceil(s / 60) + ' min left' : s + ' sec left';
+  }
+
+  /* every picture a record points at, for taking them out of the store with it */
+  const pathsOf = rec => [rec.esnPhoto || rec.esn_photo,
+                          rec.esnFull  || rec.esn_full,
+                          rec.omIpPhoto || rec.om_ip_photo].filter(Boolean);
+
   /* what the tool holds on to between sessions, and what comes back */
   function fromRow(row) {
     return {
@@ -195,7 +234,11 @@
       runOm: !!row.run_om,
       esnPhoto: row.esn_photo, esnFull: row.esn_full, omIpPhoto: row.om_ip_photo,
       cards: Array.isArray(row.cards) && row.cards.length ? row.cards : [{ type: '', serial: '' }],
-      note: row.note || '', createdEmail: row.created_email || '',
+      note: row.note || '',
+      /* the name, not the address - and the local part stands in for records
+         filed before names were kept */
+      createdName: row.created_name || (row.created_email || '').split('@')[0] || '',
+      createdEmail: row.created_email || '',
       createdAt: row.created_at || '', savedAt: row.updated_at || row.created_at || ''
     };
   }
@@ -205,6 +248,7 @@
     norm, upper, siteKey,
     buildIndex, findSite,
     blank, liveCards, check, why,
+    editableFor, leftLabel, pathsOf, EDIT_MS,
     prepare, imageFrom, extOf, sizeLabel, MAX_BYTES,
     toRows, fromRow
   };

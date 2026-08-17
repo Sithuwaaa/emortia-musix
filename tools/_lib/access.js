@@ -1,4 +1,4 @@
-/* access.js — who may open the tools.
+/* access.js - who may open the tools.
 
    A username and a password, checked against the salted hashes in
    access-config.js, and a session that lasts seven days.
@@ -6,7 +6,7 @@
    Nothing here is a substitute for a server. See the note at the bottom of
    access-config.js: the tool pages and their data.json files are served
    publicly, so this is a gate on the door of a room with open windows. It is
-   worth having — it stops the tools being stumbled into — and it is worth
+   worth having - it stops the tools being stumbled into - and it is worth
    knowing what it is.
 
    Load access-config.js before this file. owner.js, if present, is honoured:
@@ -104,7 +104,7 @@
   function remote() { return !!(window.DB && window.DB.configured && window.DB.configured()); }
 
   /* Supabase keys accounts by email. A bare name is given a domain so that
-     "sithuwaaa" and "sithuwaaa@…" are the same account either way — but a real
+     "sithuwaaa" and "sithuwaaa@…" are the same account either way - but a real
      address is worth using, because it is the only way to recover a password. */
   function asEmail(id) {
     id = String(id || '').trim();
@@ -141,18 +141,33 @@
     return m || 'That did not work.';
   }
 
+  /* Signing in is the username and the password. The account is keyed by the
+     address underneath, so a bare name is turned back into one first - nobody
+     should have to remember which address they used months ago. An address
+     still works, for anyone who would rather type it. */
   async function signIn(id, password) {
+    id = String(id || '').trim();
     if (!id || !password) return { ok: false, error: 'Both a username and a password, please.' };
     if (!window.crypto || !crypto.subtle)
       return { ok: false, error: 'This browser will not do the maths over an insecure connection. Use https.' };
 
     if (remote()) {
+      var email = id, uname = id;
+      if (id.indexOf('@') < 0) {
+        var found = null;
+        try { found = await window.DB.emailForUsername(id); } catch (e) {}
+        /* no such name: fall through with the made-up address so the attempt
+           still takes the same time and says the same thing as a wrong password */
+        email = found || asEmail(id);
+      } else uname = nameOf(id);
+
       try {
-        await window.DB.signIn(asEmail(id), password);
-        keep(nameOf(asEmail(id)), asEmail(id));
-        return { ok: true, user: nameOf(asEmail(id)) };
+        await window.DB.signIn(email, password);
+        var who = id.indexOf('@') < 0 ? id : uname;
+        keep(who, email);
+        return { ok: true, user: who };
       } catch (e) {
-        /* a name only in the local list still works when Supabase says no */
+        /* a name only in the local list still works when the server says no */
         var local = await localSignIn(id, password);
         if (local.ok) return local;
         return { ok: false, error: tidy(e.message) };
@@ -161,15 +176,25 @@
     return localSignIn(id, password);
   }
 
-  /* Making an account. Only Supabase can do this — the local list is a file in
+  /* Making an account. Only Supabase can do this - the local list is a file in
      the repository and a browser cannot write to it. */
-  async function signUp(id, password) {
-    if (!id || !password) return { ok: false, error: 'Both a username and a password, please.' };
+  /* Signing up asks for all three: a username to sign in with afterwards, an
+     address so a confirmation and a password reset have somewhere to go, and
+     a password. The username is carried on the account itself, and the server
+     copies it into the table that turns names back into addresses. */
+  async function signUp(username, email, password) {
+    username = String(username || '').trim();
+    email = String(email || '').trim();
+    if (!username) return { ok: false, error: 'Pick a username - that is what you will sign in with.' };
+    if (!/^[a-zA-Z0-9._-]{3,32}$/.test(username))
+      return { ok: false, error: 'A username is 3 to 32 letters, numbers, dots, dashes or underscores.' };
+    if (!email || email.indexOf('@') < 0) return { ok: false, error: 'An email address, please - it is the only way to get a password reset.' };
+    if (!password) return { ok: false, error: 'A password, please.' };
     if (String(password).length < 6) return { ok: false, error: 'Use a password of at least six characters.' };
     if (!remote()) return { ok: false, error:
-      'Signing up needs the Supabase key in tools/_lib/supabase-config.js. Without it, accounts have to be added by hand with #adduser.' };
+      'Signing up is not available here. Accounts have to be added by hand with #adduser.' };
 
-    var email = asEmail(id);
+    email = email.toLowerCase();
     var allow = window.ACCESS_SIGNUP;
     if (Array.isArray(allow) && !allow.some(function (a) {
           a = String(a).toLowerCase();
@@ -178,11 +203,13 @@
       return { ok: false, error: 'That address is not on the list of people who may sign up.' };
 
     try {
-      var out = await window.DB.signUp(email, password);
-      if (out && out.session) { keep(nameOf(email), email); return { ok: true, user: nameOf(email) }; }
-      /* No session back means the project asks for the email to be confirmed. */
+      var out = await window.DB.signUp(email, password, { username: username });
+      if (out && out.session) { keep(username, email); return { ok: true, user: username }; }
+      /* No session back means the address has to be confirmed first. Said
+         without naming what is doing the asking - nobody filing an ESN needs
+         to know the machinery, and that was the whole point of the gate. */
       return { ok: false, pending: true, error:
-        'Account made. Supabase wants the address confirmed first — open the link it just emailed to ' + email + ', then sign in.' };
+        'Account made. Open the email sent to ' + email + ' to confirm it, then sign in.' };
     } catch (e) { return { ok: false, error: tidy(e.message) }; }
   }
 
@@ -247,12 +274,29 @@
     '  padding:8px 10px;font:600 13px/1 inherit;font-family:inherit;transition:background .15s ease,color .15s ease;}',
     '.acc-seg-b:hover{color:#f7edf0;}',
     '.acc-seg-b.on{background:#b03a56;color:#fff;}',
+    '.acc-pw{position:relative;}',
+    '.acc-pw input{padding-right:46px;}',
+    '.acc-eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);margin-top:-6px;',
+    '  background:none;border:none;padding:7px;cursor:pointer;color:#8d6a75;line-height:0;border-radius:8px;',
+    '  transition:color .15s ease;}',
+    '.acc-eye svg{width:19px;height:19px;display:block;}',
+    '.acc-eye:hover{color:#f7edf0;}',
+    '.acc-eye:focus-visible{outline:2px solid #b03a56;outline-offset:1px;}',
     '.acc-err{color:#e2607a;font-size:13px;margin:0 0 12px;min-height:1em;line-height:1.5;}',
     '.acc-err.ok{color:#7fdc8a;}',
     '.acc-card code{font-family:"Space Mono",ui-monospace,monospace;font-size:12.5px;color:#f7edf0;}',
     '.acc-foot{margin:16px 0 0;font-size:12px;color:#8d6a75;text-align:center;}',
     '.acc-foot a{color:#c19da8;}'
   ].join('\n');
+
+  /* An eye that is open when the password is hidden and struck through when it
+     is showing - the icon says what pressing it will do, which is the way round
+     people read it. */
+  var EYE_SHOW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">' +
+    '<path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="2.6"/></svg>';
+  var EYE_HIDE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">' +
+    '<path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="2.6"/>' +
+    '<path d="M3.5 3.5l17 17"/></svg>';
 
   function gateMarkup(title, note) {
     return '<div class="acc-card" role="dialog" aria-label="Sign in">' +
@@ -261,14 +305,21 @@
         '<button type="button" class="acc-seg-b" data-mode="up">Sign up</button></div>' +
       '<p id="accNote">' + note + '</p>' +
       '<form id="accForm" autocomplete="on">' +
-        '<label for="accUser">Username or email</label>' +
+        '<label for="accUser">Username</label>' +
         '<input id="accUser" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required>' +
+        '<div id="accMailWrap" style="display:none">' +
+          '<label for="accMail">Email</label>' +
+          '<input id="accMail" name="email" type="email" autocomplete="email" autocapitalize="none" spellcheck="false">' +
+        '</div>' +
         '<label for="accPass">Password</label>' +
-        '<input id="accPass" name="password" type="password" autocomplete="current-password" required>' +
+        '<div class="acc-pw">' +
+          '<input id="accPass" name="password" type="password" autocomplete="current-password" required>' +
+          '<button type="button" class="acc-eye" id="accEye" aria-label="Show password" title="Show password">' +
+            EYE_SHOW + '</button>' +
+        '</div>' +
         '<p class="acc-err" id="accErr"></p>' +
         '<button class="acc-go" type="submit" id="accGo">Sign in</button>' +
       '</form>' +
-      '<p class="acc-foot">Signed in for ' + DAYS + ' days on this device.</p>' +
     '</div>';
   }
 
@@ -300,19 +351,38 @@
     var mode = 'in';
     var firstNote = note ? note.innerHTML : '';
 
+    var mailWrap = root.querySelector('#accMailWrap');
+    var mail = root.querySelector('#accMail');
+
     function setMode(m) {
       mode = m;
       segs.forEach(function (b) { b.classList.toggle('on', b.dataset.mode === m); });
       go.textContent = m === 'in' ? 'Sign in' : 'Create the account';
       pass.setAttribute('autocomplete', m === 'in' ? 'current-password' : 'new-password');
       err.textContent = ''; err.className = 'acc-err';
+      /* the address is only asked for once; after that the username is enough */
+      if (mailWrap) mailWrap.style.display = m === 'up' ? '' : 'none';
+      if (mail) mail.required = m === 'up';
       if (!note) return;
       note.innerHTML = m === 'in' ? firstNote
-        : (remote()
-            ? 'Use your own email address — it is the only way to get a password reset later. A bare name works too.'
-            : 'Signing up needs the Supabase key in tools/_lib/supabase-config.js.');
+        : 'Pick a username to sign in with. The address is only for confirming the account and resetting a password.';
     }
     segs.forEach(function (b) { b.onclick = function () { setMode(b.dataset.mode); }; });
+
+    /* Show the password. Worth having on a phone, where a mistyped character
+       is invisible and the only clue is being refused. */
+    var eye = root.querySelector('#accEye');
+    if (eye) eye.onclick = function () {
+      var showing = pass.type === 'text';
+      pass.type = showing ? 'password' : 'text';
+      eye.innerHTML = showing ? EYE_SHOW : EYE_HIDE;
+      eye.title = eye.setAttribute('aria-label', showing ? 'Show password' : 'Hide password') ||
+                  (showing ? 'Show password' : 'Hide password');
+      pass.focus();
+      /* keep the caret at the end rather than sending it back to the start */
+      var v = pass.value; pass.value = ''; pass.value = v;
+    };
+
     setTimeout(function () { var u = root.querySelector('#accUser'); if (u) u.focus(); }, 60);
 
     form.addEventListener('submit', async function (e) {
@@ -320,7 +390,8 @@
       err.textContent = ''; err.className = 'acc-err';
       go.disabled = true; go.textContent = mode === 'in' ? 'Checking…' : 'Making it…';
       var id = root.querySelector('#accUser').value;
-      var r = mode === 'in' ? await signIn(id, pass.value) : await signUp(id, pass.value);
+      var r = mode === 'in' ? await signIn(id, pass.value)
+                            : await signUp(id, mail ? mail.value : '', pass.value);
       if (r.ok) { onDone(); return; }
       go.disabled = false; go.textContent = mode === 'in' ? 'Sign in' : 'Create the account';
       err.textContent = r.error;
@@ -332,7 +403,7 @@
   }
 
   /* Once you are in, the page should say so and offer the way out. Every tool
-     header is built the same way — a .hdr with a theme button at the end — so
+     header is built the same way - a .hdr with a theme button at the end - so
      the chip goes in beside it rather than being pasted into seven files. The
      site has its own, in the nav.
 
@@ -384,7 +455,7 @@
 
   /* One line at the top of a tool page. The document is held back until we
      know, so a tool never flashes its contents on the way to asking who you
-     are — and it is released again on any failure, because a gate that breaks
+     are - and it is released again on any failure, because a gate that breaks
      must not take the page down with it. */
   function protect(opts) {
     var root = document.documentElement;
@@ -422,7 +493,7 @@
   handleHash();
 
   /* The Supabase client is an ES module fetched from a CDN, and the first call
-     that needs it waits for that fetch — measured at 8.6s on a cold page, all
+     that needs it waits for that fetch - measured at 8.6s on a cold page, all
      of it after the button was pressed. Pulling it in now means it arrives
      while the password is still being typed. */
   try { if (remote()) window.DB.client(); } catch (e) {}

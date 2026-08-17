@@ -1,4 +1,4 @@
-/* db.js — the only file that talks to storage.
+/* db.js - the only file that talks to storage.
 
    Every tool goes through this. Nothing else should call supabase, fetch a
    data.json, or write to IndexedDB, so there is exactly one place to look when
@@ -10,10 +10,10 @@
    and the translation happens here.
 
    Order of truth:
-     server  — what everyone sees
-     cache   — IndexedDB, so the page opens offline and paints before the
+     server  - what everyone sees
+     cache   - IndexedDB, so the page opens offline and paints before the
                network answers
-     bundled — data.json in the repository, the floor if there is no session,
+     bundled - data.json in the repository, the floor if there is no session,
                no key, and no cache
 
    Load returns the cached copy first if there is one, then quietly replaces it
@@ -66,7 +66,7 @@
   }
   async function signIn(email, password){
     const c = await client();
-    if (!c) throw new Error('Supabase is not configured — the anon key is missing from tools/_lib/supabase-config.js.');
+    if (!c) throw new Error('Supabase is not configured - the anon key is missing from tools/_lib/supabase-config.js.');
     const { data, error } = await c.auth.signInWithPassword({ email, password });
     if (error) throw new Error(error.message);
     return data.session;
@@ -75,12 +75,22 @@
      project: with email confirmation switched on Supabase hands back a user
      and no session until the link in the email is clicked. The caller has to
      handle both, because only the project owner knows which it is. */
-  async function signUp(email, password){
+  async function signUp(email, password, meta){
     const c = await client();
-    if (!c) throw new Error('Supabase is not configured — the anon key is missing from tools/_lib/supabase-config.js.');
-    const { data, error } = await c.auth.signUp({ email, password });
+    if (!c) throw new Error('Supabase is not configured - the anon key is missing from tools/_lib/supabase-config.js.');
+    const { data, error } = await c.auth.signUp({ email, password, options: { data: meta || {} } });
     if (error) throw new Error(error.message);
     return data;
+  }
+
+  /* Signing in by username: the account is keyed by the address, so the name
+     has to be turned back into one first. The function on the server returns
+     one address for one exact name and nothing else. */
+  async function emailForUsername(username){
+    const c = await client(); if (!c) return null;
+    const { data, error } = await c.rpc('email_for_username', { uname: username });
+    if (error) return null;
+    return data || null;
   }
   async function signOut(){ const c = await client(); if (c) await c.auth.signOut(); }
   async function onAuth(fn){
@@ -146,9 +156,9 @@
      rows instead of piling up duplicates. */
   async function publish(key, cols, rows, onProgress){
     const c = await client();
-    if (!c) throw new Error('Supabase is not configured — the anon key is missing.');
+    if (!c) throw new Error('Supabase is not configured - the anon key is missing.');
     const s = await session();
-    if (!s) throw new Error('Sign in first — the write policies check auth.uid(), so uploads fail without a session.');
+    if (!s) throw new Error('Sign in first - the write policies check auth.uid(), so uploads fail without a session.');
 
     const table = TABLE[key], keyCol = KEYCOL[key];
     const idx = cols.indexOf(cols.find(cn => cn.toLowerCase().replace(/[^a-z]/g,'') === 'siteid') || cols[0]);
@@ -187,16 +197,16 @@
 
   /* ------------------------------------------------------------- workbooks
      A whole parsed workbook in one row of `books`. Unlike the lookup datasets
-     this is not a table of records — it is many sheets of differing shapes, and
+     this is not a table of records - it is many sheets of differing shapes, and
      each dataset carries its own sheet list. Ongoing has eleven sheets, Master
      eight with different names, so nothing here may assume a fixed set. */
   const BOOK_CACHE = k => 'book:' + k;
 
   async function publishBook(key, book){
     const c = await client();
-    if (!c) throw new Error('Supabase is not configured — the anon key is missing.');
+    if (!c) throw new Error('Supabase is not configured - the anon key is missing.');
     const s = await session();
-    if (!s) throw new Error('Sign in first — the write policies check auth.uid(), so uploads fail without a session.');
+    if (!s) throw new Error('Sign in first - the write policies check auth.uid(), so uploads fail without a session.');
 
     const savedAt = book.savedAt || new Date().toISOString().slice(0, 10);
     const row = {
@@ -265,7 +275,7 @@
   const TODO_CACHE = 'todos';
 
   /* Returns {items, error}. A read that fails still hands back the cache so the
-     page is usable, but the caller is told why — an empty list and a broken
+     page is usable, but the caller is told why - an empty list and a broken
      connection look identical on screen otherwise, and "nothing pending" is a
      bad way to find out the table was never created. */
   async function listTodos(){
@@ -273,7 +283,7 @@
     const c = await client();
     if (!c) return { items: await cached(),
       error: configured() ? 'Could not reach Supabase.'
-                          : 'Not syncing – the anon key is missing from tools/_lib/supabase-config.js.' };
+                          : 'Not syncing - the anon key is missing from tools/_lib/supabase-config.js.' };
     const { data, error } = await c.from('todos')
       .select('id,title,note,due,done,done_at,created_at')
       .order('done', { ascending: true })
@@ -283,7 +293,7 @@
       console.warn('Todo read failed, using the cached list:', error.message);
       const missing = /schema cache|does not exist/i.test(error.message);
       return { items: await cached(),
-        error: missing ? 'The todos table does not exist yet – run supabase/004_todos.sql in the SQL Editor.'
+        error: missing ? 'The todos table does not exist yet - run supabase/004_todos.sql in the SQL Editor.'
                        : error.message };
     }
     await cacheSet(TODO_CACHE, data || []);
@@ -292,9 +302,9 @@
 
   async function addTodo(t){
     const c = await client();
-    if (!c) throw new Error('Supabase is not configured — the anon key is missing.');
+    if (!c) throw new Error('Supabase is not configured - the anon key is missing.');
     const s = await session();
-    if (!s) throw new Error('Sign in first — adding writes to the shared list.');
+    if (!s) throw new Error('Sign in first - adding writes to the shared list.');
     const row = { title: t.title, note: t.note || null, due: t.due || null,
                   updated_at: new Date().toISOString(), updated_by: s.user.id };
     const { data, error } = await c.from('todos').insert(row).select().single();
@@ -304,9 +314,9 @@
 
   async function setTodoDone(id, done){
     const c = await client();
-    if (!c) throw new Error('Supabase is not configured — the anon key is missing.');
+    if (!c) throw new Error('Supabase is not configured - the anon key is missing.');
     const s = await session();
-    if (!s) throw new Error('Sign in first — ticking off writes to the shared list.');
+    if (!s) throw new Error('Sign in first - ticking off writes to the shared list.');
     const { error } = await c.from('todos').update({
       done: !!done, done_at: done ? new Date().toISOString() : null,
       updated_at: new Date().toISOString(), updated_by: s.user.id
@@ -324,7 +334,7 @@
   /* ------------------------------------------------------------------ ESN
 
      One table and one private storage bucket. The tool never speaks to either
-     directly — this is the only file that does, so there is one place to look
+     directly - this is the only file that does, so there is one place to look
      when a screenshot goes missing. */
   const ESN = 'esn_records', BUCKET = 'esn';
 
@@ -378,8 +388,17 @@
     return data;
   }
 
-  async function esnDelete(id){
+  /* The row and its pictures go together. The pictures first: a row deleted
+     with its images left behind is storage nobody can find again, and nobody
+     would ever notice. If the images refuse, the row stays too, so the record
+     still points at them and it can be tried again. */
+  async function esnDelete(id, paths){
     const c = await client(); if (!c) throw new Error('Not connected.');
+    const keep = (paths || []).filter(Boolean);
+    if (keep.length){
+      const { error: se } = await c.storage.from(BUCKET).remove(keep);
+      if (se) throw new Error(se.message);
+    }
     const { error } = await c.from(ESN).delete().eq('id', id);
     if (error) throw new Error(error.message);
   }
@@ -391,7 +410,7 @@
       .subscribe();
   }
 
-  window.DB = { configured, client, session, signIn, signUp, signOut, onAuth,
+  window.DB = { configured, client, session, signIn, signUp, signOut, onAuth, emailForUsername,
                 esnList, esnSave, esnDelete, esnUpload, esnLink, esnSubscribe,
                 load, publish, subscribe,
                 publishBook, loadBook, subscribeBook,

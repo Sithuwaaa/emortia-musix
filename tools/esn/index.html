@@ -20,7 +20,7 @@
 <script src="esn.js"></script>
 <style>
   :root{
-    /* terracotta — the warm one none of the other tools had taken */
+    /* terracotta - the warm one none of the other tools had taken */
     --navy:#2e150d;--navy-2:#3d1d12;--accent:#d9663f;--accentB:#ef8a63;--accentD:#a8482a;--accent-ink:#1f0c06;
     --bg:#1d100b;--card:#2a1811;--card-2:#23140e;--line:#40241a;--line3:#5b3625;
     --text:#f6e9e2;--muted:#b39387;--zebra:rgba(255,255,255,.018);
@@ -127,6 +127,17 @@
   .state.ready{border-color:var(--accentD);color:var(--accentB)}
   .state.saved{border-color:var(--ok);color:var(--ok)}
   .state.busy{border-color:var(--warn);color:var(--warn)}
+  .state.edit{border-color:var(--info);color:var(--info)}
+
+  /* correcting and removing, on a filed row */
+  .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+  .acts .btn{display:inline-flex;align-items:center;gap:6px}
+  .acts .btn em{font-style:normal;font-family:'Space Mono',monospace;font-size:10px;
+    color:var(--muted);border-left:1px solid var(--line3);padding-left:6px}
+  .acts .btn:hover em{color:var(--accentB)}
+  /* the one that cannot be taken back looks like it */
+  .btn.del.owner{border-color:rgba(226,96,122,.45);color:var(--bad)}
+  .btn.del.owner:hover{background:rgba(226,96,122,.12);border-color:var(--bad)}
 
   /* the three picture wells */
   .shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:14px}
@@ -222,7 +233,7 @@
 
    The counting and checking live in esn.js, which knows nothing
    about this page; esn.test.js holds it against the real site
-   list — 5,944 of them.
+   list - 5,944 of them.
    ============================================================ */
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -250,7 +261,7 @@ let tt; function toast(m, ms){ const t = $('toast'); t.textContent = m; t.classL
 /* ---------- what the people using this are told ----------
 
    The team files ESNs. They should not have to know there is a Postgres
-   behind it, what the table is called, or that a bucket exists — and a raw
+   behind it, what the table is called, or that a bucket exists - and a raw
    error says all three. Everyone gets a sentence about what to do next; the
    owner gets the real message underneath it, because the owner is the one
    who has to fix it.
@@ -262,13 +273,13 @@ function speak(err){
   const raw = String((err && err.message) || err || '');
   let plain;
   if (/schema cache|does not exist|relation .* does not exist/i.test(raw))
-    plain = 'This tool is not switched on yet. Sithara has one step left to do — nothing is wrong with what you typed.';
+    plain = 'This tool is not switched on yet. Sithara has one step left to do - nothing is wrong with what you typed.';
   else if (/bucket|storage/i.test(raw))
     plain = 'The picture store is not ready yet. Your typing is safe; try the save again shortly.';
   else if (/jwt|not authenticated|sign in|row-level security|permission/i.test(raw))
     plain = 'Your sign-in has run out. Reload the page and sign in again.';
   else if (/fetch|network|failed to|timeout/i.test(raw))
-    plain = 'No connection just now. What you have typed stays here — try again when the signal is back.';
+    plain = 'No connection just now. What you have typed stays here - try again when the signal is back.';
   else
     plain = 'That did not go through. Your typing is safe; try again in a moment.';
   return { plain, raw, full: isOwner() && raw ? plain + '  (' + raw + ')' : plain };
@@ -335,19 +346,41 @@ function buildTabs(){
 }
 
 /* ---------- the add tab ---------- */
+const FIELD_OF = { esn:'esnPhoto', full:'esnFull', om:'omIpPhoto' };
+
 function wellHtml(d, key, title, hint, off){
-  const url = d.files[key] ? d.files[key].url : null;
+  /* A picture the record already has and one just pasted look the same here.
+     On an edit the file is not in this browser - only the path it was stored
+     under - so the well shows the link for it once that has been asked for. */
+  const kept = d[FIELD_OF[key]];
+  const url = d.files[key] ? d.files[key].url
+            : (kept && kept !== 'pending' ? (LINKS[kept] || null) : null);
+  const waiting = !url && kept && kept !== 'pending';
   return '<div class="well' + (url ? ' has' : '') + (off ? ' off' : '') + '" data-well="' + d.uid + '.' + key + '" tabindex="0">' +
     '<div class="t">' + title + '</div>' +
     (url ? '<img src="' + url + '" alt=""><button class="rm" data-rm="' + d.uid + '.' + key + '" title="Take it off">×</button>'
+         : waiting ? '<div class="hint">the one already filed<br><span class="note">loading it…</span></div>'
          : '<div class="hint">' + hint + '</div>') +
     '<input type="file" accept="image/*" data-file="' + d.uid + '.' + key + '"></div>';
+}
+
+/* pull the links an edited draft needs, then paint once they are in */
+async function fillDraftShots(){
+  const want = [];
+  DRAFTS.forEach(d => Object.keys(FIELD_OF).forEach(k => {
+    const p = d[FIELD_OF[k]];
+    if (p && p !== 'pending' && !d.files[k] && LINKS[p] === undefined) want.push(p);
+  }));
+  if (!want.length) return;
+  await Promise.all([...new Set(want)].map(p => linkFor(p)));
+  if (ACTIVE === 'Add') render();
 }
 
 function draftHtml(d, i){
   const v = E.check(d);
   const state = d.busy ? '<span class="state busy">' + esc(d.busy) + '</span>'
               : d.saved ? '<span class="state saved">Filed</span>'
+              : d.editing ? '<span class="state edit">Correcting a filed one · save to replace it</span>'
               : v.ok ? '<span class="state ready">Ready to file</span>'
               : '<span class="state">' + esc(E.why(v.missing)) + '</span>';
 
@@ -428,11 +461,37 @@ function renderFiled(){
           ? '<img class="thumb" data-shot="' + esc(r[k]) + '" alt="' + k + '">' : '').join(' ') + '</td>' +
       '<td class="wrap note">' + esc(r.note || '') + '</td>' +
       '<td class="note" style="white-space:nowrap">' + esc((r.createdAt || '').replace('T',' ').slice(0,16)) + '<br>' +
-        esc(r.createdEmail || '') + '</td></tr>';
+        esc(r.createdName || '') + '</td>' +
+      '<td>' + actionsHtml(r) + '</td></tr>';
   }).join('');
   return '<div class="gridwrap"><table><thead><tr>' +
-    ['Site ID','Site name','','Cards','Screens','Note','Filed'].map(c => '<th>' + c + '</th>').join('') +
+    ['Site ID','Site name','','Cards','Screens','Note','Filed',''].map(c => '<th>' + c + '</th>').join('') +
     '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+}
+
+/* Correcting and removing.
+
+   Edit belongs to whoever filed it, for five minutes - long enough to catch a
+   serial typed wrong, short enough that a record is not quietly rewritten a
+   week later. The countdown is on the button so nobody has to guess.
+
+   Delete is the owner's alone, with no window, because it is the one thing
+   that cannot be taken back. */
+function actionsHtml(r){
+  const who = window.Access ? Access.currentUser() : null;
+  const ed = E.editableFor(r, { isOwner: isOwner(), email: r.createdEmail, now: Date.now() });
+  const mine = !who || !r.createdName || String(r.createdName).toLowerCase() === String(who).toLowerCase();
+  const canEdit = ed.can && (isOwner() || mine);
+
+  let h = '<div class="acts">';
+  if (canEdit){
+    const left = E.leftLabel(ed.msLeft);
+    h += '<button class="btn sm" data-edit="' + esc(r.id) + '">Edit' +
+         (left ? '<em>' + esc(left) + '</em>' : '') + '</button>';
+  }
+  if (isOwner())
+    h += '<button class="btn sm del owner" data-del="' + esc(r.id) + '">Delete</button>';
+  return h + '</div>';
 }
 
 /* ---------- the export tab ---------- */
@@ -464,6 +523,7 @@ function render(){
       : 'Site names fill in on their own · saved for the team · signed in as <b>' +
         esc((window.Access && Access.currentUser()) || '—') + '</b>';
   if (ACTIVE === 'Filed') fillThumbs();
+  if (ACTIVE === 'Add') fillDraftShots();
 }
 
 /* Signed links are asked for only for what is on screen, and only once. */
@@ -514,7 +574,14 @@ async function save(uid){
     const paths = {};
     const jobs = [['esn','esnPhoto'], ['full','esnFull'], ['om','omIpPhoto']];
     for (const [key, field] of jobs){
-      if (!d.files[key]) { paths[field] = null; continue; }
+      if (!d.files[key]){
+        /* Nothing new chosen. On an edit that means "leave it as it was" - the
+           path it already has is kept. Setting it to null here would delete the
+           picture off a record somebody only came back to fix a typo on. */
+        const had = d[field];
+        paths[field] = (had && had !== 'pending') ? had : null;
+        continue;
+      }
       d.busy = 'Uploading ' + key + '…'; render();
       paths[field] = await window.DB.esnUpload(d.siteId, key, d.files[key].blob, d.files[key].ext);
     }
@@ -650,6 +717,47 @@ function wire(){
   [...document.querySelectorAll('img[data-shot]')].forEach(im => im.onclick = async () => {
     const u = await linkFor(im.dataset.shot); if (!u) return;
     $('lightimg').src = u; $('lightbox').classList.add('on');
+  });
+
+  /* bring a filed record back to the Add tab to be corrected */
+  [...document.querySelectorAll('[data-edit]')].forEach(b => b.onclick = () => {
+    const r = FILED.find(x => x.id === b.dataset.edit); if (!r) return;
+    const open = DRAFTS.find(d => d.id === r.id);
+    if (!open){
+      const d = Object.assign(newDraft(), {
+        id: r.id, siteId: r.siteId, siteName: r.siteName, runOm: r.runOm,
+        /* the paths it already has, so the check passes and an untouched
+           picture is kept rather than wiped on save */
+        esnPhoto: r.esnPhoto, esnFull: r.esnFull, omIpPhoto: r.omIpPhoto,
+        cards: (r.cards && r.cards.length ? r.cards : [{ type:'', serial:'' }]).map(c => ({ ...c })),
+        note: r.note, editing: true, nameTouched: true
+      });
+      DRAFTS.unshift(d);
+      saveDrafts();
+    }
+    ACTIVE = 'Add'; buildTabs(); render();
+    toast('Brought back for correcting - save it again when you are done', 4000);
+  });
+
+  /* owner only, and it says exactly what is going */
+  [...document.querySelectorAll('[data-del]')].forEach(b => b.onclick = async () => {
+    const r = FILED.find(x => x.id === b.dataset.del); if (!r) return;
+    const shots = E.pathsOf(r).length;
+    const ok = confirm('Delete ' + r.siteId + (r.siteName ? ' - ' + r.siteName : '') + '?\n\n' +
+      'This removes the record and ' + (shots === 1 ? 'its screenshot' : 'all ' + shots + ' screenshots') +
+      ' from the store.\n\nIt cannot be undone.');
+    if (!ok) return;
+    b.disabled = true; b.textContent = 'Deleting…';
+    try {
+      await window.DB.esnDelete(r.id, E.pathsOf(r));
+      E.pathsOf(r).forEach(p => { delete LINKS[p]; });
+      DRAFTS = DRAFTS.filter(d => d.id !== r.id);
+      await loadFiled(); saveDrafts(); buildTabs(); render();
+      toast(r.siteId + ' deleted');
+    } catch(e){
+      b.disabled = false; b.textContent = 'Delete';
+      toast(speak(e).full, 7000);
+    }
   });
 
   const x = $('bXls');

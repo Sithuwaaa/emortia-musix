@@ -1,4 +1,4 @@
-/* bom.js — the BOM engine. No DOM, no globals it does not own, so the same
+/* bom.js - the BOM engine. No DOM, no globals it does not own, so the same
    file runs in the page and under node for the tests.
 
    The shape of a BOM here follows the July Target sheet: one row per material,
@@ -11,13 +11,13 @@
                         the BOM must not guess. RRU5910 x2 in the design is
                         RRU5910 x2 in the BOM.
 
-     from a rule        everything else — brackets, jumpers, earth, ties. These
+     from a rule        everything else - brackets, jumpers, earth, ties. These
                         follow the site: how many sectors, how many RRUs, how
                         tall the pole is, which vendor, how the site is fed.
 
    Every rule below was read off the July Target sheet, not invented. Each one
    carries the agreement it had against those 33 hand-built columns, so a rule
-   that only mostly holds says so. All of them are editable in the tool — the
+   that only mostly holds says so. All of them are editable in the tool - the
    sheet is the starting point, not the law. */
 
 (function(root, factory){
@@ -54,7 +54,7 @@ function compile(expr){
 
 /* What a site looks like to a rule.
 
-   The design sheet does not always say how a site is fed — a handful arrive
+   The design sheet does not always say how a site is fed - a handful arrive
    with the Tx plan column empty, and those are exactly the sites whose IF
    cable, MW bracket and surge arrestors nobody can work out. So the facts are
    correctable: whatever `patch` carries wins over the design, and the tool
@@ -84,7 +84,7 @@ function factsOf(site, patch){
   return f;
 }
 
-/* A site can be fed more than one way — "OFN/MW-HYB" is in the design sheet.
+/* A site can be fed more than one way - "OFN/MW-HYB" is in the design sheet.
    A rule asking for MW-HYB should fire on those, so match on containment. */
 function txMatches(want, has){
   if (!want || !want.length) return true;
@@ -114,7 +114,7 @@ function ruleFires(when, f){
 
 /* ---------------------------------------------------------- design lookups */
 
-/* Some BBU cells are not a model at all — "BB Removal Project", "Ericsson BB
+/* Some BBU cells are not a model at all - "BB Removal Project", "Ericsson BB
    removal". They are notes about the work, and nobody orders one. */
 const NOT_A_MODEL = /removal|project|^n\/?a$|^none$|^-+$/i;
 
@@ -147,7 +147,7 @@ function designCount(site, kind, model){
     return 0;
   }
   /* On an Ericsson site the BBU addition and the baseband card are the same
-     box — BB6631 is written in both columns. Counting the two columns
+     box - BB6631 is written in both columns. Counting the two columns
      separately would order it twice, so a model is looked for in both and
      counted once. */
   if (kind === 'bbu' || kind === 'card'){
@@ -181,8 +181,8 @@ function modelsIn(sites){
    cat    the heading it sits under in the July Target sheet
    name   exactly as that sheet writes it, so an exported BOM drops straight in
    unit   nos / set / m / ft / each
-   from   'design' — quantity is whatever the design says for that model
-          'rule'   — quantity comes from the first rule row that fires
+   from   'design' - quantity is whatever the design says for that model
+          'rule'   - quantity comes from the first rule row that fires
    rules  tried in order, first match wins. `off: true` means the row is there
           to be switched on by hand: the sheet uses it, but nothing in the
           design decides it (MW dish sizes, spare drums, one-off purchases).
@@ -192,11 +192,11 @@ function modelsIn(sites){
 const CATALOGUE = [
   /* ---- Brackets & Poles ---- */
   { cat:'Brackets & Poles', name:'Antenna Circle Bracket', unit:'set', from:'rule',
-    rules:[{ q:'1', when:{ off:true } }], note:'9 of 33 – depends on the antenna, decide it per site' },
+    rules:[{ q:'1', when:{ off:true } }], note:'9 of 33 - depends on the antenna, decide it per site' },
   { cat:'Brackets & Poles', name:'Enclouser Mounting Pole', unit:'nos', from:'rule',
     rules:[{ q:'1' }], fit:'33/33' },
   { cat:'Brackets & Poles', name:'Antenna GSM Pole (3m)', unit:'nos', from:'rule',
-    rules:[{ q:'sec', when:{ off:true } }], note:'9 of 33 – only where the antennas need their own poles' },
+    rules:[{ q:'sec', when:{ off:true } }], note:'9 of 33 - only where the antennas need their own poles' },
   { cat:'Brackets & Poles', name:'LP RRU Bracket', unit:'set', from:'rule',
     rules:[{ q:'1', when:{ maxRru:3 } }, { q:'2' }], fit:'33/33' },
   { cat:'Brackets & Poles', name:'MW Bracket (HUB)', unit:'nos', from:'rule',
@@ -206,7 +206,7 @@ const CATALOGUE = [
   { cat:'Brackets & Poles', name:'Wi-Bas Bracket for Lamp Pole', unit:'nos', from:'rule',
     rules:[{ q:'1', when:{ tx:['WiBAS'] } }], fit:'5/5' },
 
-  /* ---- GSM Antenna — the design names the model and the count ---- */
+  /* ---- GSM Antenna - the design names the model and the count ---- */
   { cat:'GSM Antenna', name:'SXPWL4WH-16/18-65/65-IVT-R1_10P', unit:'nos', from:'design',
     ref:{ kind:'ant', model:'SXPWL4WH-16/18-65/65-IVT-R1_10P' }, fit:'32/32' },
   { cat:'GSM Antenna', name:'New RVV2NPX310.21(5P)', unit:'nos', from:'design',
@@ -222,7 +222,7 @@ const CATALOGUE = [
   { cat:'IDU with Jumper', name:'Wi-Bas POE', unit:'nos', from:'rule',
     rules:[{ q:'2', when:{ tx:['WiBAS'] } }], fit:'5/5' },
 
-  /* ---- MW Antenna — the dish is a link decision, not a design-sheet one ---- */
+  /* ---- MW Antenna - the dish is a link decision, not a design-sheet one ---- */
   { cat:'MW Antenna', name:'0.3m (Huawei)', unit:'nos', from:'rule',
     rules:[{ q:'1', when:{ off:true, vendor:['Huawei'], tx:['MW-HYB'] } }], note:'dish size comes from the link plan' },
   { cat:'MW Antenna', name:'0.6m (Huawei)', unit:'nos', from:'rule',
@@ -238,7 +238,7 @@ const CATALOGUE = [
   { cat:'MW Antenna', name:'0.6m (Wi-Bas)', unit:'nos', from:'rule',
     rules:[{ q:'1', when:{ tx:['WiBAS'] } }], fit:'5/5' },
 
-  /* ---- ODU — the design does carry the band, so these follow it ---- */
+  /* ---- ODU - the design does carry the band, so these follow it ---- */
   { cat:'ODU', name:'23G-H (Huawei)', unit:'nos', from:'rule',
     rules:[{ q:'1', when:{ vendor:['Huawei'], tx:['MW-HYB'], band:['23G'] } }], fit:'3/3' },
   { cat:'ODU', name:'23G-L (Huawei)', unit:'nos', from:'rule',
@@ -264,7 +264,7 @@ const CATALOGUE = [
   { cat:'ODU', name:'10G-L (Wi-Bas)', unit:'nos', from:'rule',
     rules:[{ q:'1', when:{ tx:['WiBAS'] } }], fit:'3/5' },
 
-  /* ---- RRU with Bracket — straight from the design ---- */
+  /* ---- RRU with Bracket - straight from the design ---- */
   { cat:'RRU with Bracket', name:'RRU5910 (GL900)', unit:'nos', from:'design',
     ref:{ kind:'rru', model:'RRU5910' }, fit:'23/23' },
   { cat:'RRU with Bracket', name:'Radio 2271 (GL900)', unit:'nos', from:'design',
@@ -278,7 +278,7 @@ const CATALOGUE = [
 
   /* ---- Connectors ---- */
   { cat:'Connectors', name:'Y Connectors', unit:'nos', from:'rule',
-    rules:[{ q:'2', when:{ off:true } }], note:'6 of 33 – switch it on where the link needs one' },
+    rules:[{ q:'2', when:{ off:true } }], note:'6 of 33 - switch it on where the link needs one' },
   { cat:'Connectors', name:'IF Connectors', unit:'nos', from:'rule',
     rules:[{ q:'4', when:{ tx:['MW-HYB'] } }], fit:'17/17' },
   { cat:'Connectors', name:'RJ45 Ethernet Connectors', unit:'nos', from:'rule',
@@ -304,7 +304,7 @@ const CATALOGUE = [
   { cat:'Cables', name:'Fiber Cable (40m) - Ericsson', unit:'nos', from:'rule',
     rules:[{ q:'rru', when:{ vendor:['Ericsson'] } }], fit:'8/8' },
   { cat:'Cables', name:'Fiber Cable (70m)', unit:'nos', from:'rule',
-    rules:[{ q:'1', when:{ off:true } }], note:'4 of 33 – tall poles and long runs' },
+    rules:[{ q:'1', when:{ off:true } }], note:'4 of 33 - tall poles and long runs' },
   { cat:'Cables', name:'Fiber(60M)Huawei', unit:'nos', from:'rule', rules:[{ q:'1', when:{ off:true } }] },
   { cat:'Cables', name:'TX Fiber Pair (LC-LC)', unit:'nos', from:'rule',
     rules:[{ q:'1', when:{ tx:['MW-HYB'] } }], fit:'15/17' },
@@ -318,7 +318,7 @@ const CATALOGUE = [
   { cat:'Cables', name:'IF Cable', unit:'m', from:'rule',
     rules:[{ q:'80', when:{ tx:['MW-HYB'] } }], fit:'17/17' },
 
-  /* ---- Jumpers — the length pair follows the sector count, the connector
+  /* ---- Jumpers - the length pair follows the sector count, the connector
          pair follows the ports. Two sets, one of them switched on. ---- */
   { cat:'Jumpers', name:'32-32 (3m)', unit:'nos', from:'rule',
     rules:[{ q:'2*sec', when:{ off:true } }], fit:'7/7 when on', note:'for 4.3-10 to 4.3-10 ports' },
@@ -329,7 +329,7 @@ const CATALOGUE = [
   { cat:'Jumpers', name:'22-22 (5m)', unit:'nos', from:'rule',
     rules:[{ q:'4*sec' }], fit:'23/24' },
 
-  /* ---- BBU — the design names the cards ---- */
+  /* ---- BBU - the design names the cards ---- */
   { cat:'BBU', name:'Huawei BBU3910 with UPEU, FAN Card & Power Cable', unit:'nos', from:'design',
     ref:{ kind:'bbu', model:'BBU3910' }, fit:'23/23' },
   { cat:'BBU', name:'BBU5900 with UPEU, FAN Card & Power Cable', unit:'nos', from:'design',
@@ -368,7 +368,7 @@ const CATALOGUE = [
   { cat:'Local Purchased', name:'White Tie', unit:'nos', from:'rule', rules:[{ q:'50' }], fit:'33/33' },
   { cat:'Local Purchased', name:'Black tie (L)', unit:'nos', from:'rule', rules:[{ q:'300' }], fit:'33/33' },
   { cat:'Local Purchased', name:'Steel Tie (1Ft, 300mm)', unit:'nos', from:'rule',
-    rules:[{ q:'30', when:{ minHt:30 } }, { q:'28' }], fit:'22/33', note:'the loose one – it moves with how the pole is dressed' },
+    rules:[{ q:'30', when:{ minHt:30 } }, { q:'28' }], fit:'22/33', note:'the loose one - it moves with how the pole is dressed' },
   { cat:'Local Purchased', name:'Colour Tapes (Blue/White/Red)', unit:'each', from:'rule', rules:[{ q:'1' }], fit:'33/33' },
   { cat:'Local Purchased', name:'Colour Tapes (Yellow)', unit:'nos', from:'rule',
     rules:[{ q:'1', when:{ off:true } }], note:'10 of 33' },
@@ -421,7 +421,7 @@ function freshCatalogue(){
    radio the BOM quietly drops. */
 
 function growCatalogue(catalogue, sites){
-  /* One model, one line — whichever column of the design it came out of. That
+  /* One model, one line - whichever column of the design it came out of. That
      is what stops BB6631 being ordered as a BBU and again as a card. */
   const have = {};
   catalogue.forEach(it => { if (it.from === 'design' && it.ref) have[key(it.ref.model)] = true; });
@@ -432,7 +432,7 @@ function growCatalogue(catalogue, sites){
       if (have[key(model)]) return;
       const it = { cat: CAT_FOR[kind], name: model, unit:'nos', from:'design',
                    ref:{ kind: kind, model: model }, added:true,
-                   note:'added from the design – ' + found[kind][model] + ' site' + (found[kind][model] === 1 ? '' : 's') };
+                   note:'added from the design - ' + found[kind][model] + ' site' + (found[kind][model] === 1 ? '' : 's') };
       catalogue.push(it); added.push(it);
       have[key(model)] = true;
     });
@@ -446,7 +446,7 @@ function growCatalogue(catalogue, sites){
 
    `overrides` is keyed by site ID and holds two things: `facts`, which corrects
    what the design left blank or wrong, and `qty`, a quantity typed by hand for
-   one material. A typed quantity always wins — including a typed zero, which is
+   one material. A typed quantity always wins - including a typed zero, which is
    how you take a line off a site without touching the rule for every other. */
 function buildSite(site, catalogue, overrides){
   const own = (overrides || {})[norm(site.siteId)] || {};
@@ -486,7 +486,7 @@ function build(sites, catalogue, overrides){
   return (sites || []).map(s => buildSite(s, catalogue, overrides));
 }
 
-/* every material any site needs, with the run total — what you actually order */
+/* every material any site needs, with the run total - what you actually order */
 function rollup(built){
   const rows = {};
   built.forEach(b => b.lines.forEach(l => {

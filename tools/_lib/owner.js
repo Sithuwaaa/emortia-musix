@@ -1,4 +1,4 @@
-/* owner.js — kept only so the pages that load it keep loading.
+/* owner.js - kept only so the pages that load it keep loading.
 
    Owner mode used to be a passphrase typed after #owner in the address bar.
    It is an account now: sign in as one of the names in ACCESS_OWNERS and

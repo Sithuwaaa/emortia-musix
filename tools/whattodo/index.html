@@ -19,7 +19,7 @@
 <script src="../_lib/authgate.js"></script>
 <style>
   :root{
-    /* rose — the one accent the other tools had not taken, and it ties back to
+    /* rose - the one accent the other tools had not taken, and it ties back to
        the site's own burgundy */
     --navy:#2a121b;--navy-2:#3a1826;--accent:#d4547a;--accentB:#e87b9c;--accentD:#a63558;--accent-ink:#1d0610;
     --bg:#190c11;--card:#25131b;--card-2:#1f0f16;--line:#3a1e29;--line3:#502c3a;
@@ -37,7 +37,7 @@
   html,body{background:var(--bg);color:var(--text);
     font-family:'Hanken Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;line-height:1.5}
 
-  /* header — same shape as the other tools, its own colour */
+  /* header - same shape as the other tools, its own colour */
   .hdr{position:sticky;top:0;z-index:30;background:linear-gradient(180deg,var(--navy-2),var(--navy));
     color:#fff;padding:calc(env(safe-area-inset-top) + 12px) 16px 12px;display:flex;align-items:center;gap:10px;
     border-bottom:1px solid var(--line3);box-shadow:0 6px 26px rgba(0,0,0,.5);overflow:hidden}
@@ -211,7 +211,7 @@
   /* on a narrow screen the tool's own name is the one worth keeping */
 
   /* What a cramped header gives up, and in what order. The status pill is the
-     most expendable thing in it — it was taking half the bar and squeezing the
+     most expendable thing in it - it was taking half the bar and squeezing the
      tool name down to "Site Ac…" long before the site name joined it. */
   .hdr h1{flex:0 1 auto;min-width:7ch}
   .hdr .pill{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
@@ -236,7 +236,7 @@
 
 <script>
 /* ============================================================
-   What To Do — a first pass. Tasks live in the shared database so
+   What To Do - a first pass. Tasks live in the shared database so
    the same list shows on every device, and ticking one off on the
    phone clears it from the laptop.
    ============================================================ */
@@ -272,7 +272,7 @@ function whenText(due){
 /* ---------- the month ----------
    A job with a deadline belongs on a date, so the calendar is the first thing
    you see. Jobs without one cannot be drawn on a grid, so they are listed
-   under it rather than quietly dropped — undated is not the same as done. */
+   under it rather than quietly dropped - undated is not the same as done. */
 const DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 let CAL_M = null;      // the first of the month on screen
 let CAL_SEL = null;    // the day picked out, as yyyy-mm-dd
@@ -311,12 +311,12 @@ function refreshPill(){
 }
 
 /* ============================================================
-   Reminders — every 15 minutes while this page is open.
+   Reminders - every 15 minutes while this page is open.
 
    Worth being straight about the limit: with no server pushing to
    your phone, a browser can only remind you while the tab is
    alive. Closing it stops the reminders. Making them arrive with
-   the tab shut needs push, which needs a server — a later job.
+   the tab shut needs push, which needs a server - a later job.
    ============================================================ */
 const EVERY = 15 * 60 * 1000;
 const REMIND_KEY = 'whattodo_remind';
@@ -329,7 +329,7 @@ function canNotify(){ return typeof Notification !== 'undefined'; }
    Synthesised rather than a file: nothing to download, works offline, and no
    sound sitting in the repo. A browser will not let a page make noise until
    it has been interacted with, so the context is opened on the click that
-   turns reminders on — which is also why that click plays a short preview.
+   turns reminders on - which is also why that click plays a short preview.
    Audio is not throttled the way animation is, so this still sounds with the
    tab in the background. It cannot sound with the tab closed. */
 let AC = null, MASTER = null;
@@ -361,7 +361,7 @@ function audioCtx(){
 
    What makes a bell sound like struck metal rather than an organ is that its
    partials are not whole multiples of the note. A founder tunes them to the
-   old ratios — hum an octave below, then prime, tierce a minor third above
+   old ratios - hum an octave below, then prime, tierce a minor third above
    (which is why a big bell always sounds sombre), quint, and nominal an octave
    up. The high inharmonic ones give the clang and die away quickly while the
    hum hangs on for seconds. Each is detuned a hair so they beat against each
@@ -372,7 +372,7 @@ function audioCtx(){
 const BELL = [
   { r:0.50, g:1.00, d:5.0 },   // hum
   { r:1.00, g:0.90, d:4.2 },   // prime
-  { r:1.20, g:0.55, d:2.6 },   // tierce — the minor third
+  { r:1.20, g:0.55, d:2.6 },   // tierce - the minor third
   { r:1.50, g:0.40, d:2.0 },   // quint
   { r:2.00, g:0.62, d:1.7 },   // nominal
   { r:2.52, g:0.24, d:1.0 },
@@ -421,12 +421,12 @@ function strikePartials(ctx, at, base, level, hold){
 }
 /* ---------- Big Ben ----------
    Westminster Quarters. The tune lives on four quarter bells in E major, and
-   the hour is struck on the great bell — the one actually named Big Ben,
+   the hour is struck on the great bell - the one actually named Big Ben,
    which sounds E an octave and a half below.
 
    The phrases are the real ones. At the hour the tower plays four of them,
    sixteen strokes, and only then strikes the hour. A quarter past gets one
-   phrase — which happens to be exactly what this tool wants for a fifteen
+   phrase - which happens to be exactly what this tool wants for a fifteen
    minute nudge, so the quarter chime is the nudge and the full hour sequence
    is the alarm. */
 const WQ = { B: 246.94, E: 329.63, Fs: 369.99, Gs: 415.30 };   // B3 E4 F#4 G#4
@@ -437,7 +437,7 @@ const WQ_HOUR = [
   ['Gs','E','Fs','B'],
   ['B','Fs','Gs','E']
 ];
-const GREAT_HZ = 82.41;          // E2 — the hour bell
+const GREAT_HZ = 82.41;          // E2 - the hour bell
 const NOTE_GAP = 1.15, PHRASE_GAP = 2.05, HOUR_GAP = 4.6;
 
 /* The quarter bells are smaller: brighter, and they let go sooner. */
@@ -463,7 +463,7 @@ function startAlarm(ms){
 
   /* Scheduled on the audio clock rather than by timer, because a melody drifts
      audibly if each note waits on setInterval. Every node is kept so the whole
-     lot can be cut off — otherwise Stop would leave a minute of Westminster
+     lot can be cut off - otherwise Stop would leave a minute of Westminster
      already committed and no way to call it back. */
   const t0 = ctx.currentTime + 0.06, endAt = t0 + span;
   let t = t0;
@@ -495,7 +495,7 @@ function stopAlarm(quiet){
 function alarmLeft(){
   return Math.max(0, Math.ceil((alarmEnds - Date.now()) / 1000)) + 's';
 }
-/* The quarter chime — one phrase, which is literally what a clock tower plays
+/* The quarter chime - one phrase, which is literally what a clock tower plays
    at a quarter past, and this nudges every fifteen minutes. */
 function chime(){
   const ctx = audioCtx(); if (!ctx) return;
@@ -582,7 +582,7 @@ function taskHTML(t){
     '<div class="when">' + (w.state === 'over' ? '<b>' + esc(w.text) + '</b>' : esc(w.text)) + '</div>' +
     '</div></div>';
 }
-/* The control strip. Stop sits here whether or not anything is ringing — a
+/* The control strip. Stop sits here whether or not anything is ringing - a
    button you have to go looking for once the bell has started is no use, and
    the old Test button in this spot only ever made more noise. */
 function remindBar(){
@@ -594,7 +594,7 @@ function remindBar(){
       ? '<button class="btn stop" id="stopBtn">⏹ Stop alarm · <span id="almLeft">' + alarmLeft() + '</span></button>'
       : '<button class="btn" id="stopBtn" disabled title="Nothing is ringing">⏹ Stop alarm</button>') +
     (canNotify() && Notification.permission === 'denied'
-      ? '<span class="note">notifications blocked – reminders show on the page</span>' : '') +
+      ? '<span class="note">notifications blocked - reminders show on the page</span>' : '') +
     '<span class="next" id="nextIn">' + countdown() + '</span></div>';
 }
 function renderCalendar(){
@@ -713,7 +713,7 @@ function render(){
     add.onclick = async () => {
       /* Every field is read here, before anything is awaited. Signing in and
          saving both take time, and a realtime update arriving meanwhile
-         redraws this view — reaching back for an input afterwards would be
+         redraws this view - reaching back for an input afterwards would be
          reaching for a node that no longer exists. */
       const title = $('tTitle').value.trim();
       const note = $('tNote').value.trim();
@@ -739,7 +739,7 @@ function render(){
   renderFooter();
 }
 function renderFooter(){
-  const lead = window.DB.configured() ? 'Shared across every device' : 'Not syncing yet – anon key missing';
+  const lead = window.DB.configured() ? 'Shared across every device' : 'Not syncing yet - anon key missing';
   let h = lead + ' · reminders run while this page is open';
   h += '<br><a href="#" id="acct">…</a>';
   document.querySelector('footer').innerHTML = h;
@@ -762,7 +762,7 @@ function renderFooter(){
   await refresh();
   if (REMIND) setRemind(true); else render();
   window.DB.onAuth(() => renderFooter());
-  // someone ticked one off elsewhere — drop it here too
+  // someone ticked one off elsewhere - drop it here too
   window.DB.subscribeTodos(refresh);
 })();
 </script>

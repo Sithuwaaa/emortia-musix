@@ -20,7 +20,7 @@
 <script src="parser.js"></script>
 <style>
   :root{
-    /* moss — the one cool green the other tools had not taken */
+    /* moss - the one cool green the other tools had not taken */
     --navy:#1c2a13;--navy-2:#26391a;--accent:#8fae3e;--accentB:#a9c957;--accentD:#6b8a24;--accent-ink:#0f1607;
     --bg:#111a0d;--card:#1a2614;--card-2:#152010;--line:#2b3d1f;--line3:#3f5730;
     --text:#eef4e6;--muted:#9aab88;--zebra:rgba(255,255,255,.018);
@@ -210,8 +210,8 @@
    are known from the hand-built BOM.
 
    Two things are stored, and they are stored differently on
-   purpose. The batch is large and disposable — drop a newer
-   workbook and it is replaced — so it goes to IndexedDB. The
+   purpose. The batch is large and disposable - drop a newer
+   workbook and it is replaced - so it goes to IndexedDB. The
    radio register is small, hand-corrected, and must outlive every
    batch, so it goes to localStorage where it is easy to see and
    hard to lose.
@@ -461,7 +461,7 @@ function renderRadios(){
       '<span class="tag">' + models.length + ' models</span></h2>' +
     '<p class="note" style="margin-bottom:14px">What each radio carries. This is what turns three cells into one box: ' +
       'an RRU5909 written under G900, L900 and L2100 is one unit on the pole, not three. ' +
-      'Read from the batch to begin with, then it is yours – tick what a model really serves and it stays that way ' +
+      'Read from the batch to begin with, then it is yours - tick what a model really serves and it stays that way ' +
       'through every workbook after.</p>';
 
   if (!models.length) return h + '<div class="empty"><div class="big">📻</div>Nothing yet.<br>Read a workbook and every radio in it lands here.</div></div>';
@@ -495,7 +495,7 @@ function renderExport(){
       (flagged ? ' <b>' + flagged + '</b> of them disagree with the sheet’s own totals; they still go, carrying their flags.' : '') +
     '</p>' +
     '<div class="exrow"><div><div class="exname">Excel</div>' +
-      '<div class="exmeta">five sheets – sites, sectors, radios, antennas, BBU – one row per thing</div></div>' +
+      '<div class="exmeta">five sheets - sites, sectors, radios, antennas, BBU - one row per thing</div></div>' +
       '<button class="btn on" id="bXls">⬇ Excel</button></div>' +
     '<div class="exrow"><div><div class="exname">JSON</div>' +
       '<div class="exmeta">emortia.design-extract/2, register included</div></div>' +
@@ -504,7 +504,7 @@ function renderExport(){
       '<div class="exmeta">' + Object.keys(REG).length + ' radios and what they carry</div></div>' +
       '<button class="btn" id="bReg">⬇ JSON</button></div>' +
     '<div class="exrow"><div><div class="exname">Send it to the BOM Builder</div>' +
-      '<div class="exmeta">the radios, antennas and cards go across as they are – no file in between</div></div>' +
+      '<div class="exmeta">the radios, antennas and cards go across as they are - no file in between</div></div>' +
       '<button class="btn" id="bBom">→ BOM Builder</button></div>' +
     '</div>';
 }
@@ -617,7 +617,7 @@ function wire(){
     if (!name) return;
     if (REG[name]){ toast('Already in the register'); return; }
     REG[name] = { model: name, serves: [], seen: 0, vendors: [], source: 'yours' };
-    saveReg(); buildTabs(); render(); toast(name + ' added – now tick what it carries');
+    saveReg(); buildTabs(); render(); toast(name + ' added - now tick what it carries');
   };
   const rr = $('regReset');
   if (rr) rr.onclick = () => {

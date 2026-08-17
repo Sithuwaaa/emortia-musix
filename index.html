@@ -2612,22 +2612,42 @@ class Component extends DCLogic {
     if(this.state.toolsIn) return React.createElement('div',{style:{display:'none'}});
     const A = window.Access;
     const err = this.state.accErr;
-    const field = (id, label, type, auto) => React.createElement('div',{key:id},
-      React.createElement('label',{htmlFor:id, style:{display:'block',fontFamily:"'Space Mono',monospace",
-        fontSize:'10px',letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--mute)',margin:'0 0 5px'}}, label),
-      React.createElement('input',{id, type:type||'text', autoComplete:auto,
-        autoCapitalize:'none', spellCheck:false,
+    const pw = this.state.accShowPw;
+    const field = (id, label, type, auto) => {
+      const isPw = type === 'password';
+      const input = React.createElement('input',{id, type: isPw ? (pw ? 'text' : 'password') : (type||'text'),
+        autoComplete:auto, autoCapitalize:'none', spellCheck:false,
         style:{width:'100%',boxSizing:'border-box',background:'rgba(23,13,16,0.6)',color:'var(--text)',
           border:'1px solid var(--line2)',borderRadius:'10px',padding:'11px 12px',fontSize:'14.5px',
-          fontFamily:'inherit',outline:'none',marginBottom:'13px'}}));
+          fontFamily:'inherit',outline:'none',marginBottom:'13px',
+          paddingRight: isPw ? '46px' : '12px'}});
+      /* an eye that shows what pressing it will do: open while hidden,
+         struck through while showing */
+      const eye = !isPw ? null : React.createElement('button',{type:'button',
+        'aria-label': pw ? 'Hide password' : 'Show password',
+        title: pw ? 'Hide password' : 'Show password',
+        onClick:()=>this.setState({accShowPw:!pw}),
+        style:{position:'absolute',right:'6px',top:'17px',background:'none',border:'none',
+          padding:'7px',cursor:'pointer',color:'var(--mute)',lineHeight:0,borderRadius:'8px'}},
+        React.createElement('svg',{width:19,height:19,viewBox:'0 0 24 24',fill:'none',
+          stroke:'currentColor',strokeWidth:1.9,strokeLinecap:'round'},
+          React.createElement('path',{d:'M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z'}),
+          React.createElement('circle',{cx:12,cy:12,r:2.6}),
+          pw ? React.createElement('path',{d:'M3.5 3.5l17 17'}) : null));
+      return React.createElement('div',{key:id, style:{position:'relative'}},
+        React.createElement('label',{htmlFor:id, style:{display:'block',fontFamily:"'Space Mono',monospace",
+          fontSize:'10px',letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--mute)',margin:'0 0 5px'}}, label),
+        input, eye);
+    };
 
     const up = this.state.accMode === 'up';
     const submit = async (e)=>{
       e.preventDefault();
       const u=(document.getElementById('siteAccUser')||{}).value;
+      const m=(document.getElementById('siteAccMail')||{}).value;
       const p=(document.getElementById('siteAccPass')||{}).value;
       this.setState({accErr:'', accOk:'', accBusy:true});
-      const r = up ? await A.signUp(u, p) : await A.signIn(u, p);
+      const r = up ? await A.signUp(u, m, p) : await A.signIn(u, p);
       if(r.ok){
         A.applyOwner();
         this.setState({toolsIn:true, isOwner:A.isOwner(), accErr:'', accOk:'', accBusy:false});
@@ -2651,10 +2671,12 @@ class Component extends DCLogic {
         border:'1px solid var(--line2)',borderRadius:'11px',padding:'3px',marginBottom:'16px'}},
         seg('in','Sign in'), seg('up','Sign up')),
       React.createElement('p',{style:{color:'var(--dim)',fontSize:'13.5px',lineHeight:1.55,margin:'0 0 18px'}},
-        up ? 'Use your own email address — it is the only way to get a password reset later. A bare name works too.'
-           : 'These are work tools, not public ones. Signing in keeps you in for ' + (A ? A.days : 7) + ' days on this device.'),
+        up ? 'Pick a username to sign in with. The address is only for confirming the account and resetting a password.'
+           : 'These are work tools, not public ones. Sign in to open them.'),
       React.createElement('form',{onSubmit:submit},
-        field('siteAccUser','Username or email','text','username'),
+        field('siteAccUser','Username','text','username'),
+        /* asked once, on the way in; after that the username is enough */
+        up ? field('siteAccMail','Email','email','email') : null,
         field('siteAccPass','Password','password', up?'new-password':'current-password'),
         err ? React.createElement('p',{style:{color:'var(--accentB)',fontSize:'13px',margin:'0 0 12px',lineHeight:1.5}}, err) : null,
         this.state.accOk ? React.createElement('p',{style:{color:'#7fdc8a',fontSize:'13px',margin:'0 0 12px',lineHeight:1.5}}, this.state.accOk) : null,

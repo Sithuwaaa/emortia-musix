@@ -1,4 +1,4 @@
-/* bom.test.js — the engine against a BOM that was built by hand.
+/* bom.test.js - the engine against a BOM that was built by hand.
 
      node tools/bom/bom.test.js
      node tools/bom/bom.test.js MU5051      one site, side by side
@@ -8,7 +8,7 @@
    also in the design batch. So the test is the honest one: feed the design
    through the engine and see whether it reaches the same numbers a person did.
 
-   Perfect agreement is not the goal and would be suspicious — a few materials
+   Perfect agreement is not the goal and would be suspicious - a few materials
    are decided on site, not on paper. What matters is that the ones the design
    actually determines (radios, antennas, BBU, and anything that scales with
    sectors or RRUs) come out exact. */
@@ -40,7 +40,7 @@ function loadSheetJS(){
   throw new Error('SheetJS not found. Pass --sheetjs <path to xlsx.full.min.js>.');
 }
 
-/* Neither workbook is in the repository — everything here is served, and
+/* Neither workbook is in the repository - everything here is served, and
    neither a Dialog design sheet nor a costed BOM is something to publish.
    Not having them means the tests could not run: not a pass, not a failure. */
 if (!BOM_BOOK || !DESIGN_BOOK){
@@ -119,7 +119,7 @@ if (one){
 
    The fair question is not "does every cell match". The July Target sheet is a
    delivery list, so a site that already had its jumpers sits at zero even
-   though the site plainly needs them — eight sites are like that. Counting
+   though the site plainly needs them - eight sites are like that. Counting
    those as errors would be measuring the wrong thing.
 
    So the number that matters is: where the hand sheet ordered a material and
@@ -160,7 +160,7 @@ console.log(path.basename(DESIGN_BOOK) + ' · ' + design.length + ' designed sit
 console.log(pairs.length + ' sites are in both. ' + grew.length + ' models the reference did not know were added.\n');
 
 /* ---- the two sites with independently known answers ---- */
-console.log('MU5051 — 3 sectors, 5 RRUs, 20m, Huawei, MW-HYB 18G');
+console.log('MU5051 - 3 sectors, 5 RRUs, 20m, Huawei, MW-HYB 18G');
 {
   const b = built['MU5051'];
   is('RRU5910 (GL900)',                  qtyOf(b, 'RRU5910 (GL900)'), 2);
@@ -177,7 +177,7 @@ console.log('MU5051 — 3 sectors, 5 RRUs, 20m, Huawei, MW-HYB 18G');
   is('Ericsson alarm cable stays out',   qtyOf(b, 'Alarm Cable (For Ericsson Sites)'), 0);
 }
 
-console.log('\nKI5032 — 4 sectors, 6 RRUs');
+console.log('\nKI5032 - 4 sectors, 6 RRUs');
 {
   const b = built['KI5032'];
   is('sectors',                        b.site.sec, 4);
@@ -204,7 +204,7 @@ console.log('\nthe radios and antennas come from the design, never from a rule')
   is('every radio and antenna carried through exactly', wrong.slice(0, 3), []);
 
   /* The hand sheet writes one antenna model per site. The design is finer than
-     that — BD5071 and HA5039 carry a different antenna on sector three — so
+     that - BD5071 and HA5039 carry a different antenna on sector three - so
      the comparison that means anything is the count, not the model split. */
   let antOff = [];
   pairs.forEach(p => {
@@ -285,7 +285,7 @@ console.log('\nwhere the design says nothing, the tool says so rather than guess
 console.log('\nwhat the design writes twice is ordered once');
 {
   /* On an Ericsson site BB6631 is both the BBU addition and the baseband card
-     — one box, written in two columns. */
+     - one box, written in two columns. */
   const eri = design.find(s => (s.bbuAddition || []).includes('BB6631') &&
                                (s.basebandCards || []).includes('BB6631'));
   is('a site that writes BB6631 in both columns exists', !!eri, true);

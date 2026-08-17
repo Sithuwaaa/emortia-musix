@@ -1,7 +1,7 @@
 /* A sign-in gate for Supabase Auth.
 
    Worth being clear about why this exists alongside the old passphrase gate in
-   owner.js. That one only decides whether edit controls are drawn — it is a
+   owner.js. That one only decides whether edit controls are drawn - it is a
    client-side check and a determined person can walk past it. It stays, because
    hiding the buttons from casual visitors is still worth doing.
 
@@ -92,7 +92,7 @@
 
   /* Session if there is one, otherwise ask. */
   async function require(){
-    if (!window.DB || !window.DB.configured()) throw new Error('Supabase is not configured yet — add the anon key to tools/_lib/supabase-config.js.');
+    if (!window.DB || !window.DB.configured()) throw new Error('Supabase is not configured yet - add the anon key to tools/_lib/supabase-config.js.');
     return (await window.DB.session()) || await signIn();
   }
 

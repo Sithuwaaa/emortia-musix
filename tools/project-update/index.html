@@ -20,7 +20,7 @@
 <script src="../_lib/authgate.js"></script>
 <style>
   :root{
-    /* teal – the site's Tools colour; this is the flagship tool */
+    /* teal - the site's Tools colour; this is the flagship tool */
     --navy:#0f2126;--navy-2:#16323a;--accent:#1f97a8;--accentB:#3fbdd0;--accentD:#12707e;--accent-ink:#04191d;
     --bg:#0c1619;--card:#142428;--card-2:#0f1d21;--line:#1e363c;--line3:#2c4c54;
     --text:#e9f4f6;--muted:#8fa8ad;--zebra:rgba(255,255,255,.018);--rowhover:rgba(31,151,168,.10);
@@ -61,7 +61,7 @@
     font-size:15px;cursor:pointer;flex-shrink:0;transition:border-color .2s ease,transform .2s ease}
   .theme:hover{border-color:var(--accentB);transform:scale(1.06)}
 
-  /* dataset switcher – the first thing on the page */
+  /* dataset switcher - the first thing on the page */
   .dsbar{position:sticky;top:55px;z-index:26;display:flex;gap:8px;padding:12px 14px 10px;
     background:var(--bg);border-bottom:1px solid var(--line);flex-wrap:wrap}
   .dsbtn{flex:1;min-width:160px;text-align:left;border:1px solid var(--line);background:var(--card);
@@ -105,7 +105,7 @@
   .barrow{display:grid;grid-template-columns:132px 1fr 44px;gap:10px;align-items:center;font-size:13px}
   .barrow .lb{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .bartrack{height:9px;border-radius:999px;background:var(--card-2);overflow:hidden;border:1px solid var(--line)}
-  /* display:block matters – as a span it stays inline, and then width/height are ignored.
+  /* display:block matters - as a span it stays inline, and then width/height are ignored.
      The real width is the base style, not the animation's end state: if animations are
      throttled (background tab, reduced motion) the bar must still show the right fill. */
   .barfill{display:block;height:100%;border-radius:999px;background:var(--b,var(--accent));width:var(--w,0);
@@ -218,7 +218,7 @@
   /* on a narrow screen the tool's own name is the one worth keeping */
 
   /* What a cramped header gives up, and in what order. The status pill is the
-     most expendable thing in it — it was taking half the bar and squeezing the
+     most expendable thing in it - it was taking half the bar and squeezing the
      tool name down to "Site Ac…" long before the site name joined it. */
   .hdr h1{flex:0 1 auto;min-width:7ch}
   .hdr .pill{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
@@ -245,14 +245,14 @@
 <script src="../_lib/theme.js" defer></script>
 <script>
 /* ============================================================
-   Project Update – dashboard + Excel-style viewer.
+   Project Update - dashboard + Excel-style viewer.
    Data comes from the workbook committed in this folder; in owner
    mode a new workbook can be uploaded, which replaces the whole
    stored database (kept in IndexedDB, same pattern as Site Access).
    ============================================================ */
 /* Two datasets, switched from the bar at the top of the page.
    Each keeps its own stored copy, so uploading one never touches the other.
-   `files` lists the workbook names to try in this folder – the first that
+   `files` lists the workbook names to try in this folder - the first that
    loads wins, so a committed file keeps working if it gets renamed. */
 const DATASETS = [
   { key:'ongoing', label:'Ongoing', hint:'current batch in progress',
@@ -394,8 +394,8 @@ function refreshPill(){
   const plan = BOOK && BOOK['Full Plan'];
   $('pill').innerHTML = '<b>' + (plan ? plan.rows.length : 0) + '</b> sites · ' + ds().label + (SAVED ? ' · updated ' + SAVED : '');
 }
-/* Each dataset carries its own sheet list — Ongoing has eleven, Master eight
-   with different names — so the tabs are built from that book's order and
+/* Each dataset carries its own sheet list - Ongoing has eleven, Master eight
+   with different names - so the tabs are built from that book's order and
    never from a fixed set. */
 function visibleSheets(){
   return (ORDER || []).filter(n => !HIDDEN.includes(n) && BOOK[n] && BOOK[n].rows && BOOK[n].rows.length);
@@ -456,8 +456,8 @@ const SITE_ID_RE = /^[A-Z]{2}\d{3,5}$/;
 const FAR_COL_RE = /far\s*end/i;
 
 /* Every sheet in the book, not two of them. A site turns up wherever the work
-   took it — the MW removal tracker, the new locations, the AP data, the CR
-   update — and one that needs defence clearance needs it just as much when it
+   took it - the MW removal tracker, the new locations, the AP data, the CR
+   update - and one that needs defence clearance needs it just as much when it
    is written on a tab nobody thought to look at.
 
    Columns are found by what they hold rather than by what they are called, so
@@ -512,7 +512,7 @@ function harvestSites(){
       });
     });
   }
-  /* Ours is ours, even where it also appears as somebody's far end — but the
+  /* Ours is ours, even where it also appears as somebody's far end - but the
      tabs it turned up on are worth keeping either way. */
   own.forEach((o, id) => {
     const hb = hubs.get(id);
@@ -624,7 +624,7 @@ function renderDashboard(){
     h += '<div class="kpi" style="--k:' + b.c + '"><div class="k">' + esc(b.label) + '</div><div class="v">' + counts[b.k] + '</div><div class="s">' + esc(b.sub) + '</div></div>'; });
   h += '</div>';
 
-  /* Overall completion – a site part-way through still counts for something,
+  /* Overall completion - a site part-way through still counts for something,
      so the green bar is weighted by how far each stage has got. "On air" is
      shown underneath as the strict figure. */
   const WEIGHT = { onAir:1, airPending:.9, partial:.8, commissioning:.75, wip:.5, tx:.25, mobilize:.1,
@@ -657,9 +657,9 @@ function renderDashboard(){
   if (!mod) h += '<div class="note">Couldn’t reach the Site Access data to check permissions.</div>';
   else if (!mod.list.length)
     h += '<div class="note">No defence permissions found. Every site in the plan is looked up in the Site Access list, and so is ' +
-         'the far end of each MW hop – clearance can sit on either.</div>';
+         'the far end of each MW hop - clearance can sit on either.</div>';
   else {
-    h += '<div class="note" style="margin-bottom:12px">These need defence clearance before access – plan lead time for them and for anything they serve.</div><div class="modlist">';
+    h += '<div class="note" style="margin-bottom:12px">These need defence clearance before access - plan lead time for them and for anything they serve.</div><div class="modlist">';
     mod.list.forEach(m => {
       h += '<div class="modcard"><div class="id">' + esc(m.id) + '</div><div class="nm">' + esc(m.name) + '</div>' +
            '<span class="perm">🛡 ' + esc(m.perm) + '</span>' +
@@ -736,7 +736,7 @@ function renderDashboard(){
 /* ---------- taking the data away ----------
    Reading a table on a page is one thing; doing anything with it is another.
    Both exports write a real .xlsx rather than a CSV, so the Sinhala names and
-   the leading zeros on a site id survive the trip — a spreadsheet opening a
+   the leading zeros on a site id survive the trip - a spreadsheet opening a
    CSV will happily turn KI0023 into a number and a date into whatever it
    fancies. */
 function xlName(n, used){
@@ -796,7 +796,7 @@ function renderExport(){
 
   let h = '<div class="panel"><h2><span class="dot"></span>Take the data away' +
     '<span class="tag">' + ds().label + (SAVED ? ' · updated ' + SAVED : '') + '</span></h2>' +
-    '<div class="note" style="margin-bottom:14px">Real Excel files, not CSV – Sinhala names survive the trip ' +
+    '<div class="note" style="margin-bottom:14px">Real Excel files, not CSV - Sinhala names survive the trip ' +
     'and nothing decides a site ID like KI0023 is a number.</div>' +
     '<div class="exlist">';
 
@@ -832,7 +832,7 @@ function renderGrid(name){
   let h = '<div class="toolbar"><div class="search"><span class="ic">⌕</span>' +
     '<input id="q" type="search" placeholder="Filter rows…" value="' + esc(QUERY) + '" autocomplete="off" spellcheck="false"></div>' +
     '<button class="btn' + (WRAP ? ' on' : '') + '" id="wrapBtn">Wrap text</button>' +
-    // what you are looking at, then the lot — a filtered view is usually the
+    // what you are looking at, then the lot - a filtered view is usually the
     // reason someone wants the file at all
     '<button class="btn" id="expSheet" title="This sheet as you have filtered it">⬇ Excel · this sheet' +
       (parts.length ? ' (' + shown.length + ')' : '') + '</button>' +
@@ -872,7 +872,7 @@ $('file').addEventListener('change', async e => {
   let s;
   try { s = await window.AuthGate.require(); }
   catch (err){ toast(err.message, 7000); return; }
-  if (!s){ toast('Cancelled – nothing was published'); return; }
+  if (!s){ toast('Cancelled - nothing was published'); return; }
 
   const book = { sheets: p.sheets, order: p.order,
                  savedAt: new Date().toISOString().slice(0, 10), bytes: buf.byteLength };
@@ -891,9 +891,9 @@ $('file').addEventListener('change', async e => {
 
 function renderFooter(){
   const where = ORIGIN === 'server' ? 'shared across every device'
-              : ORIGIN === 'bundled' ? 'nothing published yet – showing <b>' + esc(SOURCE) + '</b> from this folder'
+              : ORIGIN === 'bundled' ? 'nothing published yet - showing <b>' + esc(SOURCE) + '</b> from this folder'
               : 'offline copy';
-  const lead = window.DB.configured() ? where : 'not syncing yet – anon key missing';
+  const lead = window.DB.configured() ? where : 'not syncing yet - anon key missing';
   const bits = ['<b>' + esc(ds().label) + '</b> · ' + lead];
   if (window.IS_OWNER){
     bits.push('<a href="#" id="upBtn">Update ' + esc(ds().label) + ' from Excel…</a>' +

@@ -34,7 +34,7 @@ function buildIndex(){
   ROWS.forEach(r=>{if(r[idc])IDX.byId[String(r[idc]).toLowerCase()]=r});
 }
 /* A tool opts into the shared database by naming a dataset key in its config.
-   Without one — Site Data, for now — nothing here changes and the old
+   Without one - Site Data, for now - nothing here changes and the old
    device-local path runs exactly as before. */
 const SYNCED = !!(C.syncKey && window.DB);
 function applyDataset(ds){
@@ -246,7 +246,7 @@ $('file').addEventListener('change', async e=>{
    chunk loop with a policy error. */
 async function publishDataset(cols,rows,what){
   const s=await window.AuthGate.require();
-  if(!s){ toast('Cancelled — nothing was published'); return; }
+  if(!s){ toast('Cancelled - nothing was published'); return; }
   toast('Publishing '+rows.length.toLocaleString()+' '+C.unit+'…',60000);
   await window.DB.publish(C.syncKey,cols,rows,(done,total)=>{
     if(done<total) toast('Publishing… '+done.toLocaleString()+' of '+total.toLocaleString(),60000);
@@ -259,14 +259,14 @@ let dq; q.addEventListener('input',()=>{clearTimeout(dq);dq=setTimeout(route,120
 $('clr').onclick=()=>{q.value='';q.focus();route()};
 addEventListener('keydown',e=>{if(e.key==='/'&&document.activeElement!==q){e.preventDefault();q.focus()}});
 
-/* footer – the data-editing links show only in owner mode (see _lib/owner.js) */
+/* footer - the data-editing links show only in owner mode (see _lib/owner.js) */
 const editLinks = window.IS_OWNER
   ? '<br><a href="#" id="refresh">Update data from Excel…</a>' +
     (SYNCED ? ' · <a href="#" id="acct" style="color:var(--muted)">…</a>'
             : ' · <a href="#" id="reset" style="color:var(--muted)">reset to bundled</a>')
   : '';
 const lead = SYNCED
-  ? (window.DB.configured() ? 'Shared across every device · ' : 'Not syncing yet — anon key missing · ')
+  ? (window.DB.configured() ? 'Shared across every device · ' : 'Not syncing yet - anon key missing · ')
   : 'Runs entirely on your device · ';
 document.querySelector('main').insertAdjacentHTML('beforeend',
   '<footer>'+lead+C.source+editLinks+'</footer>');

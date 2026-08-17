@@ -21,7 +21,7 @@
 <script src="bom.js"></script>
 <style>
   :root{
-    /* brass — warm, and the one the other tools have not taken */
+    /* brass - warm, and the one the other tools have not taken */
     --navy:#2b1f0c;--navy-2:#3a2a10;--accent:#d99b2e;--accentB:#f0bb55;--accentD:#a8721a;--accent-ink:#201604;
     --bg:#1b1408;--card:#261d0e;--card-2:#20180b;--line:#3e2f16;--line3:#584324;
     --text:#f5eddf;--muted:#b0a086;--zebra:rgba(255,255,255,.018);
@@ -216,11 +216,11 @@
    Takes what the Design Extractor read and turns it into
    something you can order. The counting lives in bom.js, which
    knows nothing about this page; bom.test.js holds it against
-   the July Target sheet — 33 sites someone costed by hand.
+   the July Target sheet - 33 sites someone costed by hand.
 
    Three things are stored, and they are stored differently on
-   purpose. The sites are large and replaceable — send a newer
-   batch across and they are replaced — so they go to IndexedDB.
+   purpose. The sites are large and replaceable - send a newer
+   batch across and they are replaced - so they go to IndexedDB.
    The catalogue and the quantities you have typed are small,
    hand-corrected, and must outlive every batch, so they go to
    localStorage where they are easy to see and hard to lose.
@@ -229,8 +229,8 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 const SITES_KEY  = 'bom_sites_v1';       // IndexedDB, via db.js
-const INBOX_KEY  = 'bom_inbox_v1';       // IndexedDB — what Design Extractor sent
-const DESIGN_KEY = 'design_batch_v1';    // IndexedDB — Design Extractor's own batch
+const INBOX_KEY  = 'bom_inbox_v1';       // IndexedDB - what Design Extractor sent
+const DESIGN_KEY = 'design_batch_v1';    // IndexedDB - Design Extractor's own batch
 const CAT_KEY    = 'bom_catalogue_v1';   // localStorage
 const OVR_KEY    = 'bom_overrides_v1';   // localStorage
 
@@ -268,7 +268,7 @@ function loadKept(){
   try { const o = localStorage.getItem(OVR_KEY); OVR = o ? JSON.parse(o) : {}; } catch(e){ OVR = {}; }
 }
 
-/* Both tools live at the same origin, so the handoff is not a file — the
+/* Both tools live at the same origin, so the handoff is not a file - the
    Design Extractor writes what its filters are showing and this reads it.
    Anything typed by hand here survives it: only the sites are replaced. */
 async function takeFrom(which){
@@ -340,7 +340,7 @@ function buildTabs(){
 function renderStart(){
   return '<div class="panel"><h2><span class="dot"></span>Nothing here yet</h2>' +
     '<p class="note">This builds the BOM from what the <a href="../design-extractor/" style="color:var(--accent)">Design Extractor</a> ' +
-    'already read — the radios, the antennas, the BBU and its cards come across as they are, ' +
+    'already read - the radios, the antennas, the BBU and its cards come across as they are, ' +
     'and everything else follows the site: its sectors, its RRUs, how tall the pole is, which vendor, how it is fed.</p>' +
     '<div class="bar" style="margin-top:14px">' +
       '<button class="btn on" id="bPull">Take the Design Extractor’s batch</button>' +
@@ -457,7 +457,7 @@ function renderSite(site){
         '<td class="why">' + esc(l.why) + '</td></tr>';
       last = l.cat; return row;
     }).join('') + '</tbody></table></div>' +
-    '<p class="note" style="margin-top:9px;font-size:11.5px">Type over any quantity and it stays typed for this site only — ' +
+    '<p class="note" style="margin-top:9px;font-size:11.5px">Type over any quantity and it stays typed for this site only - ' +
     'zero takes the line off. ' +
     (own.qty && Object.keys(own.qty).length
       ? '<button class="btn sm" id="clearQty">put all ' + Object.keys(own.qty).length + ' back</button>' : '') +
@@ -471,7 +471,7 @@ function renderMaterials(){
   let h = '<div class="panel"><h2><span class="dot"></span>What can go on a BOM' +
     '<span class="tag">' + CAT.length + ' materials</span></h2>' +
     '<p class="note">Every one of these came off the July Target sheet, and so did every rule behind them. ' +
-    'The radios, antennas and BBU cards are never worked out here — they are whatever the design says. ' +
+    'The radios, antennas and BBU cards are never worked out here - they are whatever the design says. ' +
     'The rest follow the site, and you can change how.' +
     (sample ? ' The column on the right shows what each would come to for <b>' + esc(sample.siteId) + '</b>.' : '') +
     '</p>' +
@@ -529,7 +529,7 @@ function ruleEditor(it, idx){
   if (it.from === 'design')
     return '<p class="note">The design decides this one. It is ' + esc(it.ref.model) +
       ', counted exactly as the design sheet writes it' +
-      (it.ref.kind === 'rru' ? ' — a radio written into three technology columns is still one box on the pole.' : '.') +
+      (it.ref.kind === 'rru' ? ' - a radio written into three technology columns is still one box on the pole.' : '.') +
       '<br><br>Model in the design: <input data-ref="' + idx + '" value="' + esc(it.ref.model) + '" style="min-width:260px">' +
       ' <span class="lab" style="font-family:\'Space Mono\',monospace;font-size:11px;color:var(--muted)">change this if the design names it differently</span></p>';
 
@@ -586,7 +586,7 @@ function renderExport(){
       (gaps ? ' <b>' + gaps + '</b> of them are still missing a fact the design never gave, so their MW lines are short.' : '') +
     '</p>' +
     '<div class="exrow"><div><div class="exname">Excel</div>' +
-      '<div class="exmeta">the July Target layout – one row a material, one column a site – plus the order and the lines</div></div>' +
+      '<div class="exmeta">the July Target layout - one row a material, one column a site - plus the order and the lines</div></div>' +
       '<button class="btn on" id="bXls">⬇ Excel</button></div>' +
     '<div class="exrow"><div><div class="exname">The order on its own</div>' +
       '<div class="exmeta">one row a material, with the total</div></div>' +
@@ -661,7 +661,7 @@ function wire(){
 
   const pull = async () => {
     const added = await takeFrom('design');
-    if (!SITES.length){ toast('The Design Extractor has no batch yet — read a workbook there first', 5000); return; }
+    if (!SITES.length){ toast('The Design Extractor has no batch yet - read a workbook there first', 5000); return; }
     applyFilters(); buildTabs(); render();
     toast(SITES.length + ' sites taken' + (added ? ', ' + added + ' new material' + (added === 1 ? '' : 's') : ''));
   };
@@ -776,7 +776,7 @@ function wire(){
     CAT.push({ cat: cat, name: name, unit:'nos', from:'rule', rules:[{ q:'1' }], added:true });
     OPEN = String(CAT.length - 1);
     saveCat(); rebuild(); buildTabs(); render();
-    toast(name + ' added – now say how many');
+    toast(name + ' added - now say how many');
   };
   const cr = $('catReset');
   if (cr) cr.onclick = () => {

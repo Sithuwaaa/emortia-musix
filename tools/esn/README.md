@@ -14,7 +14,7 @@ at whoever is using it.
 
 That migration makes three things:
 
-- `esn_records` — one row per site filed
+- `esn_records` - one row per site filed
 - the `esn` storage bucket, **private**, 50MB a file
 - the policies: signed in may read and may file, signed out may do neither,
   and only the owner may delete
@@ -22,17 +22,17 @@ That migration makes three things:
 ## How it is used
 
 **Site ID** → the name arrives on its own from the Site Access list. Lower case,
-a trailing full stop, a space in the middle — all find the same site.
+a trailing full stop, a space in the middle - all find the same site.
 
-**The three pictures** — ESN only, the full screenshot, and the O&M IP. Click a
+**The three pictures** - ESN only, the full screenshot, and the O&M IP. Click a
 slot, drop onto it, or paste with **Ctrl+V**, which is how a print screen
 actually travels. They go up at the size they arrived: nothing is resized or
 re-encoded, because an ESN is a serial someone has to read back off the picture.
 
-**Run O&M Script?** — ticking it opens the third slot and makes that screenshot
+**Run O&M Script?** - ticking it opens the third slot and makes that screenshot
 required. Left unticked, nothing asks for it.
 
-**Cards** — type and serial, as many rows as the site needs. The type is a free
+**Cards** - type and serial, as many rows as the site needs. The type is a free
 field with suggestions, never a fixed list, because every batch brings a card
 nobody wrote down in advance.
 
@@ -47,7 +47,7 @@ picture columns carry links that work for an hour.
 
 | file | what it is |
 |---|---|
-| `esn.js` | the logic — the site index, what a record needs, the export shape. No DOM. |
+| `esn.js` | the logic - the site index, what a record needs, the export shape. No DOM. |
 | `esn.test.js` | 45 checks against the real 5,944-site list. `node tools/esn/esn.test.js` |
 | `index.html` | the page |
 | `../_lib/db.js` | the only file that talks to the database or the bucket |

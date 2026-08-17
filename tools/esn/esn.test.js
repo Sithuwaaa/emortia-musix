@@ -1,4 +1,4 @@
-/* esn.test.js — the ESN tool's logic, against the real site list.
+/* esn.test.js - the ESN tool's logic, against the real site list.
 
      node tools/esn/esn.test.js
 
@@ -44,7 +44,7 @@ console.log('\nfinding a site by what someone actually types');
      quietly fails on the one someone needs.
 
      Compared after the same tidying the index does. The source has names with
-     double spaces in them — "Randeniya  Relocation" — and the index collapses
+     double spaces in them - "Randeniya  Relocation" - and the index collapses
      those, which is what should be shown. Eleven sites look like failures
      until the comparison is made like for like. */
   const cId = ds.cols.indexOf('Site_ID'), cName = ds.cols.indexOf('Site_Name');
@@ -64,7 +64,7 @@ console.log('\nfinding a site by what someone actually types');
   });
   is('every listed site finds its own name', missed.map(r => r[cId]), []);
   is('IDs listed twice under different names', clashes.length <= 2, true);
-  if (clashes.length) console.log('        (' + clashes.join(', ') + ' — the later spelling wins)');
+  if (clashes.length) console.log('        (' + clashes.join(', ') + ' - the later spelling wins)');
   is('and each of those still finds a name',
      clashes.every(k => !!E.findSite(idx, k)), true);
 
@@ -143,6 +143,33 @@ console.log('\nthe export');
   const linked = E.toRows(recs, { 'p/a.webp':'https://signed/a' });
   is('a signed link is used when there is one', linked[0][5], 'https://signed/a');
   is('and the path stands in when there is not', linked[0][6], 'p/b.webp');
+}
+
+console.log('\nwho may change a filed record');
+{
+  const T0 = Date.parse('2026-08-18T10:00:00Z');
+  const rec = { id:'r1', createdEmail:'mate@dialog.lk', createdAt:'2026-08-18T10:00:00Z' };
+  const at = (mins, opts) => E.editableFor(rec, Object.assign({ now: T0 + mins*60000 }, opts||{}));
+
+  is('the filer, straight away',        at(0, {email:'mate@dialog.lk'}).can, true);
+  is('the filer, four minutes later',   at(4, {email:'mate@dialog.lk'}).can, true);
+  is('the filer, at five minutes',      at(5, {email:'mate@dialog.lk'}).can, false);
+  is('and why it stopped',              at(5, {email:'mate@dialog.lk'}).reason, 'the five minutes are up');
+  is('somebody else, straight away',    at(0, {email:'other@dialog.lk'}).can, false);
+  is('and why',                         at(0, {email:'other@dialog.lk'}).reason, 'somebody else filed it');
+  is('the owner, a week later',         at(60*24*7, {email:'anyone@x.y', isOwner:true}).can, true);
+  is('a draft that was never filed',    E.editableFor({ id:null }, {}).can, false);
+  is('a record with no time on it',     E.editableFor({ id:'r2', createdAt:'' }, {}).can, false);
+
+  is('the countdown reads in minutes',  E.leftLabel(4*60000 + 1000), '5 min left');
+  is('then in seconds',                 E.leftLabel(40000), '40 sec left');
+  is('and says nothing once it is up',  E.leftLabel(0), '');
+  is('the owner gets no countdown',     E.leftLabel(Infinity), '');
+
+  is('every picture is listed for removal',
+     E.pathsOf({ esnPhoto:'a', esnFull:'b', omIpPhoto:null }), ['a','b']);
+  is('and from a raw database row too',
+     E.pathsOf({ esn_photo:'x', esn_full:'y', om_ip_photo:'z' }), ['x','y','z']);
 }
 
 console.log('\nthe pictures are left exactly as they arrive');

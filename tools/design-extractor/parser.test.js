@@ -1,4 +1,4 @@
-/* parser.test.js — the parser against a real batch.
+/* parser.test.js - the parser against a real batch.
 
      node tools/design-extractor/parser.test.js
      node tools/design-extractor/parser.test.js MU5051     print one site
@@ -37,7 +37,7 @@ function loadSheetJS(){
   throw new Error('SheetJS not found. Pass --sheetjs <path to xlsx.full.min.js>.');
 }
 
-/* The workbook is not in the repository — everything here is served, and a
+/* The workbook is not in the repository - everything here is served, and a
    Dialog design sheet is not something to publish. Not having it means the
    tests could not run, which is neither a pass nor a failure. */
 if (!BOOK){
@@ -75,7 +75,7 @@ if (arg){
   process.exit(0);
 }
 if (process.argv.includes('--register')){
-  console.log('\nRadio register — what each model carries, learned from the batch\n');
+  console.log('\nRadio register - what each model carries, learned from the batch\n');
   Object.values(register).sort((a, b) => b.seen - a.seen).forEach(r =>
     console.log('  ' + r.model.padEnd(30) + (r.label || '').padEnd(24) + String(r.seen).padStart(5) + ' cells   ' + r.vendors.join('/')));
   process.exit(0);
@@ -85,7 +85,7 @@ console.log('\n' + path.basename(BOOK) + '  ·  sheet "' + ctx.sheetName + '", h
 console.log(sites.length + ' sites read in ' + ms + 'ms\n');
 
 /* -------------------------------------------------- the two verified sites */
-console.log('MU5051 — the BOM says 3 sectors / 5 RRUs, RRU5909 ×3 and RRU5910 ×2');
+console.log('MU5051 - the BOM says 3 sectors / 5 RRUs, RRU5909 ×3 and RRU5910 ×2');
 {
   const s = by('MU5051');
   is('found', !!s, true);
@@ -99,7 +99,7 @@ console.log('MU5051 — the BOM says 3 sectors / 5 RRUs, RRU5909 ×3 and RRU5910
     is('one shared run, from sector 2', s.sharedRuns.length && s.sharedRuns[0].from, 2);
   }
 }
-console.log('\nKI5032 — the BOM says 4 sectors / 6 RRUs');
+console.log('\nKI5032 - the BOM says 4 sectors / 6 RRUs');
 {
   const s = by('KI5032');
   is('found', !!s, true);

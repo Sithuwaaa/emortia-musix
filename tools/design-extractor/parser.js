@@ -1,4 +1,4 @@
-/* parser.js — the Dialog MBB design sheet, read.
+/* parser.js - the Dialog MBB design sheet, read.
 
    No DOM, no network, no globals it did not make: the spreadsheet library is
    handed in. That is what lets the same file run in the browser and under node
@@ -13,7 +13,7 @@
        sec 3   G900=Share sec 2 L9 RRU  ...  L2100=RRU5909 ->  1 radio
 
    So radios are counted once per distinct model per sector, and anything that
-   says "Share sec N ..." is a run back to a radio already up the pole — real
+   says "Share sec N ..." is a run back to a radio already up the pole - real
    cabling, but not a box to order.
    ───────────────────────────────────────────────────────────────────────── */
 (function (root, factory) {
@@ -53,7 +53,7 @@
   }
 
   /* The header is wherever "Site ID" and "Operation Region" sit on one row.
-     Nothing is ever found by column position — the sheet gains and loses
+     Nothing is ever found by column position - the sheet gains and loses
      columns between batches, and it is 765 wide. */
   function findHeader(grid){
     for (let i = 0; i < Math.min(grid.length, 25); i++){
@@ -91,7 +91,7 @@
     const sheetName = pickSheet(wb);
     const grid = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, raw: true, defval: null });
     const h = findHeader(grid);
-    if (h < 0) throw new Error('No header row found — expected one row carrying both "Site ID" and "Operation Region".');
+    if (h < 0) throw new Error('No header row found - expected one row carrying both "Site ID" and "Operation Region".');
     const idx = indexHeaders(grid[h]);
     const rows = grid.slice(h + 1).filter(r =>
       r && !isBlank(r[idx['Site ID']]) && norm(r[idx['Site ID']]).toLowerCase() !== 'site id');
@@ -253,7 +253,7 @@
     s.basebandCards = uniq([...s.lteMbb.baseband, ...s.lteHbb.baseband].map(c => c.card).concat([s.g2.baseband]));
 
     /* ---- what the sheet's own summary claims ----
-       Stale on most sites, so never used — only compared, and a disagreement
+       Stale on most sites, so never used - only compared, and a disagreement
        becomes something for a person to settle. */
     const netRru = s.sectors.reduce((a, x) => a + (x.netRru || 0), 0);
     const netAnt = s.sectors.reduce((a, x) => a + (x.netAnt || 0), 0);
@@ -277,7 +277,7 @@
 
      Which technologies each radio carries, learned from the batch itself: a
      model's capability is simply the set of columns it was ever written under.
-     This is the table to own and correct by hand — it is what turns "three
+     This is the table to own and correct by hand - it is what turns "three
      cells" into "one box", and next batch will bring models nobody has seen. */
   function buildRegister(sites){
     const reg = {};
