@@ -95,6 +95,27 @@ input,textarea,button{font-family:inherit;}
 .fs-inner{position:relative;z-index:3;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px;padding:24px;text-align:center;}
 .fs-art{width:min(44vh,360px);height:min(44vh,360px);border-radius:18px;object-fit:cover;box-shadow:0 30px 80px rgba(0,0,0,0.62);}
 .hidden{display:none !important;}
+/* ---- who is signed in, sitting at the end of the nav ---- */
+.acct{display:inline-flex;align-items:center;gap:8px;margin-left:8px;padding:5px 6px 5px 11px;
+  border:1px solid var(--line2);border-radius:999px;background:var(--panelS);white-space:nowrap;}
+.acct-dot{width:7px;height:7px;border-radius:50%;background:#7fdc8a;flex-shrink:0;
+  box-shadow:0 0 8px rgba(127,220,138,.6);}
+.acct-who{font-family:'Space Mono',monospace;font-size:12px;color:var(--text2);
+  max-width:14ch;overflow:hidden;text-overflow:ellipsis;}
+.acct-out{background:none;border:1px solid var(--line3);border-radius:999px;color:var(--dim);
+  cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;padding:4px 10px;
+  transition:color .16s ease,border-color .16s ease;}
+.acct-out:hover{color:var(--text);border-color:var(--accent);}
+/* In the stacked menu every nav button is stretched to full width with
+   !important padding — which swallowed the name and spread "Sign out" across
+   the row. The overrides have to be in the same breakpoint and just as loud. */
+@media (max-width:940px){
+  .site-nav.open .acct{width:100%;margin-left:0;justify-content:space-between;
+    padding:8px 8px 8px 14px;margin-top:4px;}
+  .site-nav.open .acct-who{max-width:none;flex:1;font-size:14px;}
+  .site-nav.open .acct-out{width:auto !important;flex:0 0 auto;text-align:center !important;
+    font-size:14px !important;padding:8px 16px !important;}
+}
 /* ---- the drawer: queue and words, down the right-hand side ----
    The glass is the sleeve of whatever is playing, blurred behind the panel,
    so the drawer takes its colour from the song instead of sitting on it. */
@@ -467,6 +488,14 @@ html.bk-reading-on,html.bk-reading-on body{overflow:hidden;}
             </sc-if>
           </button>
         </sc-for>
+        <!-- who is signed in, and the way out -->
+        <sc-if value="{{ showAccount }}" hint-placeholder-val="{{ false }}">
+          <span class="acct">
+            <span class="acct-dot"></span>
+            <span class="acct-who">{{ accountName }}</span>
+            <button class="acct-out" onClick="{{ doSignOut }}" title="{{ accountTitle }}">Sign out</button>
+          </span>
+        </sc-if>
       </nav>
       <button class="nav-toggle" onClick="{{ toggleMenu }}" title="Menu" style="background:none;border:1px solid var(--line2);border-radius:9px;padding:9px;cursor:pointer;color:var(--text);flex-shrink:0;">
         <sc-if value="{{ menuClosed }}" hint-placeholder-val="{{ true }}">
@@ -2875,6 +2904,11 @@ class Component extends DCLogic {
       page:s.page,
 
       navItems: navDefs.map(([k,label])=>({ key:k, label, active:s.page===k, onClick:this.go(k) })),
+      showAccount: s.toolsIn,
+      accountName: s.toolsIn && window.Access ? window.Access.currentUser() : '',
+      accountTitle: (()=>{ const A=window.Access; if(!A||!s.toolsIn) return 'Sign out';
+        const d=A.daysLeft(); return 'Signed in' + (d!=null ? ' · ' + d + ' day' + (d===1?'':'s') + ' left' : '') + ' — sign out'; })(),
+      doSignOut: ()=>{ if(window.Access) window.Access.signOut(); },
       navClass: s.menuOpen ? 'site-nav open' : 'site-nav',
       menuOpen:!!s.menuOpen, menuClosed:!s.menuOpen,
       toggleMenu: ()=>this.setState(st=>({menuOpen:!st.menuOpen})),

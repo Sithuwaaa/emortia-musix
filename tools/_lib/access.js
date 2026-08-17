@@ -331,13 +331,64 @@
     });
   }
 
+  /* Once you are in, the page should say so and offer the way out. Every tool
+     header is built the same way — a .hdr with a theme button at the end — so
+     the chip goes in beside it rather than being pasted into seven files. The
+     site has its own, in the nav.
+
+     Not called on the site: it renders its own and this would be a second one. */
+  var CHIP_CSS = [
+    '.acc-chip{display:inline-flex;align-items:center;gap:7px;padding:4px 5px 4px 10px;',
+    '  border:1px solid var(--line3,rgba(255,255,255,.2));border-radius:999px;',
+    '  background:rgba(0,0,0,.28);white-space:nowrap;flex-shrink:0;}',
+    '.acc-chip-d{width:6px;height:6px;border-radius:50%;background:#7fdc8a;flex-shrink:0}',
+    '.acc-chip-n{font-family:"Space Mono",ui-monospace,monospace;font-size:11.5px;color:#fff;opacity:.9;',
+    '  max-width:12ch;overflow:hidden;text-overflow:ellipsis}',
+    '.acc-chip-o{background:none;border:1px solid var(--line3,rgba(255,255,255,.24));border-radius:999px;',
+    '  color:#fff;opacity:.72;cursor:pointer;font:600 11.5px/1 inherit;font-family:inherit;padding:4px 9px;',
+    '  transition:opacity .16s ease,border-color .16s ease}',
+    '.acc-chip-o:hover{opacity:1;border-color:var(--accent,#b03a56)}',
+    '@media (max-width:560px){.acc-chip-n{display:none}}'
+  ].join('\n');
+
+  function chip() {
+    if (document.getElementById('__accChip')) return;
+    if (document.querySelector('x-dc')) return;            // the site does its own
+    var who = currentUser();
+    if (!who) return;
+    var st = document.createElement('style'); st.textContent = CHIP_CSS; document.head.appendChild(st);
+
+    var c = document.createElement('span');
+    c.id = '__accChip'; c.className = 'acc-chip';
+    var d = document.createElement('span'); d.className = 'acc-chip-d';
+    var n = document.createElement('span'); n.className = 'acc-chip-n'; n.textContent = who;
+    var b = document.createElement('button'); b.className = 'acc-chip-o'; b.type = 'button';
+    b.textContent = 'Sign out';
+    var left = daysLeft();
+    b.title = 'Signed in as ' + who + (left != null ? ' · ' + left + ' day' + (left === 1 ? '' : 's') + ' left' : '');
+    b.onclick = function () { signOut(); };
+    c.appendChild(d); c.appendChild(n); c.appendChild(b);
+
+    var theme = document.querySelector('.hdr .theme') || document.querySelector('.hdr button:last-of-type');
+    if (theme && theme.parentNode) theme.parentNode.insertBefore(c, theme);
+    else {                                                  // no header to sit in
+      c.style.cssText = 'position:fixed;right:14px;bottom:14px;z-index:9999;' +
+        'background:rgba(18,15,12,.92);backdrop-filter:blur(8px);box-shadow:0 8px 26px rgba(0,0,0,.45)';
+      document.body.appendChild(c);
+    }
+  }
+  function showChip() {
+    if (document.readyState === 'loading') addEventListener('DOMContentLoaded', chip, { once: true });
+    else chip();
+  }
+
   /* One line at the top of a tool page. The document is held back until we
      know, so a tool never flashes its contents on the way to asking who you
      are — and it is released again on any failure, because a gate that breaks
      must not take the page down with it. */
   function protect(opts) {
     var root = document.documentElement;
-    if (signedIn()) return;
+    if (signedIn()) { showChip(); return; }
     root.style.visibility = 'hidden';
     var open = function () {
       root.style.visibility = '';
@@ -362,7 +413,7 @@
   window.Access = {
     signedIn: signedIn, currentUser: currentUser, daysLeft: daysLeft, isOwner: isOwner,
     signIn: signIn, signUp: signUp, signOut: signOut, guard: guard, protect: protect,
-    canSignUp: remote, applyOwner: applyOwner,
+    canSignUp: remote, applyOwner: applyOwner, chip: showChip,
     makeUserLine: makeUserLine, CSS: CSS, gateMarkup: gateMarkup, wire: wire,
     days: DAYS, userCount: USERS.length
   };
