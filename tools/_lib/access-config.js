@@ -22,6 +22,27 @@ window.ACCESS_USERS = [
   // { user:'sithara', salt:'…', hash:'…', iter:210000 },
 ];
 
+/* Who gets owner mode. It is a property of the account, not a passphrase in
+   the address bar: sign in as one of these and the owner controls appear,
+   on the site and in every tool. */
+window.ACCESS_OWNERS = ['sithuwaaa'];
+
+/* Who may sign themselves up. Leave it undefined and anyone can; give it a
+   list to narrow it — a bare address matches itself, one starting with @
+   matches a whole domain:
+
+     window.ACCESS_SIGNUP = ['sithuwaaathepage@gmail.com', '@dialog.lk'];
+
+   Accounts live in Supabase, so this list is a convenience rather than a
+   wall — the real switch is "Allow new users to sign up" in the Supabase
+   dashboard, under Authentication → Providers → Email. */
+// window.ACCESS_SIGNUP = [];
+
+/* A bare username with no @ is given this domain so it can be an account.
+   Signing up with a real address is better: it is the only way to get a
+   password reset. */
+window.ACCESS_DOMAIN = 'emortia.local';
+
 /* Bump this to sign everyone out at once — a signature that no longer matches
    is a session that is no longer valid, whatever its expiry says. */
 window.ACCESS_EPOCH = 1;

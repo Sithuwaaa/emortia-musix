@@ -71,6 +71,17 @@
     if (error) throw new Error(error.message);
     return data.session;
   }
+  /* Returns {user, session}. Whether a session comes back depends on the
+     project: with email confirmation switched on Supabase hands back a user
+     and no session until the link in the email is clicked. The caller has to
+     handle both, because only the project owner knows which it is. */
+  async function signUp(email, password){
+    const c = await client();
+    if (!c) throw new Error('Supabase is not configured — the anon key is missing from tools/_lib/supabase-config.js.');
+    const { data, error } = await c.auth.signUp({ email, password });
+    if (error) throw new Error(error.message);
+    return data;
+  }
   async function signOut(){ const c = await client(); if (c) await c.auth.signOut(); }
   async function onAuth(fn){
     const c = await client(); if (!c) return;
@@ -310,7 +321,7 @@
       .subscribe();
   }
 
-  window.DB = { configured, client, session, signIn, signOut, onAuth,
+  window.DB = { configured, client, session, signIn, signUp, signOut, onAuth,
                 load, publish, subscribe,
                 publishBook, loadBook, subscribeBook,
                 listTodos, addTodo, setTodoDone, subscribeTodos,

@@ -1,75 +1,28 @@
-/* Soft owner-mode gate.
-   NOTE: this is a convenience lock, not real security. A static site can't
-   enforce authentication – a determined person can bypass any client-side
-   check. The only hard boundary is who can commit to the GitHub repo (you),
-   which is what actually protects the published/shared data. This module just
-   hides edit controls from ordinary viewers and reveals them to you after you
-   unlock with your passphrase. Load owner-config.js before this file. */
+/* owner.js — kept only so the pages that load it keep loading.
+
+   Owner mode used to be a passphrase typed after #owner in the address bar.
+   It is an account now: sign in as one of the names in ACCESS_OWNERS and
+   access.js sets window.IS_OWNER and puts the `owner` class on the document,
+   which is what the rest of the site and the tools have always read.
+
+   The floating chip is gone too. Its two buttons live on the Owner tab of the
+   site, where they can be found rather than remembered.
+
+   Nothing else should be added here. New work belongs in access.js. */
 (function () {
-  var KEY = 'emortia_owner_v1';
-  var HASH = (window.OWNER_HASH || '').toLowerCase();
+  'use strict';
 
-  function isOwner() { try { return localStorage.getItem(KEY) === '1'; } catch (e) { return false; } }
-  window.IS_OWNER = isOwner();
-  if (window.IS_OWNER) document.documentElement.classList.add('owner');
+  /* access.js sets the real value a moment later; this only stops anything
+     that reads the flag between the two files from seeing `undefined`. */
+  if (typeof window.IS_OWNER === 'undefined') window.IS_OWNER = false;
 
-  async function sha256(s) {
-    var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
-    return Array.from(new Uint8Array(buf)).map(function (x) { return x.toString(16).padStart(2, '0'); }).join('');
-  }
-  window.ownerLock = function () { try { localStorage.removeItem(KEY); } catch (e) {} location.hash = ''; location.reload(); };
+  /* Old passphrase sessions are not owner sessions any more. Clearing the key
+     means nobody keeps owner mode from before this change without signing in. */
+  try { localStorage.removeItem('emortia_owner_v1'); } catch (e) {}
 
-  async function handleHash() {
-    var h = (location.hash || '').toLowerCase();
-    if (h === '#lock') { window.ownerLock(); return; }
-    if (h === '#setpass') {
-      history.replaceState(null, '', location.pathname + location.search);
-      var p = prompt('Choose an owner passphrase.\n\nIt will show you a hash – paste that into tools/_lib/owner-config.js (OWNER_HASH) and commit.\nThe passphrase itself is never stored or sent.');
-      if (p) { var hx = await sha256(p); window.prompt('OWNER_HASH – copy this whole line into owner-config.js:', hx); }
-      return;
-    }
-    if (h === '#owner') {
-      history.replaceState(null, '', location.pathname + location.search);
-      if (!HASH) { alert('No owner passphrase is configured yet.\nOpen this page with #setpass to create one.'); return; }
-      var p = prompt('Owner passphrase:');
-      if (p) { var hx = await sha256(p); if (hx === HASH) { try { localStorage.setItem(KEY, '1'); } catch (e) {} location.reload(); } else { alert('Incorrect passphrase.'); } }
-      return;
-    }
-  }
-  addEventListener('hashchange', handleHash);
-  handleHash();
-
-  // small "Owner mode · Lock" chip, only visible to you
-  if (window.IS_OWNER) {
-    var addChip = function () {
-      if (document.getElementById('__ownerChip')) return;
-      var c = document.createElement('div');
-      c.id = '__ownerChip';
-      c.style.cssText = 'position:fixed;left:14px;bottom:14px;z-index:99999;display:flex;align-items:center;gap:9px;background:rgba(18,15,12,0.92);color:#fff;border:1px solid rgba(255,255,255,0.18);border-radius:999px;padding:6px 8px 6px 13px;font:600 12px/1 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;box-shadow:0 8px 26px rgba(0,0,0,0.45);backdrop-filter:blur(8px);';
-      c.innerHTML = '<span style="color:#7fdc8a;">● Owner mode</span>';
-      var btn = function (label, onClick, title) {
-        var b = document.createElement('button');
-        b.textContent = label;
-        if (title) b.title = title;
-        b.style.cssText = 'background:none;border:1px solid rgba(255,255,255,0.28);color:#fff;border-radius:7px;padding:4px 10px;font:inherit;cursor:pointer;';
-        b.onclick = onClick;
-        return b;
-      };
-      /* Timing lyrics used to mean knowing to type #sync in the address bar.
-         Only the site itself has a sync panel, so the button only appears
-         there — the tool pages have nothing to show. */
-      if (document.querySelector('x-dc')){
-        var sync = btn('Sync lyrics', function () {
-          var on = (location.hash || '').toLowerCase() === '#sync';
-          location.hash = on ? '' : 'sync';
-          sync.textContent = on ? 'Sync lyrics' : 'Close sync';
-        }, 'Tap out the timings for the playing song');
-        if ((location.hash || '').toLowerCase() === '#sync') sync.textContent = 'Close sync';
-        c.appendChild(sync);
-      }
-      c.appendChild(btn('Lock', window.ownerLock));
-      document.body.appendChild(c);
-    };
-    if (document.readyState === 'loading') addEventListener('DOMContentLoaded', addChip); else addChip();
-  }
+  /* Kept because index.html and the tools call it. */
+  window.ownerLock = function () {
+    if (window.Access && window.Access.signOut) return window.Access.signOut();
+    location.reload();
+  };
 })();
