@@ -94,6 +94,25 @@ input,textarea,button{font-family:inherit;}
 .lyrics-overlay{position:fixed;left:0;right:0;top:0;bottom:84px;z-index:60;overflow:hidden;animation:fadeUp .3s ease;}
 .lyrics-overlay .lyrics-box{max-height:min(66vh,560px);}
 /* ---- spotify-style track table ---- */
+/* ---- sort control ---- */
+.sortbar{position:relative;display:flex;justify-content:flex-end;margin-bottom:6px;}
+.sortbtn{display:inline-flex;align-items:center;gap:8px;background:none;border:none;cursor:pointer;
+  padding:6px 4px;font-family:'Space Mono',monospace;font-size:11.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--mute);transition:color .15s ease;}
+.sortbtn:hover{color:var(--text);}
+.sortbtn-v{color:var(--text);}
+.sortbtn:hover .sortbtn-v{color:var(--accent);}
+.sortbtn-a{color:var(--accent);font-size:13px;}
+.sortmenu{position:absolute;top:100%;right:0;z-index:46;min-width:210px;padding:6px;
+  background:var(--queueBg);backdrop-filter:blur(14px);border:1px solid var(--line2);
+  border-radius:13px;box-shadow:0 22px 54px rgba(0,0,0,.5);animation:fadeUp .16s ease;}
+.sortmenu-h{font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--mute);padding:7px 11px 8px;}
+.sortopt{display:flex;width:100%;align-items:center;justify-content:space-between;gap:14px;
+  background:none;border:none;cursor:pointer;text-align:left;padding:9px 11px;border-radius:9px;
+  font-family:inherit;font-size:14px;transition:background .13s ease;}
+.sortopt:hover{background:rgba(244,239,230,0.06);}
+.sortopt-m{font-size:13px;color:var(--accent);}
 .trk-head,.trk-row{display:grid;grid-template-columns:34px 1fr auto;gap:16px;align-items:center;}
 .trk-head{padding:6px 16px 8px;border-bottom:1px solid var(--line);margin-bottom:6px;}
 .trk-row{padding:9px 16px;border-radius:10px;cursor:pointer;border:1px solid transparent;transition:background .15s ease;}
@@ -643,6 +662,25 @@ html.bk-reading-on,html.bk-reading-on body{overflow:hidden;}
         </button>
       </div>
 
+      <!-- sort: the order shown is the order that plays -->
+      <div class="sortbar">
+        <button class="sortbtn" onClick="{{ toggleSort }}" title="Change the order">
+          <span class="sortbtn-l">Sort by</span>
+          <span class="sortbtn-v">{{ sortLabel }}</span>
+          <span class="sortbtn-a">{{ sortArrow }}</span>
+        </button>
+        <sc-if value="{{ sortOpen }}" hint-placeholder-val="{{ false }}">
+          <div class="sortmenu">
+            <div class="sortmenu-h">Sort by</div>
+            <sc-for list="{{ sortItems }}" as="opt" hint-placeholder-count="4">
+              <button class="sortopt" onClick="{{ opt.onPick }}" style="color:{{ opt.colour }};">
+                <span>{{ opt.label }}</span><span class="sortopt-m">{{ opt.mark }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+
       <!-- track table -->
       <div class="trk-head">
         <div style="font-family:'Space Mono',monospace;font-size:12px;color:var(--mute);text-align:center;">#</div>
@@ -887,6 +925,14 @@ html.bk-reading-on,html.bk-reading-on body{overflow:hidden;}
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script>
+/* How the catalogue can be ordered. Artist and album are on Spotify's menu
+   but would do nothing here — every track is Emortia, every album is itself. */
+const SORTS = [
+  ['custom', 'Custom order'],
+  ['title',  'Title'],
+  ['added',  'Recently added'],
+  ['dur',    'Duration'],
+];
 class Component extends DCLogic {
   constructor(props){
     super(props);
@@ -898,7 +944,7 @@ class Component extends DCLogic {
       {t:'Punchi Kella', a:'Emortia', d:73, tone:'#3d2a1e', src:'audio/punchi-kella.wav', img:'audio/art/punchi-kella.png'},
       {t:'Parissam', a:'Emortia', d:120, tone:'#23303f', src:'audio/parissam.wav', img:'audio/art/parissam.png'},
       {t:'Hadathi Mala', a:'Emortia', d:98, tone:'#3a2436', src:'audio/hadathi-mala.wav', img:'audio/art/hadathi-mala.png'},
-      {t:'Thissema', a:'Emortia', d:108, tone:'#412f2b', src:'audio/thissema.wav', img:'audio/art/thissema.png'},
+      {t:'Thissema', a:'Emortia', d:112, tone:'#412f2b', src:'audio/thissema.wav', img:'audio/art/thissema.png'},
     ];
     const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
     this.tracks = raw.map((x,i)=>({
@@ -913,7 +959,8 @@ class Component extends DCLogic {
     // convenient there, wrong for a visitor arriving at the door.
     this.state = { page:'home', theme:'burgundy', menuOpen:false, poems:[], poemsLoaded:false,
       bkOpen:false, bkIdx:0, bkSpread:false, bkDrag:null, bkInk:0, bkVol:0, bkShelf:true, bkPer:10,
-      bkSingle:(window.matchMedia && window.matchMedia('(max-width:700px)').matches), playing:false, idx:0, progress:0, volume:pp.volume, muted:pp.muted, shuffle:pp.shuffle, repeat:pp.repeat, queueOpen:false, contact:{name:'',email:'',msg:''}, sent:false, audioMissing:false, syncTimes:[], lyricsOpen:false, fsOpen:false, wordsEdit:false, wordsText:'' };
+      bkSingle:(window.matchMedia && window.matchMedia('(max-width:700px)').matches), playing:false, idx:0, progress:0, volume:pp.volume, muted:pp.muted, shuffle:pp.shuffle, repeat:pp.repeat, queueOpen:false,
+      sortBy:pp.sortBy, sortDir:pp.sortDir, sortOpen:false, contact:{name:'',email:'',msg:''}, sent:false, audioMissing:false, syncTimes:[], lyricsOpen:false, fsOpen:false, wordsEdit:false, wordsText:'' };
     this.PLAYER_KEY='emortia_player_v1';
     this.moods=[
       {name:'Longing', color:'#d15873', rgb:'209,88,115', line:'#4a2632', glow:'rgba(209,88,115,.55)', wash:'linear-gradient(135deg,rgba(209,88,115,.12),transparent 70%)', track:0},
@@ -973,10 +1020,11 @@ class Component extends DCLogic {
     this.audio.addEventListener('play', ()=>this.setState({playing:true, audioMissing:false}));
     this.audio.addEventListener('pause', ()=>this.setState({playing:false}));
     this.audio.addEventListener('ended', ()=>{
-      const s=this.state, n=this.tracks.length;
+      const s=this.state, order=this.playOrder();
       if(s.repeat==='one'){ this.loadTrack(s.idx, true); return; }
-      // last track, sequential, no repeat-all → stop at the end
-      if(!s.shuffle && s.idx===n-1 && s.repeat!=='all'){ this.setState({playing:false, progress:0}); return; }
+      // last one in the order on screen, sequential, no repeat-all → stop there
+      if(!s.shuffle && order.indexOf(s.idx)===order.length-1 && s.repeat!=='all'){
+        this.setState({playing:false, progress:0}); return; }
       this.loadTrack(this.pickNext(), true);
     });
     this.audio.addEventListener('error', ()=>this.setState({playing:false, audioMissing:true}));
@@ -989,7 +1037,7 @@ class Component extends DCLogic {
 
   // ---- player preferences (volume / shuffle / repeat) ----
   loadPlayerPrefs(){
-    const def={volume:0.78, muted:false, shuffle:false, repeat:'off'};
+    const def={volume:0.78, muted:false, shuffle:false, repeat:'off', sortBy:'custom', sortDir:1};
     try{
       const p=JSON.parse(localStorage.getItem('emortia_player_v1')||'null');
       if(p&&typeof p==='object'){
@@ -998,14 +1046,47 @@ class Component extends DCLogic {
           muted: !!p.muted,
           shuffle: !!p.shuffle,
           repeat: ['off','all','one'].includes(p.repeat)?p.repeat:def.repeat,
+          sortBy: SORTS.some(x=>x[0]===p.sortBy)?p.sortBy:def.sortBy,
+          sortDir: p.sortDir===-1?-1:1,
         };
       }
     }catch(e){}
     return def;
   }
   savePlayerPrefs(p){
-    const cur={volume:this.state.volume, muted:this.state.muted, shuffle:this.state.shuffle, repeat:this.state.repeat, ...(p||{})};
+    const cur={volume:this.state.volume, muted:this.state.muted, shuffle:this.state.shuffle, repeat:this.state.repeat,
+               sortBy:this.state.sortBy, sortDir:this.state.sortDir, ...(p||{})};
     try{ localStorage.setItem(this.PLAYER_KEY, JSON.stringify(cur)); }catch(e){}
+  }
+
+  /* ---- sorting ----
+     The order you can see is the order that plays. Sorting only the table
+     would leave "next" walking the file order behind your back, so the sorted
+     list is the single source of truth and pickNext walks it.
+
+     Artist and album are on Spotify's menu but not here: every track is
+     Emortia and every album is the track, so both would be no-ops. */
+  sortedTracks(){
+    const {sortBy, sortDir} = this.state;
+    const a = this.tracks.slice();
+    if(sortBy==='custom') return sortDir===1 ? a : a.reverse();
+    const cmp = {
+      title: (x,y)=>String(x.t).localeCompare(String(y.t)),
+      dur:   (x,y)=>(x.dur||0)-(y.dur||0),
+      added: (x,y)=>y.i-x.i,                 // newest first: new songs are appended
+    }[sortBy];
+    if(!cmp) return a;
+    // the file order breaks ties, so equal values never shuffle about on a repaint
+    return a.sort((x,y)=>cmp(x,y)*sortDir || x.i-y.i);
+  }
+  playOrder(){ return this.sortedTracks().map(x=>x.i); }
+  pickSort(key){
+    this.setState(st=>{
+      // pressing the one already chosen turns it round, the way a column header does
+      const sortDir = st.sortBy===key ? -st.sortDir : 1;
+      this.savePlayerPrefs({sortBy:key, sortDir});
+      return {sortBy:key, sortDir, sortOpen:false};
+    });
   }
   setVolume(v){
     v=Math.min(1,Math.max(0,v));
@@ -1025,18 +1106,21 @@ class Component extends DCLogic {
   }
   toggleShuffle(){ const shuffle=!this.state.shuffle; this.savePlayerPrefs({shuffle}); this.setState({shuffle}); }
   cycleRepeat(){ const order=['off','all','one']; const repeat=order[(order.indexOf(this.state.repeat)+1)%3]; this.savePlayerPrefs({repeat}); this.setState({repeat}); }
+  /* Both of these step through the order on screen, not the order in the file. */
   pickNext(){
-    const n=this.tracks.length;
+    const order=this.playOrder(), n=order.length;
     if(this.state.shuffle && n>1){
-      let r; do{ r=Math.floor(Math.random()*n); }while(r===this.state.idx);
+      let r; do{ r=order[Math.floor(Math.random()*n)]; }while(r===this.state.idx);
       return r;
     }
-    return (this.state.idx+1)%n;
+    const p=order.indexOf(this.state.idx);
+    return order[(p+1)%n];
   }
   playNextTrack(){ this.loadTrack(this.pickNext(), true); }
   playPrevTrack(){
     if(this.audio.currentTime>3){ this.audio.currentTime=0; this.setState({progress:0}); return; }
-    this.loadTrack((this.state.idx-1+this.tracks.length)%this.tracks.length, true);
+    const order=this.playOrder(), n=order.length, p=order.indexOf(this.state.idx);
+    this.loadTrack(order[(p-1+n)%n], true);
   }
 
   fmt(s){ s = Math.max(0, Math.floor(s)); const m=Math.floor(s/60); const ss=String(s%60).padStart(2,'0'); return m+':'+ss; }
@@ -1054,6 +1138,15 @@ class Component extends DCLogic {
       if(!inFs && this.state.fsOpen) this.setState({fsOpen:false});
     };
     document.addEventListener('fullscreenchange', this._onFsChange);
+    /* A menu should shut when you look away. The guard matters: this listener
+       also sees the very click that opened it, and without the .sortbar test
+       the menu would close itself on the way up. */
+    this._awayFromSort=(e)=>{
+      if(this.state.sortOpen && !(e.target.closest && e.target.closest('.sortbar'))) this.setState({sortOpen:false});
+    };
+    this._escSort=(e)=>{ if(e.key==='Escape' && this.state.sortOpen) this.setState({sortOpen:false}); };
+    document.addEventListener('click', this._awayFromSort);
+    document.addEventListener('keydown', this._escSort);
     document.addEventListener('webkitfullscreenchange', this._onFsChange);
     // wheel over the volume control adjusts it. Registered natively (non-passive)
     // because React attaches wheel passively, where preventDefault is ignored.
@@ -1128,6 +1221,8 @@ class Component extends DCLogic {
       document.removeEventListener('fullscreenchange', this._onFsChange);
       document.removeEventListener('webkitfullscreenchange', this._onFsChange);
     }
+    if(this._awayFromSort) document.removeEventListener('click', this._awayFromSort);
+    if(this._escSort) document.removeEventListener('keydown', this._escSort);
     if(this._bkRaf) cancelAnimationFrame(this._bkRaf);
     if(this._bkGuard) clearTimeout(this._bkGuard);
     if(this._bkOpenT) clearTimeout(this._bkOpenT);
@@ -1139,7 +1234,7 @@ class Component extends DCLogic {
     }
   }
 
-  go(p){ return ()=>this.setState({page:p, queueOpen:false, menuOpen:false}); }
+  go(p){ return ()=>this.setState({page:p, queueOpen:false, menuOpen:false, sortOpen:false}); }
   play(i){ return ()=>this.loadTrack(i, true); }
 
   // An <img> built here rather than in the markup: a {{ slot }} written into a
@@ -2592,7 +2687,22 @@ class Component extends DCLogic {
       navClass: s.menuOpen ? 'site-nav open' : 'site-nav',
       menuOpen:!!s.menuOpen, menuClosed:!s.menuOpen,
       toggleMenu: ()=>this.setState(st=>({menuOpen:!st.menuOpen})),
-      tracks: this.tracks.map(x=>{ const cur=x.i===s.idx; const pn=cur&&s.playing; return { ...x, artReady:(typeof x.img==='string' && x.img.length>0), artImg:this.artImg(x.img,{width:'42px',height:'42px',borderRadius:'7px'}), artImgSm:this.artImg(x.img,{width:'34px',height:'34px',borderRadius:'8px'}), current:cur, notCurrent:!cur, playingNow:pn, notPlayingNow:!pn, titleColor: cur?'var(--accent)':'var(--text)', onPlay:this.play(x.i), hasArt:!!x.img, noArt:!x.img }; }),
+      /* numbered by where it sits now, not by where it sits in the file — a
+         sorted list that still read 01..07 in the old order would be a lie */
+      tracks: this.sortedTracks().map((x,pos)=>{ const cur=x.i===s.idx; const pn=cur&&s.playing; return { ...x, num:String(pos+1).padStart(2,'0'), artReady:(typeof x.img==='string' && x.img.length>0), artImg:this.artImg(x.img,{width:'42px',height:'42px',borderRadius:'7px'}), artImgSm:this.artImg(x.img,{width:'34px',height:'34px',borderRadius:'8px'}), current:cur, notCurrent:!cur, playingNow:pn, notPlayingNow:!pn, titleColor: cur?'var(--accent)':'var(--text)', onPlay:this.play(x.i), hasArt:!!x.img, noArt:!x.img }; }),
+
+      sortOpen: s.sortOpen, sortShut: !s.sortOpen,
+      sortLabel: (SORTS.find(x=>x[0]===s.sortBy)||SORTS[0])[1],
+      sortArrow: s.sortDir===1 ? '↓' : '↑',
+      toggleSort: ()=>this.setState(st=>({sortOpen:!st.sortOpen})),
+      closeSort: ()=>this.setState({sortOpen:false}),
+      sortItems: SORTS.map(([key,label])=>({
+        key, label,
+        on: key===s.sortBy, off: key!==s.sortBy,
+        mark: key===s.sortBy ? (s.sortDir===1?'↓':'↑') : '',
+        colour: key===s.sortBy ? 'var(--accent)' : 'var(--text)',
+        onPick: ()=>this.pickSort(key),
+      })),
       catMeta: (()=>{ const n=this.tracks.length; const tot=this.tracks.reduce((a,b)=>a+(b.dur||0),0); const m=Math.round(tot/60); return this.tracks[0].a+' · '+n+' songs · '+(m>0?m+' min':'—'); })(),
 
       curTitle:t.t, curArtist:t.a, curInitial:t.initial, curTone:t.tone, curDur:t.durLabel, curTime:this.fmt(s.progress),
