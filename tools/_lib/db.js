@@ -92,6 +92,30 @@
     if (error) return null;
     return data || null;
   }
+
+  /* Who am I, by name. Asked on the way in so the site can show the name
+     somebody chose rather than working one out from their address. */
+  async function myProfile(){
+    const c = await client(); if (!c) return null;
+    const { data, error } = await c.rpc('my_profile');
+    if (error || !data || !data.length) return null;
+    return data[0];
+  }
+
+  async function setUsername(name){
+    const c = await client(); if (!c) throw new Error('Not connected.');
+    const s = await session(); if (!s) throw new Error('Sign in first.');
+    const { data, error } = await c.from('profiles')
+      .update({ username: name }).eq('id', s.user.id).select().single();
+    if (error){
+      /* the unique index is what actually decides it, so say what it means */
+      if (/duplicate|unique/i.test(error.message)) throw new Error('That name is taken.');
+      if (/violates check|profiles_username_shape/i.test(error.message))
+        throw new Error('A name is 3 to 32 letters, numbers, dots, dashes or underscores.');
+      throw new Error(error.message);
+    }
+    return data;
+  }
   async function signOut(){ const c = await client(); if (c) await c.auth.signOut(); }
   async function onAuth(fn){
     const c = await client(); if (!c) return;
@@ -410,7 +434,7 @@
       .subscribe();
   }
 
-  window.DB = { configured, client, session, signIn, signUp, signOut, onAuth, emailForUsername,
+  window.DB = { configured, client, session, signIn, signUp, signOut, onAuth, emailForUsername, myProfile, setUsername,
                 esnList, esnSave, esnDelete, esnUpload, esnLink, esnSubscribe,
                 load, publish, subscribe,
                 publishBook, loadBook, subscribeBook,

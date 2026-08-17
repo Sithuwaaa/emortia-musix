@@ -102,7 +102,31 @@ input,textarea,button{font-family:inherit;}
 .acct-dot{width:7px;height:7px;border-radius:50%;background:#7fdc8a;flex-shrink:0;
   box-shadow:0 0 8px rgba(127,220,138,.6);}
 .acct-who{font-family:'Space Mono',monospace;font-size:12px;color:var(--text2);
-  max-width:14ch;overflow:hidden;text-overflow:ellipsis;}
+  max-width:14ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  background:none;border:none;padding:0;cursor:pointer;border-bottom:1px dotted transparent;}
+.acct-who:hover{color:var(--accentB);border-bottom-color:var(--accentB);}
+/* the profile panel */
+.prof-back{position:fixed;inset:0;z-index:70;background:rgba(10,6,8,.62);backdrop-filter:blur(4px);
+  display:grid;place-items:center;padding:22px;animation:fadeUp .2s ease;}
+.prof{width:100%;max-width:360px;background:var(--queueBg);backdrop-filter:blur(20px) saturate(1.3);
+  border:1px solid var(--line2);border-radius:18px;padding:24px 22px 20px;
+  box-shadow:0 26px 70px rgba(0,0,0,.6);}
+.prof h3{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:19px;margin:0 0 5px;}
+.prof p{color:var(--dim);font-size:13px;line-height:1.55;margin:0 0 16px;}
+.prof label{display:block;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--mute);margin:0 0 5px;}
+.prof input{width:100%;box-sizing:border-box;background:rgba(23,13,16,.6);color:var(--text);
+  border:1px solid var(--line2);border-radius:10px;padding:11px 12px;font-size:14.5px;
+  font-family:'Space Mono',monospace;outline:none;margin-bottom:6px;}
+.prof input:focus{border-color:var(--accent);}
+.prof .msg{font-size:12.5px;line-height:1.5;min-height:1.2em;margin:0 0 12px;}
+.prof .msg.bad{color:var(--accentB);} .prof .msg.good{color:#7fdc8a;}
+.prof .row{display:flex;gap:9px;}
+.prof .row button{flex:1;border-radius:10px;padding:11px;font-family:inherit;font-size:14px;
+  font-weight:700;cursor:pointer;border:1px solid var(--line3);background:none;color:var(--text);}
+.prof .row button.go{background:var(--accent);border-color:transparent;color:#fff;}
+.prof .row button:disabled{opacity:.5;cursor:default;}
+.prof .at{font-family:'Space Mono',monospace;font-size:11.5px;color:var(--mute);margin:0 0 14px;}
 .acct-out{background:none;border:1px solid var(--line3);border-radius:999px;color:var(--dim);
   cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;padding:4px 10px;
   transition:color .16s ease,border-color .16s ease;}
@@ -493,7 +517,7 @@ html.bk-reading-on,html.bk-reading-on body{overflow:hidden;}
         <sc-if value="{{ showAccount }}" hint-placeholder-val="{{ false }}">
           <span class="acct">
             <span class="acct-dot"></span>
-            <span class="acct-who">{{ accountName }}</span>
+            <button class="acct-who" onClick="{{ openProfile }}" title="Change your name">{{ accountName }}</button>
             <button class="acct-out" onClick="{{ doSignOut }}" title="{{ accountTitle }}">Sign out</button>
           </span>
         </sc-if>
@@ -908,6 +932,7 @@ html.bk-reading-on,html.bk-reading-on body{overflow:hidden;}
 
   <!-- ============ PERSISTENT PLAYER DOCK ============ -->
   <!-- the queue lives in the drawer now, rendered from {{ lyricsOverlay }} -->
+  <div>{{ profilePanel }}</div>
   <div>{{ syncPanel }}</div>
 
   <footer style="position:fixed;left:0;right:0;bottom:0;z-index:50;background:var(--bar2);backdrop-filter:blur(16px);border-top:1px solid var(--line2);">
@@ -1032,7 +1057,8 @@ class Component extends DCLogic {
       /* the tools are behind a sign-in; the owner is never shut out */
       toolsIn: !!(window.Access && window.Access.signedIn()),
       isOwner: !!(window.Access && window.Access.isOwner()),
-      accErr:'', accOk:'', accBusy:false, accMode:'in',
+      accErr:'', accOk:'', accBusy:false, accMode:'in', accShowPw:false,
+      profOpen:false, profMsg:'', profOk:'', profBusy:false,
       sortBy:pp.sortBy, sortDir:pp.sortDir, sortOpen:false, contact:{name:'',email:'',msg:''}, sent:false, audioMissing:false, syncTimes:[], fsOpen:false, wordsEdit:false, wordsText:'' };
     this.PLAYER_KEY='emortia_player_v1';
     this.moods=[
@@ -2565,6 +2591,45 @@ class Component extends DCLogic {
       )
     );
   }
+  /* ---------------- your name ----------------
+     The chip says who you are; pressing it lets you change it. The address is
+     shown but not editable - the account was made with it, and a confirmation
+     and a password reset still go there. */
+  renderProfile(){
+    if (!this.state.profOpen) return React.createElement('div',{style:{display:'none'}});
+    const A = window.Access;
+    const shut = ()=>this.setState({profOpen:false, profMsg:'', profOk:''});
+    const save = async (e)=>{
+      e.preventDefault();
+      const v = (document.getElementById('profName')||{}).value || '';
+      this.setState({profBusy:true, profMsg:'', profOk:''});
+      const r = await A.rename(v);
+      if (r.ok){
+        this.setState({profBusy:false, profOk: r.unchanged ? 'That is already your name.' : 'Saved.',
+                       profMsg:'', isOwner:A.isOwner()});
+        setTimeout(()=>this.setState({profOpen:false, profOk:''}), 900);
+        return;
+      }
+      this.setState({profBusy:false, profMsg:r.error});
+    };
+    return React.createElement('div',{className:'prof-back',
+        onClick:(e)=>{ if(e.target.classList.contains('prof-back')) shut(); }},
+      React.createElement('div',{className:'prof'},
+        React.createElement('h3',null,'Your name'),
+        React.createElement('p',null,'This is what everyone else sees, and what you sign in with.'),
+        React.createElement('form',{onSubmit:save},
+          React.createElement('label',{htmlFor:'profName'},'Username'),
+          React.createElement('input',{id:'profName', defaultValue:A.currentUser()||'',
+            autoCapitalize:'none', spellCheck:false, maxLength:32}),
+          React.createElement('div',{className:'at'}, A.currentEmail() ? 'signed up with ' + A.currentEmail() : ''),
+          React.createElement('div',{className:'msg' + (this.state.profMsg ? ' bad' : this.state.profOk ? ' good' : '')},
+            this.state.profMsg || this.state.profOk || ''),
+          React.createElement('div',{className:'row'},
+            React.createElement('button',{type:'button', onClick:shut},'Close'),
+            React.createElement('button',{type:'submit', className:'go', disabled:!!this.state.profBusy},
+              this.state.profBusy ? 'Saving…' : 'Save')))));
+  }
+
   /* ---------------- the tools gate ----------------
      The Tools tab is the office side, and it is not for everyone who wanders
      past. Signing in here lasts seven days on this device; each tool checks
@@ -2934,6 +2999,8 @@ class Component extends DCLogic {
       accountTitle: (()=>{ const A=window.Access; if(!A||!s.toolsIn) return 'Sign out';
         const d=A.daysLeft(); return 'Signed in' + (d!=null ? ' · ' + d + ' day' + (d===1?'':'s') + ' left' : '') + ' — sign out'; })(),
       doSignOut: ()=>{ if(window.Access) window.Access.signOut(); },
+      openProfile: ()=>this.setState({profOpen:true, profMsg:'', profOk:''}),
+      profilePanel: this.renderProfile(),
       navClass: s.menuOpen ? 'site-nav open' : 'site-nav',
       menuOpen:!!s.menuOpen, menuClosed:!s.menuOpen,
       toggleMenu: ()=>this.setState(st=>({menuOpen:!st.menuOpen})),

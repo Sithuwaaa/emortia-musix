@@ -89,6 +89,8 @@
 
   function signedIn() { return !!session(); }
   function currentUser() { var s = session(); return s ? s.user : null; }
+  /* only shown back to the person it belongs to, on their own profile */
+  function currentEmail() { var s = session(); return s ? (s.email || '') : ''; }
   function daysLeft() {
     var s = session();
     if (!s) return null;
@@ -163,7 +165,15 @@
 
       try {
         await window.DB.signIn(email, password);
+        /* The name comes from the profile, not from the address. Somebody who
+           signed up with sithuwaaathepage@gmail.com and then renamed
+           themselves Sithuwaaa should be Sithuwaaa everywhere, including on
+           the sign-in where they typed the address. */
         var who = id.indexOf('@') < 0 ? id : uname;
+        try {
+          var p = await window.DB.myProfile();
+          if (p && p.username) who = p.username;
+        } catch (e2) {}
         keep(who, email);
         return { ok: true, user: who };
       } catch (e) {
@@ -211,6 +221,41 @@
       return { ok: false, pending: true, error:
         'Account made. Open the email sent to ' + email + ' to confirm it, then sign in.' };
     } catch (e) { return { ok: false, error: tidy(e.message) }; }
+  }
+
+  /* Changing your own name. The session carries the display name, so it is
+     rewritten here too - otherwise the chip would keep saying the old one
+     until the seven days ran out. */
+  async function rename(name) {
+    name = String(name || '').trim();
+    if (!/^[a-zA-Z0-9._-]{3,32}$/.test(name))
+      return { ok: false, error: 'A name is 3 to 32 letters, numbers, dots, dashes or underscores.' };
+    if (!remote()) return { ok: false, error: 'Not connected just now. Try again in a moment.' };
+    var s = session();
+    if (!s) return { ok: false, error: 'Sign in first.' };
+    if (String(s.user) === name) return { ok: true, user: name, unchanged: true };
+    try {
+      await window.DB.setUsername(name);
+      write({ user: name, email: s.email || '', epoch: EPOCH, since: s.since, until: s.until });
+      applyOwner();
+      return { ok: true, user: name };
+    } catch (e) { return { ok: false, error: e.message }; }
+  }
+
+  /* Pull the name from the server, for a session made before the profile was
+     renamed on another device. */
+  async function refresh() {
+    var s = session();
+    if (!s || !remote()) return null;
+    try {
+      var p = await window.DB.myProfile();
+      if (p && p.username && p.username !== s.user) {
+        write({ user: p.username, email: p.email || s.email || '', epoch: EPOCH, since: s.since, until: s.until });
+        applyOwner();
+        return p.username;
+      }
+    } catch (e) {}
+    return null;
   }
 
   function signOut() {
@@ -482,8 +527,10 @@
   }
 
   window.Access = {
-    signedIn: signedIn, currentUser: currentUser, daysLeft: daysLeft, isOwner: isOwner,
+    signedIn: signedIn, currentUser: currentUser, currentEmail: currentEmail,
+    daysLeft: daysLeft, isOwner: isOwner,
     signIn: signIn, signUp: signUp, signOut: signOut, guard: guard, protect: protect,
+    rename: rename, refresh: refresh,
     canSignUp: remote, applyOwner: applyOwner, chip: showChip,
     makeUserLine: makeUserLine, CSS: CSS, gateMarkup: gateMarkup, wire: wire,
     days: DAYS, userCount: USERS.length
