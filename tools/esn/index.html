@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1d100b">
+<title>ESN Sharing</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b03a56'/%3E%3Cg fill='%23170d10'%3E%3Crect x='8' y='13' width='3' height='8' rx='1.5'/%3E%3Crect x='13' y='9' width='3' height='14' rx='1.5'/%3E%3Crect x='18' y='11' width='3' height='10' rx='1.5'/%3E%3Crect x='23' y='8' width='3' height='15' rx='1.5'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="../_lib/owner-config.js"></script>
+<script src="../_lib/owner.js"></script>
+<script src="../_lib/supabase-config.js"></script>
+<script src="../_lib/db.js"></script>
+<script src="../_lib/access-config.js"></script>
+<script src="../_lib/access.js"></script>
+<script>Access.protect();</script>
+<script src="esn.js"></script>
+<style>
+  :root{
+    /* terracotta — the warm one none of the other tools had taken */
+    --navy:#2e150d;--navy-2:#3d1d12;--accent:#d9663f;--accentB:#ef8a63;--accentD:#a8482a;--accent-ink:#1f0c06;
+    --bg:#1d100b;--card:#2a1811;--card-2:#23140e;--line:#40241a;--line3:#5b3625;
+    --text:#f6e9e2;--muted:#b39387;--zebra:rgba(255,255,255,.018);
+    --ok:#34c98b;--warn:#f2a33a;--bad:#e2607a;--info:#4f9bf0;
+    --glow:rgba(217,102,63,.5);--glowSoft:rgba(217,102,63,.28);
+  }
+  html[data-theme="light"]{
+    --navy:#3d1d12;--navy-2:#512718;--accent:#a8482a;--accentB:#c25c39;--accentD:#7d3319;--accent-ink:#ffffff;
+    --bg:#faf5f2;--card:#ffffff;--card-2:#fdf9f7;--line:#e8dcd5;--line3:#cdb8ac;
+    --text:#2e150d;--muted:#6d5b52;--zebra:rgba(0,0,0,.022);
+    --ok:#1f9a68;--warn:#b8721c;--bad:#c2405c;--info:#2f6fd0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);
+    font-family:'Hanken Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;line-height:1.5}
+
+  .hdr{position:sticky;top:0;z-index:30;background:linear-gradient(180deg,var(--navy-2),var(--navy));
+    color:#fff;padding:calc(env(safe-area-inset-top) + 12px) 16px 12px;display:flex;align-items:center;gap:10px;
+    border-bottom:1px solid var(--line3);box-shadow:0 6px 26px rgba(0,0,0,.5);overflow:hidden}
+  .hdr::before{content:'';position:absolute;inset:-24px 0;pointer-events:none;opacity:.45;
+    background-image:linear-gradient(rgba(239,138,99,.10) 1px,transparent 1px),linear-gradient(90deg,rgba(239,138,99,.07) 1px,transparent 1px);
+    background-size:24px 24px;animation:tGrid 3s linear infinite}
+  @keyframes tGrid{to{transform:translateY(24px)}}
+  .hdr>*{position:relative;z-index:1}
+  .hdr .brand{display:flex;align-items:center;gap:9px;text-decoration:none;color:inherit;flex-shrink:0;transition:opacity .18s ease}
+  .hdr .brand:hover{opacity:.86}
+  .hdr .brand:focus-visible{outline:2px solid #f7edf0;outline-offset:4px;border-radius:10px}
+  .hdr .logo{width:30px;height:30px;border-radius:50%;flex-shrink:0;
+    background:linear-gradient(150deg,#d15873,#87213c) !important;display:flex;align-items:center;justify-content:center;gap:2.4px;
+    box-shadow:0 0 16px rgba(176,58,86,.45);font-size:0;transition:transform .18s ease}
+  .hdr .brand:hover .logo{transform:scale(1.06)}
+  .hdr .logo i{width:2.6px;border-radius:2px;background:#170d10;display:block}
+  .hdr .logo i:nth-child(1){height:7px} .hdr .logo i:nth-child(2){height:12px}
+  .hdr .logo i:nth-child(3){height:9px} .hdr .logo i:nth-child(4){height:13px}
+  .hdr .bname{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:16px;letter-spacing:-.02em;color:#fff;white-space:nowrap}
+  .hdr .hsep{width:1px;height:19px;background:rgba(255,255,255,.2);flex-shrink:0}
+  .hdr h1{font-family:'Bricolage Grotesque',sans-serif;font-size:18px;font-weight:700;margin-right:auto;
+    white-space:nowrap;color:#fff;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;min-width:7ch}
+  .pill{font-family:'Space Mono',monospace;font-size:11.5px;background:rgba(0,0,0,.32);border:1px solid var(--line3);
+    color:#f7ded2;border-radius:999px;padding:5px 12px;white-space:nowrap;display:inline-flex;align-items:center;gap:7px;
+    flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .pill::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--accentB);animation:tLed 1.6s ease-in-out infinite;flex-shrink:0}
+  @keyframes tLed{0%,100%{opacity:.35}50%{opacity:1}}
+  .pill b{color:var(--accentB)}
+  .theme{background:none;border:1px solid var(--line3);color:#fff;border-radius:9px;width:34px;height:34px;
+    font-size:15px;cursor:pointer;flex-shrink:0;transition:border-color .2s ease,transform .2s ease}
+  .theme:hover{border-color:var(--accentB);transform:scale(1.06)}
+  @media (max-width:900px){.hdr .bname,.hdr .hsep{display:none}}
+  @media (max-width:760px){.hdr .pill{display:none}}
+
+  .tabs{position:sticky;top:55px;z-index:25;display:flex;gap:4px;overflow-x:auto;padding:10px 14px;
+    background:var(--bg);border-bottom:1px solid var(--line);scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{flex-shrink:0;border:1px solid var(--line);background:var(--card-2);color:var(--muted);border-radius:9px;
+    padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit;
+    transition:transform .15s ease,border-color .15s ease,color .15s ease}
+  .tab:hover{transform:translateY(-1px);border-color:var(--accent);color:var(--text)}
+  .tab.on{background:var(--accent);color:var(--accent-ink);border-color:transparent;box-shadow:0 6px 16px var(--glowSoft)}
+
+  main{max-width:1180px;margin:0 auto;padding:18px 14px calc(env(safe-area-inset-bottom) + 60px)}
+  @keyframes rise{0%{opacity:0;transform:translateY(12px)}100%{opacity:1;transform:none}}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px;animation:rise .4s ease both}
+  .panel h2{font-family:'Bricolage Grotesque',sans-serif;font-size:17px;margin-bottom:6px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .panel h2 .dot{width:7px;height:7px;border-radius:50%;background:var(--accentB);flex-shrink:0}
+  .panel h2 .tag{margin-left:auto;font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);font-weight:400}
+  .note{color:var(--muted);font-size:13px;line-height:1.6}
+  .note b{color:var(--text);font-weight:600}
+
+  .btn{border:1px solid var(--line3);background:none;color:var(--text);border-radius:9px;padding:8px 14px;
+    font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;
+    transition:border-color .18s ease,transform .18s ease,background .18s ease}
+  .btn:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .btn.on{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+  .btn:disabled{opacity:.45;cursor:default;transform:none;border-color:var(--line)}
+  .btn.sm{padding:5px 10px;font-size:12px}
+  .btn.del:hover{border-color:var(--bad);color:var(--bad)}
+  .bar{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+
+  label.f{display:block;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.13em;
+    text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+  input,select,textarea{background:var(--card-2);color:var(--text);border:1px solid var(--line);border-radius:9px;
+    padding:9px 11px;font-size:14px;font-family:inherit;outline:none;width:100%;
+    transition:border-color .18s ease}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+  input[readonly]{color:var(--muted);background:transparent}
+  .mono{font-family:'Space Mono',monospace}
+
+  .grid2{display:grid;grid-template-columns:minmax(0,180px) minmax(0,1fr);gap:12px}
+  @media(max-width:640px){.grid2{grid-template-columns:1fr}}
+
+  /* the site card */
+  .site{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px;
+    animation:rise .35s ease both}
+  .site.done{border-color:var(--accentD)}
+  .site>header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .site>header .n{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);
+    border:1px solid var(--line);border-radius:999px;padding:3px 9px}
+  .site>header .sp{flex:1}
+  /* The "still needs…" line is a sentence, not a label, so it has to wrap —
+     nowrap pushed it past the edge and took the whole page sideways with it. */
+  .state{font-family:'Space Mono',monospace;font-size:11px;padding:4px 11px;border-radius:12px;
+    border:1px solid var(--line3);color:var(--muted);line-height:1.5;
+    max-width:100%;min-width:0;overflow-wrap:anywhere}
+  .state.ready{border-color:var(--accentD);color:var(--accentB)}
+  .state.saved{border-color:var(--ok);color:var(--ok)}
+  .state.busy{border-color:var(--warn);color:var(--warn)}
+
+  /* the three picture wells */
+  .shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:14px}
+  .well{border:1px dashed var(--line3);border-radius:12px;background:var(--card-2);padding:12px;
+    min-height:150px;display:flex;flex-direction:column;gap:8px;cursor:pointer;position:relative;
+    transition:border-color .18s ease,background .18s ease}
+  .well:hover,.well.hot{border-color:var(--accent);background:rgba(217,102,63,.06)}
+  .well.has{border-style:solid;border-color:var(--accentD)}
+  .well .t{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted)}
+  .well .hint{font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:auto}
+  .well img{width:100%;height:120px;object-fit:cover;border-radius:8px;display:block;background:#000}
+  .well .rm{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.6);border:1px solid var(--line3);
+    color:#fff;border-radius:8px;width:26px;height:26px;cursor:pointer;font-size:14px;line-height:1}
+  .well input[type=file]{display:none}
+  .well.off{opacity:.4;pointer-events:none;border-style:dotted}
+
+  /* the tick */
+  .tick{display:inline-flex;align-items:center;gap:10px;cursor:pointer;user-select:none;
+    border:1px solid var(--line);border-radius:10px;padding:10px 13px;background:var(--card-2);
+    transition:border-color .18s ease}
+  .tick:hover{border-color:var(--accent)}
+  .tick.on{border-color:var(--accentD);background:rgba(217,102,63,.09)}
+  .tick input{width:auto;margin:0;accent-color:var(--accent)}
+  .tick span{font-size:14px;font-weight:600}
+
+  /* card serials */
+  .cards{margin-top:14px}
+  .crow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr) 38px;gap:8px;margin-bottom:8px;align-items:center}
+  @media(max-width:560px){.crow{grid-template-columns:1fr 1fr 38px}}
+  .crow .x{border:1px solid var(--line);background:none;color:var(--muted);border-radius:9px;height:38px;
+    cursor:pointer;font-size:15px;transition:border-color .16s ease,color .16s ease}
+  .crow .x:hover{border-color:var(--bad);color:var(--bad)}
+
+  .gridwrap{border:1px solid var(--line);border-radius:12px;overflow:auto;max-height:64vh;background:var(--card)}
+  table{border-collapse:collapse;width:100%;font-size:12.5px}
+  th{position:sticky;top:0;background:var(--navy);color:var(--muted);text-align:left;padding:9px 10px;
+    font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;
+    border-bottom:1px solid var(--line3);white-space:nowrap;z-index:1}
+  td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  tbody tr:nth-child(even){background:var(--zebra)}
+  td.k1{font-family:'Space Mono',monospace;color:var(--accentB);white-space:nowrap}
+  td.wrap{white-space:normal;min-width:160px}
+  .thumb{width:52px;height:38px;object-fit:cover;border-radius:6px;background:#000;cursor:zoom-in;display:block}
+  .chip{display:inline-block;padding:1px 7px;border:1px solid var(--line3);border-radius:6px;
+    font-family:'Space Mono',monospace;font-size:10.5px;margin:1px 3px 1px 0;color:var(--muted);white-space:nowrap}
+
+  .empty{text-align:center;color:var(--muted);padding:44px 20px;font-size:14.5px;line-height:1.6}
+  .empty .big{font-size:36px;margin-bottom:10px;opacity:.6}
+  .err{border:1px solid var(--bad);border-radius:12px;padding:13px 15px;background:rgba(226,96,122,.08);
+    font-size:13.5px;line-height:1.6;margin-bottom:14px}
+  .exrow{display:flex;align-items:center;gap:12px;background:var(--card-2);border:1px solid var(--line);
+    border-radius:11px;padding:12px 14px;margin-bottom:8px}
+  .exrow>div:first-child{flex:1;min-width:0}
+  .exname{font-weight:600;font-size:14.5px}
+  .exmeta{font-family:'Space Mono',monospace;font-size:11.5px;color:var(--muted);margin-top:3px}
+
+  #lightbox{position:fixed;inset:0;z-index:120;background:rgba(10,5,3,.92);display:none;
+    align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
+  #lightbox.on{display:flex}
+  #lightbox img{max-width:100%;max-height:100%;border-radius:10px;box-shadow:0 30px 80px rgba(0,0,0,.7)}
+
+  footer{max-width:1180px;margin:0 auto;padding:0 14px 30px;color:var(--muted);font-size:12.5px;line-height:1.7}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:var(--navy-2);
+    color:#fff;border:1px solid var(--line3);border-radius:10px;padding:11px 18px;font-size:13.5px;
+    opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;z-index:130;max-width:90vw;text-align:center}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+  @media (prefers-reduced-motion:reduce){*{animation:none !important}}
+</style>
+</head>
+<body>
+<header class="hdr">
+  <a class="brand" href="../../" title="Emortia · back to the site" aria-label="Emortia · back to the site">
+    <span class="logo"><i></i><i></i><i></i><i></i></span><span class="bname">Emortia</span></a>
+  <span class="hsep" aria-hidden="true"></span>
+  <h1>ESN Sharing</h1>
+  <span class="pill" id="pill">loading</span>
+  <button class="theme" id="themeBtn" aria-label="Toggle theme">☾</button>
+</header>
+<div class="tabs" id="tabs"></div>
+<main><div id="view"></div></main>
+<footer id="foot"></footer>
+<div class="toast" id="toast"></div>
+<div id="lightbox"><img id="lightimg" alt=""></div>
+
+<script>
+/* ============================================================
+   ESN Sharing
+
+   Someone types a site ID, the name arrives on its own, they
+   paste the screenshots straight out of the clipboard, type the
+   card serials, and press Save. The record and the pictures go
+   to the database. Nobody has to know there is a database.
+
+   The counting and checking live in esn.js, which knows nothing
+   about this page; esn.test.js holds it against the real site
+   list — 5,944 of them.
+   ============================================================ */
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const E = window.EsnCore;
+
+const DRAFT_KEY = 'esn_drafts_v1';        // what is typed but not yet filed
+
+let INDEX = {};                            // site id -> {id, name}
+let DRAFTS = [];                           // the cards on screen
+let FILED  = [];                           // what the database has
+let LINKS  = {};                           // storage path -> signed url
+let ACTIVE = 'Add';
+let SITES_READY = false, LOAD_ERR = '';
+
+/* ---------- theme, shared with the other tools ---------- */
+const THEME_KEY = 'office_tool_theme';
+function applyTheme(t){ document.documentElement.dataset.theme = t; $('themeBtn').textContent = t === 'dark' ? '☀' : '☾';
+  try { localStorage.setItem(THEME_KEY, t); } catch(e){} }
+applyTheme(localStorage.getItem(THEME_KEY) || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+$('themeBtn').onclick = () => applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+
+let tt; function toast(m, ms){ const t = $('toast'); t.textContent = m; t.classList.add('show');
+  clearTimeout(tt); tt = setTimeout(() => t.classList.remove('show'), ms || 2600); }
+
+/* ---------- what the people using this are told ----------
+
+   The team files ESNs. They should not have to know there is a Postgres
+   behind it, what the table is called, or that a bucket exists — and a raw
+   error says all three. Everyone gets a sentence about what to do next; the
+   owner gets the real message underneath it, because the owner is the one
+   who has to fix it.
+
+   Nothing is hidden that anybody needs. It is hidden that nobody needs. */
+const isOwner = () => !!(window.Access && Access.isOwner());
+
+function speak(err){
+  const raw = String((err && err.message) || err || '');
+  let plain;
+  if (/schema cache|does not exist|relation .* does not exist/i.test(raw))
+    plain = 'This tool is not switched on yet. Sithara has one step left to do — nothing is wrong with what you typed.';
+  else if (/bucket|storage/i.test(raw))
+    plain = 'The picture store is not ready yet. Your typing is safe; try the save again shortly.';
+  else if (/jwt|not authenticated|sign in|row-level security|permission/i.test(raw))
+    plain = 'Your sign-in has run out. Reload the page and sign in again.';
+  else if (/fetch|network|failed to|timeout/i.test(raw))
+    plain = 'No connection just now. What you have typed stays here — try again when the signal is back.';
+  else
+    plain = 'That did not go through. Your typing is safe; try again in a moment.';
+  return { plain, raw, full: isOwner() && raw ? plain + '  (' + raw + ')' : plain };
+}
+
+/* ---------- drafts survive a closed tab ----------
+   A half-filled record is somebody's afternoon. The typed parts are kept in
+   this browser; the pictures are not, because they are already megabytes and
+   localStorage is not the place for them. */
+function saveDrafts(){
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(DRAFTS.map(d => ({
+      siteId:d.siteId, siteName:d.siteName, runOm:d.runOm, cards:d.cards, note:d.note }))));
+  } catch(e){}
+}
+function loadDrafts(){
+  try {
+    const raw = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
+    if (Array.isArray(raw) && raw.length)
+      /* Every draft is minted through newDraft, restored or not. A restored one
+         without a uid looks fine and is dead: each field carries data-…="undefined",
+         every handler looks that up, finds nothing and returns, so you can type
+         a whole record into it and none of it is kept. */
+      DRAFTS = raw.map(r => Object.assign(newDraft(), r, { esnPhoto:null, esnFull:null, omIpPhoto:null, files:{} }));
+  } catch(e){}
+  if (!DRAFTS.length) DRAFTS = [newDraft()];
+  DRAFTS.forEach(d => { if (!d.uid) d.uid = mintUid(); });
+}
+let uidSeq = 0;
+function mintUid(){ return 'd' + (++uidSeq) + Math.random().toString(36).slice(2,7); }
+function newDraft(){ const d = E.blank(); d.files = {}; d.uid = mintUid(); return d; }
+
+/* ---------- the site list ---------- */
+async function loadSites(){
+  try {
+    const ds = await window.DB.load('site_access', '../site-access/data.json');
+    INDEX = E.buildIndex(ds);
+    SITES_READY = Object.keys(INDEX).length > 0;
+  } catch(e){ LOAD_ERR = e.message; }
+}
+
+/* ---------- what the database already has ---------- */
+async function loadFiled(){
+  const r = await window.DB.esnList(500);
+  if (r.error){ LOAD_ERR = r.error; FILED = []; return; }
+  FILED = (r.rows || []).map(E.fromRow);
+}
+async function linkFor(path){
+  if (!path) return null;
+  if (LINKS[path] !== undefined) return LINKS[path];
+  LINKS[path] = await window.DB.esnLink(path, 3600);
+  return LINKS[path];
+}
+
+/* ---------- tabs ---------- */
+function buildTabs(){
+  const names = ['Add', 'Filed', 'Export'];
+  if (!names.includes(ACTIVE)) ACTIVE = 'Add';
+  $('tabs').innerHTML = names.map(n =>
+    '<button class="tab' + (n === ACTIVE ? ' on' : '') + '" data-t="' + n + '">' + n +
+    (n === 'Filed' && FILED.length ? ' · ' + FILED.length : '') +
+    (n === 'Add' && DRAFTS.length ? ' · ' + DRAFTS.length : '') + '</button>').join('');
+  [...$('tabs').children].forEach(b => b.onclick = () => { ACTIVE = b.dataset.t; buildTabs(); render(); });
+}
+
+/* ---------- the add tab ---------- */
+function wellHtml(d, key, title, hint, off){
+  const url = d.files[key] ? d.files[key].url : null;
+  return '<div class="well' + (url ? ' has' : '') + (off ? ' off' : '') + '" data-well="' + d.uid + '.' + key + '" tabindex="0">' +
+    '<div class="t">' + title + '</div>' +
+    (url ? '<img src="' + url + '" alt=""><button class="rm" data-rm="' + d.uid + '.' + key + '" title="Take it off">×</button>'
+         : '<div class="hint">' + hint + '</div>') +
+    '<input type="file" accept="image/*" data-file="' + d.uid + '.' + key + '"></div>';
+}
+
+function draftHtml(d, i){
+  const v = E.check(d);
+  const state = d.busy ? '<span class="state busy">' + esc(d.busy) + '</span>'
+              : d.saved ? '<span class="state saved">Filed</span>'
+              : v.ok ? '<span class="state ready">Ready to file</span>'
+              : '<span class="state">' + esc(E.why(v.missing)) + '</span>';
+
+  const cards = (d.cards || []).map((c, ci) =>
+    '<div class="crow">' +
+      '<input list="cardTypes" placeholder="Card type" value="' + esc(c.type) + '" data-card="' + d.uid + '.' + ci + '.type">' +
+      '<input class="mono" placeholder="Serial no" value="' + esc(c.serial) + '" data-card="' + d.uid + '.' + ci + '.serial">' +
+      '<button class="x" data-cardrm="' + d.uid + '.' + ci + '" title="Remove">×</button>' +
+    '</div>').join('');
+
+  return '<div class="site' + (d.saved ? ' done' : '') + '" data-site="' + d.uid + '">' +
+    '<header><span class="n">' + (i + 1) + '</span>' + state + '<span class="sp"></span>' +
+      '<button class="btn sm del" data-drop="' + d.uid + '">Remove</button></header>' +
+
+    '<div class="grid2">' +
+      '<div><label class="f" for="sid_' + d.uid + '">Site ID</label>' +
+        '<input id="sid_' + d.uid + '" class="mono" placeholder="MU5051" value="' + esc(d.siteId) + '" data-sid="' + d.uid + '" autocapitalize="characters" spellcheck="false"></div>' +
+      '<div><label class="f">Site name</label>' +
+        '<input value="' + esc(d.siteName) + '" data-sname="' + d.uid + '" placeholder="' +
+          (SITES_READY ? 'fills in from the site list' : 'site list still loading') + '"></div>' +
+    '</div>' +
+
+    '<div class="bar" style="margin:14px 0 0">' +
+      '<label class="tick' + (d.runOm ? ' on' : '') + '">' +
+        '<input type="checkbox" data-om="' + d.uid + '"' + (d.runOm ? ' checked' : '') + '>' +
+        '<span>Run O&amp;M Script?</span></label>' +
+      '<span class="note" style="font-size:12.5px">' +
+        (d.runOm ? 'Add the O&amp;M IP print screen below.' : 'Tick it and the O&amp;M IP slot opens.') + '</span>' +
+    '</div>' +
+
+    '<div class="shots">' +
+      wellHtml(d, 'esn',  'ESN only',        'Click, drop, or paste with Ctrl+V', false) +
+      wellHtml(d, 'full', 'Full screenshot', 'The whole screen with the ESN on it', false) +
+      wellHtml(d, 'om',   'O&amp;M IP',      d.runOm ? 'Print screen of the O&amp;M IP' : 'Tick the box above first', !d.runOm) +
+    '</div>' +
+
+    '<div class="cards">' +
+      '<label class="f">Card type and serial number</label>' + cards +
+      '<button class="btn sm" data-cardadd="' + d.uid + '">+ Add card</button>' +
+    '</div>' +
+
+    '<div style="margin-top:14px"><label class="f">Note</label>' +
+      '<input placeholder="anything worth saying about this one" value="' + esc(d.note) + '" data-note="' + d.uid + '"></div>' +
+
+    '<div class="bar" style="margin:14px 0 0">' +
+      '<button class="btn on" data-save="' + d.uid + '"' + (v.ok && !d.busy ? '' : ' disabled') + '>' +
+        (d.saved ? 'Save again' : 'Save') + '</button>' +
+      '<button class="btn sm" data-clear="' + d.uid + '">Clear</button></div>' +
+  '</div>';
+}
+
+function renderAdd(){
+  let h = '';
+  if (LOAD_ERR){ const t = speak(LOAD_ERR);
+    h += '<div class="err">' + esc(t.full) + '</div>'; }
+  h += '<div class="bar">' +
+    '<button class="btn on" id="addSite">+ Add Site</button>' +
+    '<span class="note">Paste a screenshot straight into a slot with <b>Ctrl+V</b>.</span></div>';
+  h += DRAFTS.map(draftHtml).join('');
+  h += '<datalist id="cardTypes">' + E.CARD_TYPES.map(t => '<option value="' + esc(t) + '">').join('') + '</datalist>';
+  return h;
+}
+
+/* ---------- the filed tab ---------- */
+function renderFiled(){
+  if (!FILED.length) return '<div class="empty"><div class="big">📷</div>Nothing filed yet.<br>' +
+    'What gets saved on the Add tab lands here, for everyone signed in.</div>';
+  const rows = FILED.map(r => {
+    const cards = E.liveCards(r);
+    return '<tr>' +
+      '<td class="k1">' + esc(r.siteId) + '</td>' +
+      '<td class="wrap">' + esc(r.siteName || '') + '</td>' +
+      '<td>' + (r.runOm ? '<span class="chip" style="border-color:var(--accentD);color:var(--accentB)">O&amp;M</span>' : '') + '</td>' +
+      '<td class="wrap">' + (cards.length
+          ? cards.map(c => '<span class="chip">' + esc(c.type || '—') + ' · ' + esc(c.serial) + '</span>').join('')
+          : '<span class="note">—</span>') + '</td>' +
+      '<td>' + ['esnPhoto','esnFull','omIpPhoto'].map(k => r[k]
+          ? '<img class="thumb" data-shot="' + esc(r[k]) + '" alt="' + k + '">' : '').join(' ') + '</td>' +
+      '<td class="wrap note">' + esc(r.note || '') + '</td>' +
+      '<td class="note" style="white-space:nowrap">' + esc((r.createdAt || '').replace('T',' ').slice(0,16)) + '<br>' +
+        esc(r.createdEmail || '') + '</td></tr>';
+  }).join('');
+  return '<div class="gridwrap"><table><thead><tr>' +
+    ['Site ID','Site name','','Cards','Screens','Note','Filed'].map(c => '<th>' + c + '</th>').join('') +
+    '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+}
+
+/* ---------- the export tab ---------- */
+function renderExport(){
+  return '<div class="panel"><h2><span class="dot"></span>Take it out<span class="tag">' + FILED.length + ' filed</span></h2>' +
+    '<p class="note" style="margin-bottom:14px">One row per card, with the site repeated down its rows so the sheet can be sorted and filtered without looking anything up again. The picture columns carry links that work for an hour.</p>' +
+    '<div class="exrow"><div><div class="exname">Excel</div>' +
+      '<div class="exmeta">' + E.COLS.length + ' columns · every record filed</div></div>' +
+      '<button class="btn on" id="bXls">⬇ Excel</button></div>' +
+    '<div class="exrow"><div><div class="exname">CSV</div>' +
+      '<div class="exmeta">the same thing, for anything that will not open xlsx</div></div>' +
+      '<button class="btn" id="bCsv">⬇ CSV</button></div>' +
+  '</div>';
+}
+
+function render(){
+  $('view').innerHTML = ACTIVE === 'Filed' ? renderFiled()
+                      : ACTIVE === 'Export' ? renderExport() : renderAdd();
+  wire();
+  $('pill').innerHTML = SITES_READY
+    ? '<b>' + FILED.length + '</b> filed'
+    : 'site list loading';
+  $('foot').innerHTML = !SITES_READY ? 'Loading the site list…'
+    : isOwner()
+      /* the owner is the one who maintains it, so the owner sees how it works */
+      ? 'Site names from the Site Access list · screenshots resized in the browser, stored privately · ' +
+        'signed in as <b>' + esc(Access.currentUser()) + '</b>'
+      /* everyone else just needs to know it saved and who they are */
+      : 'Site names fill in on their own · saved for the team · signed in as <b>' +
+        esc((window.Access && Access.currentUser()) || '—') + '</b>';
+  if (ACTIVE === 'Filed') fillThumbs();
+}
+
+/* Signed links are asked for only for what is on screen, and only once. */
+async function fillThumbs(){
+  const imgs = [...document.querySelectorAll('img[data-shot]')];
+  for (const im of imgs){
+    const u = await linkFor(im.dataset.shot);
+    if (u) im.src = u;
+  }
+}
+
+/* ---------- pictures ---------- */
+async function takeImage(uid, key, file){
+  const d = DRAFTS.find(x => x.uid === uid); if (!d || !file) return;
+  try {
+    const out = await E.shrink(file);
+    if (d.files[key] && d.files[key].url) URL.revokeObjectURL(d.files[key].url);
+    d.files[key] = { blob: out.blob, ext: out.ext, url: URL.createObjectURL(out.blob) };
+    /* the record only counts a picture once it is actually held */
+    if (key === 'esn')  d.esnPhoto  = 'pending';
+    if (key === 'full') d.esnFull   = 'pending';
+    if (key === 'om')   d.omIpPhoto = 'pending';
+    d.saved = false;
+    render();
+    if (out.to < out.from) toast('Picture added · ' + Math.round(out.from/1024) + 'kB → ' + Math.round(out.to/1024) + 'kB');
+    else toast('Picture added');
+  } catch(e){ toast(e.message, 4500); }
+}
+function dropImage(uid, key){
+  const d = DRAFTS.find(x => x.uid === uid); if (!d) return;
+  if (d.files[key] && d.files[key].url) URL.revokeObjectURL(d.files[key].url);
+  delete d.files[key];
+  if (key === 'esn')  d.esnPhoto  = null;
+  if (key === 'full') d.esnFull   = null;
+  if (key === 'om')   d.omIpPhoto = null;
+  d.saved = false; render();
+}
+
+/* ---------- saving ---------- */
+async function save(uid){
+  const d = DRAFTS.find(x => x.uid === uid); if (!d) return;
+  const v = E.check(d);
+  if (!v.ok){ toast(E.why(v.missing), 4000); return; }
+
+  d.busy = 'Uploading…'; render();
+  try {
+    const paths = {};
+    const jobs = [['esn','esnPhoto'], ['full','esnFull'], ['om','omIpPhoto']];
+    for (const [key, field] of jobs){
+      if (!d.files[key]) { paths[field] = null; continue; }
+      d.busy = 'Uploading ' + key + '…'; render();
+      paths[field] = await window.DB.esnUpload(d.siteId, key, d.files[key].blob, d.files[key].ext);
+    }
+    d.busy = 'Saving…'; render();
+    const row = await window.DB.esnSave({
+      id: d.id, siteId: E.upper(d.siteId), siteName: d.siteName,
+      runOm: d.runOm, cards: E.liveCards(d),
+      esnPhoto: paths.esnPhoto, esnFull: paths.esnFull, omIpPhoto: paths.omIpPhoto,
+      note: d.note
+    });
+    d.id = row.id; d.saved = true; d.busy = null;
+    await loadFiled(); buildTabs(); render();
+    toast(E.upper(d.siteId) + ' filed');
+  } catch(e){
+    d.busy = null; render();
+    toast(speak(e).full, 7000);
+  }
+}
+
+/* ---------- export ---------- */
+async function sheetRows(){
+  /* a link for every picture, asked for together rather than one at a time */
+  const paths = [];
+  FILED.forEach(r => ['esnPhoto','esnFull','omIpPhoto'].forEach(k => { if (r[k]) paths.push(r[k]); }));
+  await Promise.all([...new Set(paths)].map(p => linkFor(p)));
+  return [E.COLS].concat(E.toRows(FILED, LINKS));
+}
+function download(name, blob){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+/* ---------- wiring ---------- */
+function wire(){
+  const add = $('addSite');
+  if (add) add.onclick = () => { DRAFTS.push(newDraft()); saveDrafts(); buildTabs(); render();
+    const cards = document.querySelectorAll('[data-site]');
+    if (cards.length) cards[cards.length-1].scrollIntoView({ behavior:'smooth', block:'start' }); };
+
+  const find = uid => DRAFTS.find(x => x.uid === uid);
+
+  /* site id -> name, on every keystroke */
+  [...document.querySelectorAll('[data-sid]')].forEach(el => {
+    el.oninput = () => {
+      const d = find(el.dataset.sid); if (!d) return;
+      d.siteId = el.value;
+      const hit = E.findSite(INDEX, el.value);
+      const nameEl = document.querySelector('[data-sname="' + d.uid + '"]');
+      if (hit){ d.siteName = hit.name; if (nameEl) nameEl.value = hit.name; }
+      else if (!d.nameTouched){ d.siteName = ''; if (nameEl) nameEl.value = ''; }
+      d.saved = false; saveDrafts();
+      const st = el.closest('.site').querySelector('.state');
+      const v = E.check(d);
+      if (st && !d.busy){ st.className = 'state' + (v.ok ? ' ready' : ''); st.textContent = v.ok ? 'Ready to file' : E.why(v.missing); }
+      const btn = document.querySelector('[data-save="' + d.uid + '"]'); if (btn) btn.disabled = !v.ok;
+    };
+  });
+  [...document.querySelectorAll('[data-sname]')].forEach(el => {
+    el.oninput = () => { const d = find(el.dataset.sname); if (!d) return;
+      d.siteName = el.value; d.nameTouched = true; saveDrafts(); };
+  });
+  [...document.querySelectorAll('[data-note]')].forEach(el => {
+    el.oninput = () => { const d = find(el.dataset.note); if (d){ d.note = el.value; saveDrafts(); } };
+  });
+  [...document.querySelectorAll('[data-om]')].forEach(el => {
+    el.onchange = () => { const d = find(el.dataset.om); if (!d) return;
+      d.runOm = el.checked;
+      if (!el.checked) dropImage(d.uid, 'om'); else { d.saved = false; saveDrafts(); render(); } };
+  });
+
+  /* cards */
+  [...document.querySelectorAll('[data-card]')].forEach(el => {
+    el.oninput = () => {
+      const [uid, ci, field] = el.dataset.card.split('.');
+      const d = find(uid); if (!d) return;
+      d.cards[+ci][field] = el.value; d.saved = false; saveDrafts();
+      const v = E.check(d);
+      const btn = document.querySelector('[data-save="' + uid + '"]'); if (btn) btn.disabled = !v.ok;
+      const st = el.closest('.site').querySelector('.state');
+      if (st && !d.busy){ st.className = 'state' + (v.ok ? ' ready' : ''); st.textContent = v.ok ? 'Ready to file' : E.why(v.missing); }
+    };
+  });
+  [...document.querySelectorAll('[data-cardadd]')].forEach(b => b.onclick = () => {
+    const d = find(b.dataset.cardadd); if (!d) return;
+    d.cards.push({ type:'', serial:'' }); saveDrafts(); render();
+  });
+  [...document.querySelectorAll('[data-cardrm]')].forEach(b => b.onclick = () => {
+    const [uid, ci] = b.dataset.cardrm.split('.');
+    const d = find(uid); if (!d) return;
+    d.cards.splice(+ci, 1);
+    if (!d.cards.length) d.cards.push({ type:'', serial:'' });
+    saveDrafts(); render();
+  });
+
+  /* the picture wells: click, drop, or paste */
+  [...document.querySelectorAll('[data-well]')].forEach(w => {
+    const [uid, key] = w.dataset.well.split('.');
+    const input = w.querySelector('input[type=file]');
+    w.onclick = e => { if (!e.target.closest('.rm')) input.click(); };
+    w.onkeydown = e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); input.click(); } };
+    input.onchange = e => { const f = e.target.files[0]; if (f) takeImage(uid, key, f); e.target.value = ''; };
+    ['dragover','dragenter'].forEach(t => w.addEventListener(t, e => { e.preventDefault(); w.classList.add('hot'); }));
+    ['dragleave','drop'].forEach(t => w.addEventListener(t, e => { e.preventDefault(); w.classList.remove('hot'); }));
+    w.addEventListener('drop', e => { const f = E.imageFrom(e); if (f) takeImage(uid, key, f); });
+    /* a print screen arrives on the clipboard, so the well takes a paste
+       whenever it is the thing being looked at */
+    w.addEventListener('paste', e => { const f = E.imageFrom(e); if (f){ e.preventDefault(); takeImage(uid, key, f); } });
+  });
+  [...document.querySelectorAll('[data-rm]')].forEach(b => b.onclick = e => {
+    e.stopPropagation(); const [uid, key] = b.dataset.rm.split('.'); dropImage(uid, key);
+  });
+
+  [...document.querySelectorAll('[data-save]')].forEach(b => b.onclick = () => save(b.dataset.save));
+  [...document.querySelectorAll('[data-clear]')].forEach(b => b.onclick = () => {
+    const d = find(b.dataset.clear); if (!d) return;
+    ['esn','full','om'].forEach(k => { if (d.files[k] && d.files[k].url) URL.revokeObjectURL(d.files[k].url); });
+    Object.assign(d, E.blank(), { uid: d.uid, files: {} });
+    saveDrafts(); render();
+  });
+  [...document.querySelectorAll('[data-drop]')].forEach(b => b.onclick = () => {
+    const i = DRAFTS.findIndex(x => x.uid === b.dataset.drop);
+    if (i < 0) return;
+    const d = DRAFTS[i];
+    if (!d.saved && (d.siteId || Object.keys(d.files).length) && !confirm('Remove this one? What is typed here goes with it.')) return;
+    ['esn','full','om'].forEach(k => { if (d.files[k] && d.files[k].url) URL.revokeObjectURL(d.files[k].url); });
+    DRAFTS.splice(i, 1);
+    if (!DRAFTS.length) DRAFTS = [newDraft()];
+    saveDrafts(); buildTabs(); render();
+  });
+
+  /* filed: tap a thumbnail to see it properly */
+  [...document.querySelectorAll('img[data-shot]')].forEach(im => im.onclick = async () => {
+    const u = await linkFor(im.dataset.shot); if (!u) return;
+    $('lightimg').src = u; $('lightbox').classList.add('on');
+  });
+
+  const x = $('bXls');
+  if (x) x.onclick = async () => {
+    if (!FILED.length){ toast('Nothing filed yet'); return; }
+    x.disabled = true; x.textContent = 'Building…';
+    try {
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(await sheetRows()), 'ESN');
+      XLSX.writeFile(wb, 'esn-' + new Date().toISOString().slice(0,10) + '.xlsx');
+      toast(FILED.length + ' records exported');
+    } catch(e){ toast(e.message, 5000); }
+    x.disabled = false; x.textContent = '⬇ Excel';
+  };
+  const c = $('bCsv');
+  if (c) c.onclick = async () => {
+    if (!FILED.length){ toast('Nothing filed yet'); return; }
+    const rows = await sheetRows();
+    const q = v => '"' + String(v == null ? '' : v).replace(/"/g,'""') + '"';
+    download('esn-' + new Date().toISOString().slice(0,10) + '.csv',
+      new Blob([rows.map(r => r.map(q).join(',')).join('\n')], { type:'text/csv;charset=utf-8' }));
+    toast('CSV downloaded');
+  };
+}
+
+$('lightbox').onclick = () => $('lightbox').classList.remove('on');
+addEventListener('keydown', e => { if (e.key === 'Escape') $('lightbox').classList.remove('on'); });
+
+/* ---------- boot ---------- */
+(async function(){
+  loadDrafts();
+  buildTabs(); render();
+  await loadSites();
+  render();
+  await loadFiled();
+  buildTabs(); render();
+  try { window.DB.esnSubscribe(async () => { await loadFiled(); buildTabs(); if (ACTIVE === 'Filed') render(); }); } catch(e){}
+})();
+</script>
+</body>
+</html>

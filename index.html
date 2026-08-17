@@ -49,6 +49,7 @@ header,footer{--accent:#b03a56;--accentB:#d15873;--accentD:#87213c;--glow:rgba(1
 .tool-update{--tc:#1f97a8;--tcB:#3fbdd0;--tcGrid:rgba(31,151,168,.10);--tcLine:#1c3a42;--tcBg:#0e1a1e;--tcRGB:31,151,168;}
 .tool-access{--tc:#2f8fd4;--tcB:#5fb0ea;--tcGrid:rgba(47,143,212,.10);--tcLine:#1b3245;--tcBg:#0d1620;--tcRGB:47,143,212;}
 .tool-data{--tc:#7a68e8;--tcB:#9a8bf2;--tcGrid:rgba(122,104,232,.10);--tcLine:#2a2547;--tcBg:#131024;--tcRGB:122,104,232;}
+.tool-esn{--tc:#d9663f;--tcB:#ef8a63;--tcGrid:rgba(217,102,63,.10);--tcLine:#40241a;--tcBg:#1a0f0a;--tcRGB:217,102,63;}
 .tool-gin{--tc:#2fa877;--tcB:#4cc294;--tcGrid:rgba(47,168,119,.10);--tcLine:#203029;--tcBg:#0e1712;--tcRGB:47,168,119;}
 
 *{box-sizing:border-box;}
@@ -2890,6 +2891,8 @@ class Component extends DCLogic {
          desc:'Reads the 765-column design workbook and keeps what a bill of materials needs. One radio written under three technologies is one box on the pole, not three – and the table that decides which radio carries what is yours to correct.'},
         {name:'BOM Builder', initial:'B', tag:'Dialog · lamp pole materials', href:'tools/bom/',
          desc:'Turns a design into something you can order. The radios, antennas and BBU cards come straight across from the Design Extractor; everything else follows the site – its sectors, its RRUs, the height of the pole, the vendor, how it is fed. Every rule was read off a hand-built BOM and every one of them is yours to change.'},
+        {name:'ESN Sharing', initial:'E', tag:'Dialog · ESN + serials', href:'tools/esn/',
+         desc:'The team files an ESN from the field: type a site ID and the name arrives on its own, paste the print screens straight out of the clipboard, list the card types and their serials. Tick Run O&M Script and the O&M IP slot opens. Everything lands in one place and comes out as Excel.'},
         {name:'What To Do', initial:'W', tag:'Jobs · reminders', href:'tools/whattodo/',
          desc:'The running list of what still needs doing, shared across every device. Add a job on one, tick it off on another, and it leaves both. Nudges every 15 minutes while the page is open.'},
         {name:'Project Update', initial:'P', tag:'Dialog · lamp pole rollout', href:'tools/project-update/',
@@ -2900,7 +2903,7 @@ class Component extends DCLogic {
          desc:'Full technical profile for 13,000+ sites – TX technology, tower, power, generator, solar and equipment counts. Search and go.'},
         {name:'GIN Extractor', initial:'G', tag:'Dialog Axiata · SAP', href:'tools/gin-extractor/',
          desc:'Drop SAP Goods Issue Note PDFs and pull every material line into one clean Excel sheet. Runs entirely on your device, works offline, nothing is uploaded.'},
-      ].map(t=>({...t, cmd:'$ '+t.href.replace(/^tools\//,'').replace(/\/$/,'')+' --open', cls:'tool-'+({'design-extractor':'design','bom':'bom','whattodo':'todo','project-update':'update','site-access':'access','site-data':'data','gin-extractor':'gin'}[t.href.replace(/^tools\//,'').replace(/\/$/,'')]||'access')})),
+      ].map(t=>({...t, cmd:'$ '+t.href.replace(/^tools\//,'').replace(/\/$/,'')+' --open', cls:'tool-'+({'design-extractor':'design','bom':'bom','esn':'esn','whattodo':'todo','project-update':'update','site-access':'access','site-data':'data','gin-extractor':'gin'}[t.href.replace(/^tools\//,'').replace(/\/$/,'')]||'access')})),
       page:s.page,
 
       navItems: navDefs.map(([k,label])=>({ key:k, label, active:s.page===k, onClick:this.go(k) })),
@@ -2979,7 +2982,7 @@ class Component extends DCLogic {
             meta: mt?mt.t:'', go: ()=>{ this.loadTrack(m.track, true); this.setState({page:'music', menuOpen:false}); } }; }),
         };
       })(),
-      hmToolCount: 7,
+      hmToolCount: 8,
       hmTools: [{name:'What To Do', dot:'#d4547a'},{name:'Project Update', dot:'#1f97a8'},{name:'Site Access Lookup', dot:'#2f8fd4'}],
       hmSongCount: this.tracks.length,
       hmCatSummary: (()=>{ const tot=this.tracks.reduce((a,b)=>a+(b.dur||0),0); const m=Math.round(tot/60);

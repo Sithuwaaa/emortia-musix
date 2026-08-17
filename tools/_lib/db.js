@@ -321,7 +321,78 @@
       .subscribe();
   }
 
+  /* ------------------------------------------------------------------ ESN
+
+     One table and one private storage bucket. The tool never speaks to either
+     directly — this is the only file that does, so there is one place to look
+     when a screenshot goes missing. */
+  const ESN = 'esn_records', BUCKET = 'esn';
+
+  async function esnList(limit){
+    const c = await client(); if (!c) return { rows: [], error: 'offline' };
+    const { data, error } = await c.from(ESN).select('*')
+      .order('created_at', { ascending: false }).limit(limit || 500);
+    if (error) return { rows: [], error: error.message };
+    return { rows: data || [], error: null };
+  }
+
+  /* Images go to storage under the site they belong to, named by when they
+     arrived, so two people filing the same site never overwrite each other. */
+  async function esnUpload(siteId, kind, blob, ext){
+    const c = await client(); if (!c) throw new Error('Not connected.');
+    const s = await session(); if (!s) throw new Error('Sign in first.');
+    const safe = String(siteId || 'unknown').toUpperCase().replace(/[^A-Z0-9_-]+/g, '') || 'UNKNOWN';
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const path = safe + '/' + stamp + '-' + kind + '.' + (ext || 'webp');
+    const { error } = await c.storage.from(BUCKET).upload(path, blob, {
+      contentType: blob.type || 'image/webp', upsert: false });
+    if (error) throw new Error(error.message);
+    return path;
+  }
+
+  /* The bucket is private, so a path is not a URL. These are short-lived links
+     asked for at the moment something is shown or exported. */
+  async function esnLink(path, seconds){
+    const c = await client(); if (!c || !path) return null;
+    const { data, error } = await c.storage.from(BUCKET)
+      .createSignedUrl(path, seconds || 3600);
+    return error ? null : (data ? data.signedUrl : null);
+  }
+
+  async function esnSave(rec){
+    const c = await client(); if (!c) throw new Error('Not connected.');
+    const s = await session(); if (!s) throw new Error('Sign in first.');
+    const row = {
+      site_id: rec.siteId, site_name: rec.siteName || null,
+      run_om: !!rec.runOm,
+      esn_photo: rec.esnPhoto || null, esn_full: rec.esnFull || null,
+      om_ip_photo: rec.omIpPhoto || null,
+      cards: rec.cards || [], note: rec.note || null,
+      created_by: s.user.id, created_email: s.user.email || null
+    };
+    const q = rec.id
+      ? c.from(ESN).update(row).eq('id', rec.id).select().single()
+      : c.from(ESN).insert(row).select().single();
+    const { data, error } = await q;
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  async function esnDelete(id){
+    const c = await client(); if (!c) throw new Error('Not connected.');
+    const { error } = await c.from(ESN).delete().eq('id', id);
+    if (error) throw new Error(error.message);
+  }
+
+  async function esnSubscribe(fn){
+    const c = await client(); if (!c) return;
+    c.channel('esn_live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: ESN }, () => fn())
+      .subscribe();
+  }
+
   window.DB = { configured, client, session, signIn, signUp, signOut, onAuth,
+                esnList, esnSave, esnDelete, esnUpload, esnLink, esnSubscribe,
                 load, publish, subscribe,
                 publishBook, loadBook, subscribeBook,
                 listTodos, addTodo, setTodoDone, subscribeTodos,
