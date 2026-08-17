@@ -25,7 +25,7 @@ window.ACCESS_USERS = [
 /* Who gets owner mode. It is a property of the account, not a passphrase in
    the address bar: sign in as one of these and the owner controls appear,
    on the site and in every tool. */
-window.ACCESS_OWNERS = ['sithuwaaa'];
+window.ACCESS_OWNERS = ['sithuwaaa', 'sithuwaaathepage@gmail.com'];
 
 /* Who may sign themselves up. Leave it undefined and anyone can; give it a
    list to narrow it — a bare address matches itself, one starting with @

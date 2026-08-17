@@ -75,9 +75,16 @@
   function owners() {
     return (window.ACCESS_OWNERS || []).map(function (n) { return String(n).trim().toLowerCase(); });
   }
+  /* Matched on the name or on the whole address, because the same person may
+     sign up as "Sithuwaaa" or as their real inbox and should be the owner
+     either way. */
   function isOwner() {
     var s = session();
-    return !!(s && owners().indexOf(String(s.user).trim().toLowerCase()) > -1);
+    if (!s) return false;
+    var list = owners();
+    var name = String(s.user || '').trim().toLowerCase();
+    var mail = String(s.email || '').trim().toLowerCase();
+    return list.indexOf(name) > -1 || (!!mail && list.indexOf(mail) > -1);
   }
 
   function signedIn() { return !!session(); }
@@ -107,8 +114,8 @@
   }
   var nameOf = function (email) { return String(email || '').split('@')[0]; };
 
-  function keep(user) {
-    write({ user: user, epoch: EPOCH, since: Date.now(), until: Date.now() + MS });
+  function keep(user, email) {
+    write({ user: user, email: email || '', epoch: EPOCH, since: Date.now(), until: Date.now() + MS });
   }
 
   async function localSignIn(user, password) {
@@ -142,7 +149,7 @@
     if (remote()) {
       try {
         await window.DB.signIn(asEmail(id), password);
-        keep(nameOf(asEmail(id)));
+        keep(nameOf(asEmail(id)), asEmail(id));
         return { ok: true, user: nameOf(asEmail(id)) };
       } catch (e) {
         /* a name only in the local list still works when Supabase says no */
@@ -172,7 +179,7 @@
 
     try {
       var out = await window.DB.signUp(email, password);
-      if (out && out.session) { keep(nameOf(email)); return { ok: true, user: nameOf(email) }; }
+      if (out && out.session) { keep(nameOf(email), email); return { ok: true, user: nameOf(email) }; }
       /* No session back means the project asks for the email to be confirmed. */
       return { ok: false, pending: true, error:
         'Account made. Supabase wants the address confirmed first — open the link it just emailed to ' + email + ', then sign in.' };
