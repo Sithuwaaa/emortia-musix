@@ -133,14 +133,30 @@
     return { ok: true, user: rec.user };
   }
 
+  /* Nothing on screen should name a table, a bucket or a schema. Everyone gets
+     a sentence about what to do next; the owner gets the real message after it,
+     because the owner is the one who has to act on it. */
   function tidy(message) {
     var m = String(message || '');
-    if (/invalid login/i.test(m))      return 'That username and password do not match.';
-    if (/already registered/i.test(m)) return 'There is already an account with that name. Sign in instead.';
-    if (/password/i.test(m) && /least|short|6/i.test(m)) return 'Use a password of at least six characters.';
-    if (/valid email/i.test(m))        return 'That does not look like an email address.';
-    if (/rate limit|too many/i.test(m))return 'Too many tries. Wait a minute and go again.';
-    return m || 'That did not work.';
+    var plain;
+    if (/invalid login/i.test(m))      plain = 'That username and password do not match.';
+    else if (/already registered/i.test(m)) plain = 'There is already an account with that name. Sign in instead.';
+    else if (/password/i.test(m) && /least|short|6/i.test(m)) plain = 'Use a password of at least six characters.';
+    else if (/valid email/i.test(m))   plain = 'That does not look like an email address.';
+    else if (/rate limit|too many/i.test(m)) plain = 'Too many tries. Wait a minute and go again.';
+    else if (/schema cache|does not exist|relation .* does not exist|could not find the table/i.test(m))
+      plain = 'Names are not switched on yet. Sithara has one step left to do - nothing is wrong with what you typed.';
+    else if (/duplicate|unique/i.test(m)) plain = 'That name is taken.';
+    else if (/violates check|username_shape/i.test(m))
+      plain = 'A name is 3 to 32 letters, numbers, dots, dashes or underscores.';
+    else if (/jwt|not authenticated|row-level security|permission/i.test(m))
+      plain = 'Your sign-in has run out. Reload the page and sign in again.';
+    else if (/fetch|network|failed to|timeout/i.test(m))
+      plain = 'No connection just now. Try again in a moment.';
+    else plain = m || 'That did not work.';
+
+    /* only append the raw thing when it says something the sentence does not */
+    return (isOwner() && m && m !== plain) ? plain + '  (' + m + ')' : plain;
   }
 
   /* Signing in is the username and the password. The account is keyed by the
@@ -239,7 +255,7 @@
       write({ user: name, email: s.email || '', epoch: EPOCH, since: s.since, until: s.until });
       applyOwner();
       return { ok: true, user: name };
-    } catch (e) { return { ok: false, error: e.message }; }
+    } catch (e) { return { ok: false, error: tidy(e.message) }; }
   }
 
   /* Pull the name from the server, for a session made before the profile was
