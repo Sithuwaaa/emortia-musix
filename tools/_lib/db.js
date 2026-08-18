@@ -336,6 +336,20 @@
     return data;
   }
 
+  /* Change a job that is already on the list. Only the three things a person
+     types - what it is, the note, and when it is due. */
+  async function updateTodo(id, t){
+    const c = await client();
+    if (!c) throw new Error('Supabase is not configured - the anon key is missing.');
+    const s = await session();
+    if (!s) throw new Error('Sign in first - the list is shared.');
+    const row = { title: t.title, note: t.note || null, due: t.due || null,
+                  updated_at: new Date().toISOString(), updated_by: s.user.id };
+    const { data, error } = await c.from('todos').update(row).eq('id', id).select().single();
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
   async function setTodoDone(id, done){
     const c = await client();
     if (!c) throw new Error('Supabase is not configured - the anon key is missing.');
@@ -438,6 +452,6 @@
                 esnList, esnSave, esnDelete, esnUpload, esnLink, esnSubscribe,
                 load, publish, subscribe,
                 publishBook, loadBook, subscribeBook,
-                listTodos, addTodo, setTodoDone, subscribeTodos,
+                listTodos, addTodo, updateTodo, setTodoDone, subscribeTodos,
                 cacheSet, cacheGet };
 })();

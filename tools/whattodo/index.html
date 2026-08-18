@@ -150,6 +150,23 @@
   @keyframes tickOff{to{opacity:0;transform:translateX(26px) scale(.96)}}
   .task.going{animation:tickOff .32s ease forwards;pointer-events:none}
 
+  /* Done, and still on the calendar. Quiet rather than gone: the day it was
+     for is worth keeping, and it should never be mistaken for outstanding. */
+  .task.is-done{border-left-color:var(--ok);opacity:.62}
+  .task.is-done .t{text-decoration:line-through;text-decoration-color:var(--muted)}
+  .task.is-done .when{color:var(--ok)}
+  .tick.back{border-color:var(--ok);color:var(--ok);font-size:13px}
+  .tick.back:hover{background:rgba(52,201,139,.14)}
+  .cal-dot.done{background:var(--ok);opacity:.55}
+
+  /* changing one already on the list */
+  .task .edit{flex-shrink:0;align-self:center;background:none;border:1px solid var(--line3);
+    border-radius:8px;color:var(--muted);cursor:pointer;font-family:inherit;font-size:12px;
+    font-weight:600;padding:5px 11px;transition:border-color .16s ease,color .16s ease}
+  .task .edit:hover{border-color:var(--accent);color:var(--text)}
+  .addrow{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+  .addrow .go{flex:0 1 auto}
+
   /* add form */
   .field{margin-bottom:13px}
   .field label{display:block;font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:.08em;
@@ -242,7 +259,7 @@
    ============================================================ */
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let TODOS = [], ACTIVE = 'Calendar', BUSY = false, LOAD_ERR = null;
+let TODOS = [], ACTIVE = 'Dashboard', BUSY = false, LOAD_ERR = null;
 
 /* ---------- theme (shared key with the other tools) ---------- */
 const THEME_KEY = 'office_tool_theme';
@@ -280,19 +297,26 @@ let CAL_SEL = null;    // the day picked out, as yyyy-mm-dd
 const dayKey = d => { const x = new Date(d);
   return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); };
 
+/* The calendar keeps everything that had a date, ticked off or not. The
+   dashboard is what is left to do; the calendar is what the month held. A job
+   finished on Tuesday still happened on Tuesday, and a month that empties
+   itself as you work through it cannot tell you what you did. */
 function tasksByDay(){
   const m = new Map();
-  for (const t of pending()){
+  for (const t of TODOS){
     if (!t.due) continue;
     const k = dayKey(t.due);
     if (!m.has(k)) m.set(k, []);
     m.get(k).push(t);
   }
-  for (const list of m.values()) list.sort((a, b) => new Date(a.due) - new Date(b.due));
+  /* still to do first, each group by the hour it is due */
+  for (const list of m.values())
+    list.sort((a, b) => (a.done === b.done ? new Date(a.due) - new Date(b.due) : (a.done ? 1 : -1)));
   return m;
 }
 const undated = () => pending().filter(t => !t.due);
 function dayState(t){
+  if (t.done) return 'done';
   const diff = new Date(t.due) - Date.now();
   return diff < 0 ? 'over' : diff < 3600e3 ? 'soon' : '';
 }
@@ -300,7 +324,8 @@ function monthLabel(d){ return d.toLocaleDateString([], { month:'long', year:'nu
 
 /* ---------- tabs ---------- */
 function buildTabs(){
-  const all = ['Calendar', 'Dashboard', 'Add To Do'];
+  /* what is left to do first, then adding one, then the month */
+  const all = ['Dashboard', 'Add To Do', 'Calendar'];
   $('tabs').innerHTML = all.map(n =>
     '<button class="tab' + (n === ACTIVE ? ' on' : '') + '" data-t="' + n + '">' + n + '</button>').join('');
   [...$('tabs').children].forEach(b => b.onclick = () => { ACTIVE = b.dataset.t; buildTabs(); render(); });
@@ -556,31 +581,66 @@ async function refresh(){
   TODOS = r.items; LOAD_ERR = r.error;
   refreshPill(); render();
 }
-async function markDone(id, el){
+/* Ticking one off takes it out of the dashboard but not out of the list: it
+   is marked, not dropped, so the calendar can still show the day it was for.
+   Un-ticking puts it back. */
+async function markDone(id, el, done){
   if (BUSY) return; BUSY = true;
-  el.closest('.task').classList.add('going');     // let it slide out before the list redraws
+  const want = done === undefined ? true : !!done;
+  const card = el.closest('.task');
+  if (want && card) card.classList.add('going');   // let it slide out before the list redraws
   try {
     await window.AuthGate.require();
-    await window.DB.setTodoDone(id, true);
-    TODOS = TODOS.filter(t => t.id !== id);       // done means gone from here
-    if (!pending().some(t => t.due && new Date(t.due) < new Date())) stopAlarm(true);
-    setTimeout(() => { refreshPill(); render(); }, 300);
-    toast('Done');
+    await window.DB.setTodoDone(id, want);
+    const t = TODOS.find(x => x.id === id);
+    if (t){ t.done = want; t.done_at = want ? new Date().toISOString() : null; }
+    if (!pending().some(x => x.due && new Date(x.due) < new Date())) stopAlarm(true);
+    setTimeout(() => { refreshPill(); render(); }, want ? 300 : 0);
+    toast(want ? 'Done' : 'Back on the list');
   } catch (err){
-    el.closest('.task').classList.remove('going');
+    if (card) card.classList.remove('going');
     toast(err.message, 6000);
   } finally { BUSY = false; }
+}
+
+/* ---------- changing one that is already on the list ---------- */
+let EDIT_ID = null;      // the job being edited, if any
+
+function startEdit(id){
+  const t = TODOS.find(x => x.id === id); if (!t) return;
+  EDIT_ID = id;
+  ACTIVE = 'Add To Do';
+  buildTabs(); render();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function cancelEdit(){ EDIT_ID = null; render(); }
+
+/* a datetime-local wants the local clock, not the Z the database keeps */
+function forInput(due){
+  if (!due) return '';
+  const d = new Date(due);
+  const p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()) +
+         'T' + p(d.getHours()) + ':' + p(d.getMinutes());
 }
 
 /* ---------- views ---------- */
 function taskHTML(t){
   const w = whenText(t.due);
-  return '<div class="task ' + w.state + '">' +
-    '<button class="tick" data-id="' + esc(t.id) + '" title="Mark done">✓</button>' +
+  const done = !!t.done;
+  const when = done
+    ? 'done' + (t.done_at ? ' ' + new Date(t.done_at).toLocaleDateString([], { day:'2-digit', month:'short' }) : '')
+    : w.text;
+  return '<div class="task ' + (done ? 'is-done' : w.state) + '">' +
+    (done
+      ? '<button class="tick back" data-undo="' + esc(t.id) + '" title="Put it back on the list">↩</button>'
+      : '<button class="tick" data-id="' + esc(t.id) + '" title="Mark done">✓</button>') +
     '<div class="body"><div class="t">' + esc(t.title) + '</div>' +
     (t.note ? '<div class="n">' + esc(t.note) + '</div>' : '') +
-    '<div class="when">' + (w.state === 'over' ? '<b>' + esc(w.text) + '</b>' : esc(w.text)) + '</div>' +
-    '</div></div>';
+    '<div class="when">' + (!done && w.state === 'over' ? '<b>' + esc(when) + '</b>' : esc(when)) + '</div>' +
+    '</div>' +
+    '<button class="edit" data-edit="' + esc(t.id) + '" title="Change it">Edit</button>' +
+    '</div>';
 }
 /* The control strip. Stop sits here whether or not anything is ringing - a
    button you have to go looking for once the bell has started is no use, and
@@ -675,15 +735,28 @@ function renderDashboard(){
   return h;
 }
 function renderAdd(){
-  return '<div class="panel"><h2><span class="dot"></span>Add a job</h2>' +
-    '<p class="note" style="margin-bottom:15px">It lands on the calendar under its due date, on every device.</p>' +
+  const t = EDIT_ID ? TODOS.find(x => x.id === EDIT_ID) : null;
+  if (EDIT_ID && !t) EDIT_ID = null;                  // it went while the tab was open
+  const editing = !!t;
+  const v = a => esc(a == null ? '' : a);
+
+  return '<div class="panel"><h2><span class="dot"></span>' +
+      (editing ? 'Change this job' : 'Add a job') + '</h2>' +
+    '<p class="note" style="margin-bottom:15px">' +
+      (editing ? 'Whatever you change here replaces what is on the list, everywhere.'
+               : 'It lands on the calendar under its due date, on every device.') + '</p>' +
     '<div class="field"><label for="tTitle">What needs doing</label>' +
-      '<input id="tTitle" maxlength="200" placeholder="e.g. Send the MW update to Manoj"></div>' +
+      '<input id="tTitle" maxlength="200" placeholder="e.g. Send the weekly update" value="' +
+        (editing ? v(t.title) : '') + '"></div>' +
     '<div class="field"><label for="tNote">Notes (optional)</label>' +
-      '<textarea id="tNote" maxlength="2000" placeholder="Anything worth remembering"></textarea></div>' +
+      '<textarea id="tNote" maxlength="2000" placeholder="Anything worth remembering">' +
+        (editing ? v(t.note) : '') + '</textarea></div>' +
     '<div class="field"><label for="tDue">Due (optional)</label>' +
-      '<input id="tDue" type="datetime-local"></div>' +
-    '<button class="go" id="addBtn">Add to the list</button></div>';
+      '<input id="tDue" type="datetime-local" value="' + (editing ? forInput(t.due) : '') + '"></div>' +
+    '<div class="addrow">' +
+      '<button class="go" id="addBtn">' + (editing ? 'Save the change' : 'Add to the list') + '</button>' +
+      (editing ? '<button class="btn" id="cancelBtn">Cancel</button>' : '') +
+    '</div></div>';
 }
 function render(){
   $('view').innerHTML = ACTIVE === 'Calendar' ? renderCalendar()
@@ -692,7 +765,9 @@ function render(){
     const rb = $('remBtn'); if (rb) rb.onclick = () => setRemind(!REMIND);
     const sb = $('sndBtn'); if (sb) sb.onclick = () => setSound(!SOUND);   // on plays a preview
     const stb = $('stopBtn'); if (stb && !stb.disabled) stb.onclick = () => { stopAlarm(); toast('Alarm stopped'); };
-    [...document.querySelectorAll('.tick')].forEach(b => b.onclick = () => markDone(b.dataset.id, b));
+    [...document.querySelectorAll('.tick[data-id]')].forEach(b => b.onclick = () => markDone(b.dataset.id, b, true));
+    [...document.querySelectorAll('.tick[data-undo]')].forEach(b => b.onclick = () => markDone(b.dataset.undo, b, false));
+    [...document.querySelectorAll('.edit[data-edit]')].forEach(b => b.onclick = () => startEdit(b.dataset.edit));
   }
   if (ACTIVE === 'Calendar'){
     const now = new Date();
@@ -718,22 +793,29 @@ function render(){
       const title = $('tTitle').value.trim();
       const note = $('tNote').value.trim();
       const dueRaw = $('tDue').value;
+      const editId = EDIT_ID;                    // read before the awaits too
       if (!title){ toast('Give it a title first'); $('tTitle').focus(); return; }
-      add.disabled = true; add.textContent = 'Adding…';
+      add.disabled = true; add.textContent = editId ? 'Saving…' : 'Adding…';
       try {
         await window.AuthGate.require();
         const due = dueRaw ? new Date(dueRaw).toISOString() : null;
-        await window.DB.addTodo({ title, note, due });
+        if (editId) await window.DB.updateTodo(editId, { title, note, due });
+        else        await window.DB.addTodo({ title, note, due });
+        EDIT_ID = null;
         await refresh();
-        // land on the day it is due, so you see where it went
+        /* The calendar is set to the day it is due, so opening it later lands
+           there - but the dashboard is what you came back to work from, so
+           that is where it goes. */
         if (due){ const d = new Date(due); CAL_M = new Date(d.getFullYear(), d.getMonth(), 1); CAL_SEL = dayKey(d); }
-        ACTIVE = 'Calendar'; buildTabs(); render();
-        toast('Added');
+        ACTIVE = 'Dashboard'; buildTabs(); render();
+        toast(editId ? 'Changed' : 'Added');
       } catch (err){
         toast(err.message, 6000);
-        add.disabled = false; add.textContent = 'Add to the list';
+        add.disabled = false; add.textContent = editId ? 'Save the change' : 'Add to the list';
       }
     };
+    const cancel = $('cancelBtn');
+    if (cancel) cancel.onclick = () => { EDIT_ID = null; ACTIVE = 'Dashboard'; buildTabs(); render(); toast('Left as it was'); };
     $('tTitle').focus();
   }
   renderFooter();
