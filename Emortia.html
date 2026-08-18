@@ -2980,9 +2980,9 @@ class Component extends DCLogic {
          desc:'Turns a design into something you can order. The radios, antennas and BBU cards come straight across from the Design Extractor; everything else follows the site – its sectors, its RRUs, the height of the pole, the vendor, how it is fed. Every rule was read off a hand-built BOM and every one of them is yours to change.'},
         {name:'ESN Sharing', initial:'E', tag:'Dialog · ESN + serials', href:'tools/esn/',
          desc:'The team files an ESN from the field: type a site ID and the name arrives on its own, paste the print screens straight out of the clipboard, list the card types and their serials. Tick Run O&M Script and the O&M IP slot opens. Everything lands in one place and comes out as Excel.'},
-        {name:'What To Do', initial:'W', tag:'Jobs · reminders', href:'tools/whattodo/',
+        {name:'What To Do', initial:'W', tag:'Jobs · reminders', href:'tools/whattodo/', owner:true,
          desc:'The running list of what still needs doing, shared across every device. Add a job on one, tick it off on another, and it leaves both. Nudges every 15 minutes while the page is open.'},
-        {name:'Project Update', initial:'P', tag:'Dialog · lamp pole rollout', href:'tools/project-update/',
+        {name:'Project Update', initial:'P', tag:'Dialog · lamp pole rollout', href:'tools/project-update/', owner:true,
          desc:'Live dashboard for the lamp-pole build – status, region, Tx plan, district and team breakdowns, with MOD-permission hubs flagged automatically from the Site Access list. Every sheet of the workbook is browsable and searchable.'},
         {name:'Site Access Lookup', initial:'S', tag:'Dialog · site list', href:'tools/site-access/',
          desc:'Search 5,934 Dialog sites by ID, name or district and get depot, contact, tower and access-permission details instantly. Works offline.'},
@@ -2990,7 +2990,10 @@ class Component extends DCLogic {
          desc:'Full technical profile for 13,000+ sites – TX technology, tower, power, generator, solar and equipment counts. Search and go.'},
         {name:'GIN Extractor', initial:'G', tag:'Dialog Axiata · SAP', href:'tools/gin-extractor/',
          desc:'Drop SAP Goods Issue Note PDFs and pull every material line into one clean Excel sheet. Runs entirely on your device, works offline, nothing is uploaded.'},
-      ].map(t=>({...t, cmd:'$ '+t.href.replace(/^tools\//,'').replace(/\/$/,'')+' --open', cls:'tool-'+({'design-extractor':'design','bom':'bom','esn':'esn','whattodo':'todo','project-update':'update','site-access':'access','site-data':'data','gin-extractor':'gin'}[t.href.replace(/^tools\//,'').replace(/\/$/,'')]||'access')})),
+      /* the owner's own are not listed to anybody else; each of those pages
+         checks again on its way in, because a hidden card is not a lock */
+      ].filter(t=>!t.owner || s.isOwner)
+       .map(t=>({...t, cmd:'$ '+t.href.replace(/^tools\//,'').replace(/\/$/,'')+' --open', cls:'tool-'+({'design-extractor':'design','bom':'bom','esn':'esn','whattodo':'todo','project-update':'update','site-access':'access','site-data':'data','gin-extractor':'gin'}[t.href.replace(/^tools\//,'').replace(/\/$/,'')]||'access')})),
       page:s.page,
 
       navItems: navDefs.map(([k,label])=>({ key:k, label, active:s.page===k, onClick:this.go(k) })),
@@ -3071,7 +3074,8 @@ class Component extends DCLogic {
             meta: mt?mt.t:'', go: ()=>{ this.loadTrack(m.track, true); this.setState({page:'music', menuOpen:false}); } }; }),
         };
       })(),
-      hmToolCount: 8,
+      /* the number on the front page counts what this visitor can open */
+      hmToolCount: 8 - (s.isOwner ? 0 : 2),
       hmTools: [{name:'What To Do', dot:'#d4547a'},{name:'Project Update', dot:'#1f97a8'},{name:'Site Access Lookup', dot:'#2f8fd4'}],
       hmSongCount: this.tracks.length,
       hmCatSummary: (()=>{ const tot=this.tracks.reduce((a,b)=>a+(b.dur||0),0); const m=Math.round(tot/60);

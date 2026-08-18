@@ -384,13 +384,34 @@
     '</div>';
   }
 
-  /* Put the gate over a tool page and keep it there until someone signs in. */
+  /* Put the gate over a tool page and keep it there until someone signs in.
+
+     opts.owner marks a tool as the owner's own. Somebody already signed in is
+     not asked to sign in again - they are told plainly that this one is not
+     theirs, with the way back, because a sign-in form they cannot get past is
+     a puzzle rather than an answer. */
   function guard(opts) {
     opts = opts || {};
-    if (signedIn()) return true;
+    if (opts.owner ? isOwner() : signedIn()) return true;
+
     var st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
     var g = document.createElement('div');
     g.className = 'acc-gate';
+
+    if (opts.owner && signedIn()) {
+      g.innerHTML = '<div class="acc-card" role="dialog" aria-label="Not yours">' +
+        '<div class="acc-logo"><i style="height:8px"></i><i style="height:14px"></i>' +
+          '<i style="height:10px"></i><i style="height:15px"></i></div>' +
+        '<h1 style="margin-bottom:6px">Not this one</h1>' +
+        '<p>This tool is Sithara\'s own. Everything else is open to you - ' +
+          'you are signed in as <b>' + esc(currentUser()) + '</b>.</p>' +
+        '<a class="acc-go" href="../../" style="display:block;text-align:center;text-decoration:none">' +
+          'Back to the tools</a></div>';
+      document.body.appendChild(g);
+      document.documentElement.style.overflow = 'hidden';
+      return false;
+    }
+
     g.innerHTML = gateMarkup(opts.title || 'Sign in', opts.note || (remote()
       ? 'These tools are not public. Sign in, or make an account if you have not got one.'
       : (USERS.length === 0
@@ -401,6 +422,10 @@
     wire(g, function () { location.reload(); });
     return false;
   }
+  var esc = function (s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g,
+      function (c) { return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' })[c]; });
+  };
 
   function wire(root, onDone) {
     var form = root.querySelector('#accForm'),
@@ -519,8 +544,9 @@
      are - and it is released again on any failure, because a gate that breaks
      must not take the page down with it. */
   function protect(opts) {
+    opts = opts || {};
     var root = document.documentElement;
-    if (signedIn()) { showChip(); return; }
+    if (opts.owner ? isOwner() : signedIn()) { showChip(); return; }
     root.style.visibility = 'hidden';
     var open = function () {
       root.style.visibility = '';
