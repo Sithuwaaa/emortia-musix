@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0d0b14">
+<title>Lyric Video</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b03a56'/%3E%3Cg fill='%23170d10'%3E%3Crect x='8' y='13' width='3' height='8' rx='1.5'/%3E%3Crect x='13' y='9' width='3' height='14' rx='1.5'/%3E%3Crect x='18' y='11' width='3' height='10' rx='1.5'/%3E%3Crect x='23' y='8' width='3' height='15' rx='1.5'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="../_lib/owner-config.js"></script>
+<script src="../_lib/owner.js"></script>
+<script src="../_lib/supabase-config.js"></script>
+<script src="../_lib/db.js"></script>
+<script src="../_lib/access-config.js"></script>
+<script src="../_lib/access.js"></script>
+<script>Access.protect({ owner: true });</script>
+<script src="lyric.js"></script>
+<style>
+  :root{
+    /* violet-ink - the one none of the other tools had taken */
+    --navy:#1b1630;--navy-2:#241d40;--accent:#7c6bf0;--accentB:#9b8dff;--accentD:#5a49c9;--accent-ink:#0c0916;
+    --bg:#0d0b14;--card:#171327;--card-2:#120f1e;--line:#2a2444;--line3:#3d3462;
+    --text:#eee9ff;--muted:#9d95bd;--zebra:rgba(255,255,255,.018);
+    --ok:#34c98b;--warn:#f2a33a;--bad:#e2607a;--info:#4f9bf0;
+    --glow:rgba(124,107,240,.5);--glowSoft:rgba(124,107,240,.28);
+  }
+  html[data-theme="light"]{
+    --navy:#241d40;--navy-2:#31285a;--accent:#5a49c9;--accentB:#7c6bf0;--accentD:#42349e;--accent-ink:#ffffff;
+    --bg:#f7f6fc;--card:#ffffff;--card-2:#fbfaff;--line:#e2ddf2;--line3:#c6bee6;
+    --text:#1b1630;--muted:#635b85;--zebra:rgba(0,0,0,.022);
+    --ok:#1f9a68;--warn:#b8721c;--bad:#c2405c;--info:#2f6fd0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);
+    font-family:'Hanken Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;line-height:1.5}
+
+  .hdr{position:sticky;top:0;z-index:30;background:linear-gradient(180deg,var(--navy-2),var(--navy));
+    color:#fff;padding:calc(env(safe-area-inset-top) + 12px) 16px 12px;display:flex;align-items:center;gap:10px;
+    border-bottom:1px solid var(--line3);box-shadow:0 6px 26px rgba(0,0,0,.5);overflow:hidden}
+  .hdr::before{content:'';position:absolute;inset:-24px 0;pointer-events:none;opacity:.4;
+    background-image:linear-gradient(rgba(155,141,255,.10) 1px,transparent 1px),linear-gradient(90deg,rgba(155,141,255,.07) 1px,transparent 1px);
+    background-size:24px 24px;animation:tGrid 3.4s linear infinite}
+  @keyframes tGrid{to{transform:translateY(24px)}}
+  .hdr>*{position:relative;z-index:1}
+  .hdr .brand{display:flex;align-items:center;gap:9px;text-decoration:none;color:inherit;flex-shrink:0;transition:opacity .18s ease}
+  .hdr .brand:hover{opacity:.86}
+  .hdr .logo{width:30px;height:30px;border-radius:50%;flex-shrink:0;
+    background:linear-gradient(150deg,#d15873,#87213c) !important;display:flex;align-items:center;justify-content:center;gap:2.4px;
+    box-shadow:0 0 16px rgba(176,58,86,.45);font-size:0}
+  .hdr .logo i{width:2.6px;border-radius:2px;background:#170d10;display:block}
+  .hdr .logo i:nth-child(1){height:7px} .hdr .logo i:nth-child(2){height:12px}
+  .hdr .logo i:nth-child(3){height:9px} .hdr .logo i:nth-child(4){height:13px}
+  .hdr .bname{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:16px;letter-spacing:-.02em;color:#fff;white-space:nowrap}
+  .hdr .hsep{width:1px;height:19px;background:rgba(255,255,255,.2);flex-shrink:0}
+  .hdr h1{font-family:'Bricolage Grotesque',sans-serif;font-size:18px;font-weight:700;margin-right:auto;
+    white-space:nowrap;color:#fff;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;min-width:6ch}
+  .theme{background:none;border:1px solid var(--line3);color:#fff;border-radius:9px;width:34px;height:34px;
+    font-size:15px;cursor:pointer;flex-shrink:0}
+  .theme:hover{border-color:var(--accentB)}
+  @media (max-width:900px){.hdr .bname,.hdr .hsep{display:none}}
+
+  main{max-width:1400px;margin:0 auto;padding:18px 14px calc(env(safe-area-inset-bottom) + 50px)}
+  .cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,380px);gap:20px;align-items:start}
+  @media(max-width:1000px){.cols{grid-template-columns:1fr}}
+
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+  .panel h2{font-family:'Bricolage Grotesque',sans-serif;font-size:16px;margin-bottom:5px;display:flex;align-items:center;gap:9px}
+  .panel h2 .dot{width:7px;height:7px;border-radius:50%;background:var(--accentB)}
+  .panel h2 .tag{margin-left:auto;font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);font-weight:400}
+  .note{color:var(--muted);font-size:12.5px;line-height:1.6}
+  .note b{color:var(--text);font-weight:600}
+
+  .btn{border:1px solid var(--line3);background:none;color:var(--text);border-radius:9px;padding:8px 14px;
+    font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;
+    transition:border-color .18s ease,transform .18s ease,background .18s ease}
+  .btn:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .btn.on{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+  .btn:disabled{opacity:.45;cursor:default;transform:none;border-color:var(--line)}
+  .btn.sm{padding:5px 10px;font-size:12px}
+  .btn.rec{background:var(--bad);border-color:transparent;color:#fff}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+  label.f{display:block;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.13em;
+    text-transform:uppercase;color:var(--muted);margin:0 0 5px}
+  input,select,textarea{background:var(--card-2);color:var(--text);border:1px solid var(--line);border-radius:9px;
+    padding:9px 11px;font-size:13.5px;font-family:inherit;outline:none;width:100%}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+  textarea{min-height:230px;font-family:'Space Mono',monospace;font-size:12.5px;line-height:1.75;resize:vertical}
+  input[type=range]{padding:0;accent-color:var(--accent)}
+  input[type=color]{padding:2px;height:36px;cursor:pointer}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .fld{margin-bottom:11px}
+
+  /* the stage */
+  .stagewrap{background:#000;border:1px solid var(--line);border-radius:14px;overflow:hidden;
+    display:grid;place-items:center;padding:14px;min-height:280px}
+  canvas#stage{max-width:100%;max-height:70vh;display:block;border-radius:6px;
+    box-shadow:0 20px 60px rgba(0,0,0,.6)}
+  .transport{display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin-top:12px}
+  .play{width:46px;height:46px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;
+    display:grid;place-items:center;flex-shrink:0;color:var(--accent-ink);box-shadow:0 8px 22px var(--glowSoft)}
+  .play:hover{background:var(--accentB)}
+  .scrub{flex:1;min-width:150px}
+  .clock{font-family:'Space Mono',monospace;font-size:12.5px;color:var(--muted);white-space:nowrap}
+
+  .drop{border:1px dashed var(--line3);border-radius:11px;padding:16px;text-align:center;cursor:pointer;
+    background:var(--card-2);transition:border-color .18s ease}
+  .drop:hover,.drop.hot{border-color:var(--accent)}
+  .drop b{display:block;font-size:13.5px;margin-bottom:3px}
+  .drop span{color:var(--muted);font-size:11.5px}
+  .drop input{display:none}
+  .thumb{width:100%;height:100px;object-fit:cover;border-radius:8px;margin-bottom:8px;display:block}
+
+  .rows{display:flex;flex-direction:column;gap:5px;max-height:210px;overflow:auto;margin-top:9px}
+  .lrow{display:grid;grid-template-columns:62px 1fr;gap:8px;align-items:center;padding:5px 7px;border-radius:7px;
+    cursor:pointer;font-size:12.5px}
+  .lrow:hover{background:var(--card-2)}
+  .lrow.on{background:rgba(124,107,240,.15);box-shadow:inset 2px 0 0 var(--accent)}
+  .lrow .tm{font-family:'Space Mono',monospace;font-size:11px;color:var(--accentB)}
+  .lrow .tx{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  .err{border:1px solid var(--bad);border-radius:11px;padding:12px 14px;background:rgba(226,96,122,.08);
+    font-size:13px;line-height:1.6;margin-bottom:12px}
+  .ok{border:1px solid var(--ok);border-radius:11px;padding:12px 14px;background:rgba(52,201,139,.08);
+    font-size:13px;line-height:1.6;margin-bottom:12px}
+  footer{max-width:1400px;margin:0 auto;padding:0 14px 30px;color:var(--muted);font-size:12.5px;line-height:1.7}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:var(--navy-2);
+    color:#fff;border:1px solid var(--line3);border-radius:10px;padding:11px 18px;font-size:13.5px;
+    opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;z-index:130;max-width:90vw;text-align:center}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+<header class="hdr">
+  <a class="brand" href="../../" title="Emortia · back to the site">
+    <span class="logo"><i></i><i></i><i></i><i></i></span><span class="bname">Emortia</span></a>
+  <span class="hsep" aria-hidden="true"></span>
+  <h1>Lyric Video</h1>
+  <button class="theme" id="themeBtn" aria-label="Toggle theme">☾</button>
+</header>
+
+<main>
+  <div class="cols">
+    <div>
+      <div class="stagewrap"><canvas id="stage" width="1080" height="1920"></canvas></div>
+      <div class="transport">
+        <button class="play" id="playBtn" title="Play">
+          <svg width="20" height="20" viewBox="0 0 24 24"><polygon points="7,4 20,12 7,20" fill="currentColor"></polygon></svg>
+        </button>
+        <input class="scrub" id="scrub" type="range" min="0" max="1000" value="0">
+        <span class="clock" id="clock">0:00 / 0:00</span>
+        <button class="btn sm" id="stampBtn" title="Drop the current time on the line below the playhead">⌖ Stamp</button>
+      </div>
+      <div class="panel" style="margin-top:14px">
+        <h2><span class="dot"></span>Export<span class="tag" id="recInfo"></span></h2>
+        <p class="note" id="exportNote"></p>
+        <div class="bar" style="margin-top:11px">
+          <button class="btn on" id="recBtn">● Record the video</button>
+          <button class="btn" id="frameBtn">Save this frame</button>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <h2><span class="dot"></span>The song</h2>
+        <div class="fld"><label class="f" for="pick">From the site</label>
+          <select id="pick"></select></div>
+        <div class="drop" id="audioDrop"><b id="audioName">or drop an audio file</b>
+          <span>mp3 · wav · m4a · stays in this browser</span>
+          <input id="audioFile" type="file" accept="audio/*"></div>
+      </div>
+
+      <div class="panel">
+        <h2><span class="dot"></span>The picture</h2>
+        <img id="artThumb" class="thumb" alt="" style="display:none">
+        <div class="drop" id="artDrop"><b id="artName">drop the cover art</b>
+          <span>it fills the frame and sways behind the words</span>
+          <input id="artFile" type="file" accept="image/*"></div>
+      </div>
+
+      <div class="panel">
+        <h2><span class="dot"></span>Frame<span class="tag" id="sizeTag"></span></h2>
+        <div class="fld"><select id="fmt"></select></div>
+        <div class="fld"><label class="f" for="accent">Accent</label><input id="accent" type="color" value="#e2334a"></div>
+      </div>
+
+      <div class="panel">
+        <h2><span class="dot"></span>The corner</h2>
+        <div class="fld"><label class="f" for="title">Song</label><input id="title" value="" maxlength="40"></div>
+        <div class="two">
+          <div class="fld"><label class="f" for="artist">Artist</label><input id="artist" value="Emortia" maxlength="30"></div>
+          <div class="fld"><label class="f" for="writer">Lyrics</label><input id="writer" value="Sithara Perera" maxlength="30"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2><span class="dot"></span>Timing</h2>
+        <div class="fld"><label class="f" for="speed">Word speed <span id="speedV">2.4×</span></label>
+          <input id="speed" type="range" min="1" max="5" step="0.1" value="2.4"></div>
+        <div class="fld"><label class="f" for="hide">Hold after a line <span id="hideV">1.5s</span></label>
+          <input id="hide" type="range" min="0" max="5" step="0.1" value="1.5"></div>
+        <div class="fld"><label class="f" for="swayAmt">Sway <span id="swayV">100%</span></label>
+          <input id="swayAmt" type="range" min="0" max="2" step="0.05" value="1"></div>
+        <div class="two">
+          <div class="fld"><label class="f" for="leadIn">Before it starts</label><input id="leadIn" value="Emortia" maxlength="60"></div>
+          <div class="fld"><label class="f" for="outro">At the end</label><input id="outro" value="" maxlength="60"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2><span class="dot"></span>The words<span class="tag" id="lineCount"></span></h2>
+        <p class="note" style="margin-bottom:9px">One line each, as <b>m:ss.s | the words</b>. Press
+          <b>Stamp</b> while it plays to drop the time on the next line without one.</p>
+        <textarea id="lyrics" spellcheck="false"></textarea>
+        <div class="rows" id="rows"></div>
+      </div>
+    </div>
+  </div>
+</main>
+<footer id="foot"></footer>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   Lyric Video
+
+   The frame is drawn on a canvas, not built out of elements, and
+   that is the whole design: a canvas can be recorded. What you
+   watch in the preview is the same function the recorder runs,
+   so what comes out is what was on screen.
+
+   The timing and the layout live in lyric.js, which knows nothing
+   about canvases; lyric.test.js holds it against the site's own
+   .lrc files.
+   ============================================================ */
+const $ = id => document.getElementById(id);
+const L = window.LyricCore;
+
+const KEY = 'lyricvideo_v1';
+const TRACKS = [
+  { t:'Harana Hitha',      src:'../../audio/harana-hitha.wav',      img:'../../audio/art/harana-hitha.png',      lrc:'../../audio/lyrics/harana-hitha.lrc' },
+  { t:'Napuru Hitha',      src:'../../audio/napuru-hitha.wav',      img:'../../audio/art/napuru-hitha.png',      lrc:'../../audio/lyrics/napuru-hitha.lrc' },
+  { t:'Suwanda Vitharayi', src:'../../audio/suwanda-vitharayi.wav', img:'../../audio/art/suwanda-vitharayi.png', lrc:'../../audio/lyrics/suwanda-vitharayi.lrc' },
+  { t:'Punchi Kella',      src:'../../audio/punchi-kella.wav',      img:'../../audio/art/punchi-kella.png',      lrc:'../../audio/lyrics/punchi-kella.lrc' },
+  { t:'Parissam',          src:'../../audio/parissam.wav',          img:'../../audio/art/parissam.png',          lrc:'../../audio/lyrics/parissam.lrc' },
+  { t:'Hadathi Mala',      src:'../../audio/hadathi-mala.wav',      img:'../../audio/art/hadathi-mala.png',      lrc:'../../audio/lyrics/hadathi-mala.lrc' },
+  { t:'Thissema',          src:'../../audio/thissema.wav',          img:'../../audio/art/thissema.png',          lrc:'../../audio/lyrics/thissema.lrc' }
+];
+
+const audio = new Audio();
+audio.crossOrigin = 'anonymous';
+audio.preload = 'auto';
+
+let LINES = [], ART = null, RAF = null, REC = null, RECORDING = false;
+
+/* ---------- how long the song is ----------
+
+   Chrome hands back Infinity for these WAVs even at readyState 4, and an
+   infinite duration is not a cosmetic problem: the last line's window runs to
+   Infinity, so it is never any fraction of the way through and its words never
+   light, and the outro card never comes. Seeking past the end forces the
+   figure out, which is the long-standing way round it. */
+let DUR = 0;
+const songLength = () => (isFinite(audio.duration) && audio.duration > 0) ? audio.duration : DUR;
+
+function resolveDuration(){
+  if (isFinite(audio.duration) && audio.duration > 0){ DUR = audio.duration; return Promise.resolve(DUR); }
+  return new Promise(res => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return; settled = true;
+      audio.removeEventListener('timeupdate', onTime);
+      if (isFinite(audio.duration) && audio.duration > 0) DUR = audio.duration;
+      try { audio.currentTime = 0; } catch(e){}
+      res(DUR);
+    };
+    const onTime = () => { if (isFinite(audio.duration) && audio.duration > 0) finish(); };
+    audio.addEventListener('timeupdate', onTime);
+    try { audio.currentTime = 1e6; } catch(e){ finish(); }
+    setTimeout(finish, 4000);          // never hang on it
+  });
+}
+const S = {
+  fmt:'tiktok', accent:'#e2334a',
+  title:'', artist:'Emortia', writer:'Sithara Perera',
+  speed:2.4, hide:1.5, sway:1, leadIn:'Emortia', outro:'', lyrics:'', pick:0
+};
+
+/* ---------- theme ---------- */
+const THEME_KEY = 'office_tool_theme';
+function applyTheme(t){ document.documentElement.dataset.theme = t; $('themeBtn').textContent = t === 'dark' ? '☀' : '☾';
+  try { localStorage.setItem(THEME_KEY, t); } catch(e){} }
+applyTheme(localStorage.getItem(THEME_KEY) || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+$('themeBtn').onclick = () => applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+
+let tt; function toast(m, ms){ const t = $('toast'); t.textContent = m; t.classList.add('show');
+  clearTimeout(tt); tt = setTimeout(() => t.classList.remove('show'), ms || 2600); }
+const clock = s => { s = Math.max(0, s|0); return (s/60|0) + ':' + String(s%60).padStart(2,'0'); };
+
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
+function load(){
+  try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); if (v) Object.assign(S, v); } catch(e){}
+}
+
+/* ---------- the drawing ----------
+   Every value comes off the clock, so the same second always draws the same
+   frame. That is what lets the recorder produce what the preview showed. */
+function draw(t){
+  const cv = $('stage'), cx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  const lay = L.layout(W, H);
+
+  cx.clearRect(0, 0, W, H);
+  cx.fillStyle = '#07060c';
+  cx.fillRect(0, 0, W, H);
+
+  /* the picture, filling the frame and never leaving a gap as it moves */
+  if (ART && ART.complete && ART.naturalWidth){
+    const s = L.sway(t, S.sway);
+    const cover = Math.max(W / ART.naturalWidth, H / ART.naturalHeight) * s.scale;
+    const dw = ART.naturalWidth * cover, dh = ART.naturalHeight * cover;
+    cx.save();
+    cx.translate(W/2 + s.x, H/2 + s.y);
+    cx.rotate(s.rot);
+    cx.drawImage(ART, -dw/2, -dh/2, dw, dh);
+    cx.restore();
+  }
+
+  /* The gradient darkens the top and the bottom and leaves the middle alone,
+     so the picture stays a picture and the words still have something to sit
+     on. Heavier at the foot, because that is where the words are. */
+  const g = cx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0,    'rgba(8,6,12,0.72)');
+  g.addColorStop(0.22, 'rgba(8,6,12,0.20)');
+  g.addColorStop(0.55, 'rgba(8,6,12,0.10)');
+  g.addColorStop(0.80, 'rgba(8,6,12,0.62)');
+  g.addColorStop(1,    'rgba(8,6,12,0.92)');
+  cx.fillStyle = g; cx.fillRect(0, 0, W, H);
+
+  const f = L.frameAt(t, LINES, {
+    duration: songLength(), wordSpeed: S.speed, hideAfter: S.hide,
+    leadIn: S.leadIn, outro: S.outro
+  });
+
+  const X = lay.padX;
+  const maxW = W - X * 2;
+  const fontAt = (px, weight) => (weight || 800) + ' ' + px + 'px "Hanken Grotesk", system-ui, sans-serif';
+  const mono = (px, weight) => (weight || 400) + ' ' + px + 'px "Space Mono", ui-monospace, monospace';
+  const shadow = on => { cx.shadowColor = on ? 'rgba(0,0,0,0.55)' : 'transparent';
+                         cx.shadowBlur = on ? Math.round(H * 0.010) : 0; };
+
+  /* ---- top left: the rule, the name, and who it is by ---- */
+  cx.textAlign = 'left';
+  cx.textBaseline = 'alphabetic';
+  shadow(true);
+  let y = lay.headY;
+
+  cx.fillStyle = S.accent;
+  cx.fillRect(X, y, lay.ruleW, Math.max(2, Math.round(H * 0.0016)));
+  y += Math.round(lay.titleSize * 1.5);
+
+  if (S.title){
+    cx.font = fontAt(lay.titleSize, 600);
+    cx.fillStyle = 'rgba(255,255,255,0.96)';
+    cx.letterSpacing = Math.round(lay.titleSize * 0.26) + 'px';
+    cx.fillText(S.title.toUpperCase(), X, y);
+    cx.letterSpacing = '0px';
+  }
+
+  /* the two credit rows: a muted label, then the value in white */
+  const credit = (label, value) => {
+    if (!value) return;
+    y += lay.creditGap;
+    cx.font = mono(lay.creditSize, 400);
+    cx.letterSpacing = Math.round(lay.creditSize * 0.18) + 'px';
+    cx.fillStyle = 'rgba(255,255,255,0.42)';
+    cx.fillText(label, X, y);
+    const labW = cx.measureText(label).width + lay.creditSize * 1.5;
+    cx.font = mono(lay.creditSize, 700);
+    cx.fillStyle = 'rgba(255,255,255,0.90)';
+    cx.fillText(value.toUpperCase(), X + labW, y);
+    cx.letterSpacing = '0px';
+  };
+  credit('ARTIST', S.artist);
+  credit('LYRICS', S.writer);
+
+  /* ---- top right: the clock, in the accent ---- */
+  cx.textAlign = 'right';
+  cx.font = mono(lay.timeSize, 700);
+  cx.fillStyle = S.accent;
+  cx.fillText(L.stamp(t), W - X, lay.headY + Math.round(lay.titleSize * 1.5));
+
+  /* ---- bottom left: the words ----
+     They grow upwards off a fixed floor, so a line that wraps to two rows
+     pushes its own top up and the foot of the frame never moves. */
+  cx.textAlign = 'left';
+  cx.textBaseline = 'alphabetic';
+
+  if (f.kind === 'lead' || f.kind === 'outro'){
+    cx.font = fontAt(lay.cardSize, 700);
+    const rows = L.wrap(f.text || '', maxW, s => cx.measureText(s).width);
+    cx.fillStyle = 'rgba(255,255,255,0.95)';
+    const rowH = lay.cardSize * 1.28;
+    rows.forEach((r, i) => cx.fillText(r, X, lay.lyricBase - (rows.length - 1 - i) * rowH));
+  } else if (f.kind === 'line'){
+    cx.font = fontAt(lay.activeSize, 700);
+    const rows = L.wrap(f.text, maxW, s => cx.measureText(s).width);
+    const rowH = lay.activeSize * 1.30;
+    const topOfBlock = lay.lyricBase - (rows.length - 1) * rowH;
+
+    /* the line before, quiet, above the block */
+    if (f.prev){
+      cx.font = fontAt(lay.nearSize, 500);
+      cx.fillStyle = 'rgba(255,255,255,0.34)';
+      cx.fillText(cut(cx, f.prev, maxW), X, topOfBlock - lay.activeSize - lay.lineGap);
+    }
+
+    /* the line itself, word by word */
+    cx.font = fontAt(lay.activeSize, 700);
+    cx.globalAlpha = f.alpha;
+    let spoken = 0;
+    rows.forEach((row, ri) => {
+      const parts = row.split(/\s+/).filter(Boolean);
+      const spaceW = cx.measureText(' ').width;
+      let x = X;
+      const ry = topOfBlock + ri * rowH;
+      parts.forEach((p, pi) => {
+        cx.fillStyle = (spoken + pi < f.lit) ? S.accent : 'rgba(255,255,255,0.95)';
+        cx.fillText(p, x, ry);
+        x += cx.measureText(p).width + spaceW;
+      });
+      spoken += parts.length;
+    });
+    cx.globalAlpha = 1;
+  }
+
+  shadow(false);
+
+  /* ---- the hairline across the foot ---- */
+  cx.fillStyle = 'rgba(255,255,255,0.22)';
+  cx.fillRect(X, lay.ruleY, maxW, Math.max(1, Math.round(H * 0.0008)));
+}
+/* a neighbouring line is a hint, not the point - one row, clipped */
+function cut(cx, text, maxW){
+  if (cx.measureText(text).width <= maxW) return text;
+  let s = text;
+  while (s.length > 1 && cx.measureText(s + '…').width > maxW) s = s.slice(0, -1);
+  return s + '…';
+}
+
+/* ---------- the loop ---------- */
+function tick(){
+  draw(audio.currentTime || 0);
+  const d = songLength();
+  $('scrub').value = d ? Math.round((audio.currentTime / d) * 1000) : 0;
+  $('clock').textContent = clock(audio.currentTime || 0) + ' / ' + clock(d);
+  paintRows();
+  RAF = requestAnimationFrame(tick);
+}
+function startLoop(){ if (!RAF) RAF = requestAnimationFrame(tick); }
+
+/* ---------- lyrics ---------- */
+function readLyrics(){
+  LINES = L.parse(S.lyrics);
+  $('lineCount').textContent = LINES.length ? LINES.length + ' lines' : '';
+  renderRows();
+}
+function renderRows(){
+  $('rows').innerHTML = LINES.map((l, i) =>
+    '<div class="lrow" data-i="' + i + '"><span class="tm">' +
+      (l.t == null ? '--:--' : L.stamp(l.t)) + '</span><span class="tx">' +
+      (l.text || '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])) + '</span></div>').join('');
+  [...document.querySelectorAll('.lrow')].forEach(r => r.onclick = () => {
+    const l = LINES[+r.dataset.i];
+    if (l && l.t != null){ audio.currentTime = l.t; draw(l.t); }
+  });
+}
+function paintRows(){
+  const i = L.activeAt(LINES, audio.currentTime || 0);
+  [...document.querySelectorAll('.lrow')].forEach(r => r.classList.toggle('on', +r.dataset.i === i));
+}
+
+/* Stamp writes the clock onto the first line that has no time yet, which is
+   how a whole song gets timed in one pass without touching the keyboard. */
+function doStamp(){
+  const raw = $('lyrics').value.split(/\r?\n/);
+  const at = raw.findIndex(l => l.trim() && !/^\s*(?:\[)?\d{1,2}:\d{2}/.test(l));
+  if (at < 0){ toast('Every line already has a time'); return; }
+  raw[at] = L.stamp(audio.currentTime || 0) + ' | ' + raw[at].replace(/^\s*\|?\s*/, '').trim();
+  $('lyrics').value = raw.join('\n');
+  S.lyrics = $('lyrics').value; save(); readLyrics();
+  toast('Stamped line ' + (at + 1) + ' at ' + L.stamp(audio.currentTime || 0));
+}
+
+/* ---------- recording ----------
+   A canvas gives a real video stream, and the audio element gives a real
+   audio one; together they are a file. It is WebM, because that is what a
+   browser can encode - no browser writes MP4 unaided. */
+function canRecord(){ return typeof MediaRecorder !== 'undefined' && $('stage').captureStream; }
+function bestType(){
+  const want = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+  return want.find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || '';
+}
+async function record(){
+  if (RECORDING){ REC && REC.stop(); return; }
+  if (!canRecord()){ toast('This browser will not record a canvas', 5000); return; }
+  if (!audio.src){ toast('Pick a song first'); return; }
+
+  const cv = $('stage');
+  const vs = cv.captureStream(30);
+  let stream = vs;
+  try {
+    /* route the audio through the graph once, and keep it - a second
+       createMediaElementSource on the same element throws */
+    if (!window.__actx){
+      window.__actx = new (window.AudioContext || window.webkitAudioContext)();
+      window.__srcNode = window.__actx.createMediaElementSource(audio);
+      window.__dest = window.__actx.createMediaStreamDestination();
+      window.__srcNode.connect(window.__dest);
+      window.__srcNode.connect(window.__actx.destination);
+    }
+    await window.__actx.resume();
+    stream = new MediaStream([...vs.getVideoTracks(), ...window.__dest.stream.getAudioTracks()]);
+  } catch(e){
+    toast('Recording the picture without sound: ' + e.message, 6000);
+  }
+
+  const chunks = [];
+  const type = bestType();
+  REC = new MediaRecorder(stream, type ? { mimeType: type, videoBitsPerSecond: 12000000 } : undefined);
+  REC.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+  REC.onstop = () => {
+    RECORDING = false;
+    $('recBtn').textContent = '● Record the video';
+    $('recBtn').classList.remove('rec'); $('recBtn').classList.add('on');
+    const blob = new Blob(chunks, { type: type || 'video/webm' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    const f = L.formatById(S.fmt);
+    a.download = 'lyric-' + f.w + 'x' + f.h + '-' + new Date().toISOString().slice(0,10) + '.webm';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    toast('Saved · ' + (blob.size / 1048576).toFixed(1) + 'MB');
+  };
+
+  audio.currentTime = 0;
+  await audio.play();
+  REC.start(250);
+  RECORDING = true;
+  $('recBtn').textContent = '■ Stop and save';
+  $('recBtn').classList.add('rec'); $('recBtn').classList.remove('on');
+  toast('Recording · it stops on its own when the song ends', 4000);
+}
+
+/* ---------- wiring ---------- */
+function setFormat(id){
+  S.fmt = id;
+  const f = L.formatById(id);
+  const cv = $('stage');
+  cv.width = f.w; cv.height = f.h;
+  $('sizeTag').textContent = f.w + '×' + f.h + ' · ' + f.ratio;
+  draw(audio.currentTime || 0);
+  save();
+}
+
+function pickTrack(i){
+  const tr = TRACKS[i]; if (!tr) return;
+  S.pick = i;
+  audio.src = tr.src;
+  if (!S.title || TRACKS.some(x => x.t === S.title)){ S.title = tr.t; $('title').value = tr.t; }
+  const im = new Image(); im.crossOrigin = 'anonymous';
+  im.onload = () => { ART = im; $('artThumb').src = tr.img; $('artThumb').style.display = 'block';
+    $('artName').textContent = tr.t + ' cover'; draw(audio.currentTime || 0); };
+  im.src = tr.img;
+  /* the .lrc the sync tab already wrote, if there is one - nothing retyped */
+  fetch(tr.lrc).then(r => r.ok ? r.text() : Promise.reject()).then(txt => {
+    S.lyrics = L.toText(L.parse(txt));
+    $('lyrics').value = S.lyrics; readLyrics(); save();
+    toast(tr.t + ' · lyrics loaded from the site');
+  }).catch(() => {
+    toast(tr.t + ' loaded · no .lrc yet, type the words and use Stamp', 5000);
+  });
+  save();
+}
+
+function boot(){
+  load();
+
+  $('pick').innerHTML = '<option value="">choose a song…</option>' +
+    TRACKS.map((t, i) => '<option value="' + i + '">' + t.t + '</option>').join('');
+  $('fmt').innerHTML = L.FORMATS.map(f =>
+    '<option value="' + f.id + '"' + (f.id === S.fmt ? ' selected' : '') + '>' +
+    f.name + ' · ' + f.w + '×' + f.h + '</option>').join('');
+
+  $('accent').value = S.accent;
+  $('title').value = S.title; $('artist').value = S.artist; $('writer').value = S.writer;
+  $('speed').value = S.speed;   $('hide').value = S.hide;   $('swayAmt').value = S.sway;
+  $('leadIn').value = S.leadIn; $('outro').value = S.outro;
+  $('lyrics').value = S.lyrics || '';
+  $('speedV').textContent = (+S.speed).toFixed(1) + '×';
+  $('hideV').textContent = (+S.hide).toFixed(1) + 's';
+  $('swayV').textContent = Math.round(S.sway * 100) + '%';
+
+  setFormat(S.fmt);
+  readLyrics();
+
+  $('pick').onchange = e => { if (e.target.value !== '') pickTrack(+e.target.value); };
+  $('fmt').onchange = e => setFormat(e.target.value);
+
+  const bind = (id, key, fmt, el) => {
+    $(id).oninput = () => {
+      S[key] = $(id).type === 'range' ? +$(id).value : $(id).value;
+      if (el) $(el).textContent = fmt(S[key]);
+      save(); draw(audio.currentTime || 0);
+    };
+  };
+  bind('accent','accent');
+  bind('title','title'); bind('artist','artist'); bind('writer','writer');
+  bind('leadIn','leadIn'); bind('outro','outro');
+  bind('speed','speed', v => (+v).toFixed(1) + '×', 'speedV');
+  bind('hide','hide',  v => (+v).toFixed(1) + 's', 'hideV');
+  bind('swayAmt','sway', v => Math.round(v*100) + '%', 'swayV');
+
+  let lt;
+  $('lyrics').oninput = () => { clearTimeout(lt); lt = setTimeout(() => {
+    S.lyrics = $('lyrics').value; save(); readLyrics(); draw(audio.currentTime || 0); }, 200); };
+
+  $('playBtn').onclick = () => { audio.paused ? audio.play() : audio.pause(); };
+  audio.onplay  = () => { $('playBtn').innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"></rect><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"></rect></svg>'; startLoop(); };
+  audio.onpause = () => { $('playBtn').innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24"><polygon points="7,4 20,12 7,20" fill="currentColor"></polygon></svg>'; };
+  audio.onended = () => { if (RECORDING && REC) setTimeout(() => REC.stop(), 400); };
+  audio.onloadedmetadata = async () => { await resolveDuration();
+    $('clock').textContent = clock(0) + ' / ' + clock(songLength()); draw(0); };
+
+  $('scrub').oninput = () => { const d = songLength();
+    if (d){ audio.currentTime = (+$('scrub').value / 1000) * d; draw(audio.currentTime); } };
+  $('stampBtn').onclick = doStamp;
+  $('recBtn').onclick = record;
+  $('frameBtn').onclick = () => {
+    $('stage').toBlob(b => {
+      const a = document.createElement('a'); a.href = URL.createObjectURL(b);
+      const f = L.formatById(S.fmt);
+      a.download = 'frame-' + f.w + 'x' + f.h + '.png'; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      toast('Frame saved');
+    }, 'image/png');
+  };
+
+  const wireDrop = (dropId, fileId, onFile) => {
+    const d = $(dropId), f = $(fileId);
+    d.onclick = () => f.click();
+    f.onchange = e => e.target.files[0] && onFile(e.target.files[0]);
+    ['dragover','dragenter'].forEach(t => d.addEventListener(t, e => { e.preventDefault(); d.classList.add('hot'); }));
+    ['dragleave','drop'].forEach(t => d.addEventListener(t, e => { e.preventDefault(); d.classList.remove('hot'); }));
+    d.addEventListener('drop', e => e.dataTransfer.files[0] && onFile(e.dataTransfer.files[0]));
+  };
+  wireDrop('audioDrop','audioFile', f => {
+    audio.src = URL.createObjectURL(f); $('audioName').textContent = f.name;
+    $('pick').value = ''; toast('Audio loaded');
+  });
+  wireDrop('artDrop','artFile', f => {
+    const url = URL.createObjectURL(f);
+    const im = new Image();
+    im.onload = () => { ART = im; $('artThumb').src = url; $('artThumb').style.display = 'block';
+      $('artName').textContent = f.name; draw(audio.currentTime || 0); };
+    im.src = url;
+  });
+
+  $('exportNote').innerHTML = canRecord()
+    ? 'Recording plays the song from the start and captures the canvas as it goes, so what you watched is what you get. It stops on its own at the end. The file is <b>WebM</b> - the only video a browser can write on its own; TikTok, Instagram and YouTube all take it, and any converter turns it into MP4 if you need one.'
+    : 'This browser will not record a canvas. Chrome or Edge will. <b>Save this frame</b> still works.';
+  $('recBtn').disabled = !canRecord();
+  $('recInfo').textContent = canRecord() ? '30fps · webm' : 'not available here';
+
+  $('foot').innerHTML = 'Everything happens in this browser - the song, the picture and the video never leave it · ' +
+    'lyrics come from the .lrc files the Journal sync already wrote';
+
+  draw(0);
+}
+boot();
+</script>
+</body>
+</html>
