@@ -167,8 +167,14 @@ console.log('\nthe frame sizes');
   const tall = L.layout(1080, 1920), wide = L.layout(1920, 1080);
   is('the tall frame sets its text off the height', tall.activeSize > 0, true);
   is('the wide one is not simply scaled',           tall.activeSize !== wide.activeSize, true);
-  is('text sits below the middle in both',
-     [tall.centreY / 1920 > 0.5, wide.centreY / 1080 > 0.5], [true, true]);
+  /* the words live low and the credits high, so the middle of the frame - and
+     whoever is in the picture - is never written over */
+  is('the words sit low in both',
+     [tall.lyricBase / 1920 > 0.75, wide.lyricBase / 1080 > 0.75], [true, true]);
+  is('the credits sit high in both',
+     [tall.headY / 1920 < 0.15, wide.headY / 1080 < 0.15], [true, true]);
+  is('and the words clear the hairline',
+     [tall.lyricBase < tall.ruleY, wide.lyricBase < wide.ruleY], [true, true]);
 }
 
 console.log('\nwrapping');
