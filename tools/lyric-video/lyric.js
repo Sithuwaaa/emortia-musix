@@ -157,34 +157,47 @@
     return Math.max(0, Math.min(words.length, Math.floor(through * words.length + 0.0001)));
   }
 
-  /* When the words carry their own times, those win: a word lights the moment
-     it was stamped and not a fraction earlier. Words with no time of their own
-     fall in behind the last one that had one, spread across whatever is left,
-     so a line stamped half way through still reads properly. */
-  function litFromTimes(line, now, elapsed, span, speed) {
-    const times = line && line.wordTimes;
-    const words = wordsOf(line.text).filter(w => w.trim());
-    if (!words.length) return 0;
-    if (!times || !times.some(t => t != null))
-      return litCount(line.text, elapsed, span, speed);
+  /* The moment each word arrives, whether it was stamped or not.
 
-    let lit = 0;
-    for (let i = 0; i < words.length; i++){
-      const t = times[i];
-      if (t != null){ if (now >= t) lit = i + 1; else break; }
-      else {
-        /* untimed: carry on from the last stamped word at the even rate */
-        const anchorAt = lastTimeBefore(times, i);
-        const anchor = anchorAt.t == null ? (line.t || 0) : anchorAt.t;
-        const restFrom = anchorAt.i + 1;
-        const restTo = nextTimedIndex(times, i);
-        const endT = restTo.t == null ? (line.t || 0) + span : restTo.t;
-        const n = (restTo.i < 0 ? words.length : restTo.i) - restFrom;
-        const per = n > 0 ? (endT - anchor) / n : 0;
-        if (per > 0 && now >= anchor + per * (i - restFrom + 1)) lit = i + 1;
-        else break;
-      }
+     Working this out once, for the whole line, is what lets a word be animated
+     rather than just switched on: knowing when it lands means knowing how far
+     into its own fade it is on any given frame. A stamped word arrives on its
+     stamp. An unstamped one is spread across whatever gap it sits in - between
+     the last stamp and the next, or across the line if there are none. */
+  function effectiveTimes(line, span, speed) {
+    const words = wordsOf(line.text).filter(w => w.trim());
+    const n = words.length;
+    if (!n) return [];
+    const start = line.t == null ? 0 : line.t;
+    const given = line.wordTimes || [];
+    const s = Math.max(0.1, Number(speed) || 1);
+
+    if (!given.some(t => t != null))
+      /* nothing stamped: the even spread, at the reveal speed */
+      return words.map((w, i) => start + span * (i + 1) / (s * n));
+
+    const out = new Array(n).fill(null);
+    for (let i = 0; i < n; i++) if (given[i] != null) out[i] = given[i];
+    for (let i = 0; i < n; i++){
+      if (out[i] != null) continue;
+      const before = lastTimeBefore(given, i);
+      const after = nextTimedIndex(given, i);
+      const anchor = before.t == null ? start : before.t;
+      const from = before.i + 1;
+      const endT = after.t == null ? start + span : after.t;
+      const gap = (after.i < 0 ? n : after.i) - from;
+      const per = gap > 0 ? (endT - anchor) / gap : 0;
+      out[i] = anchor + per * (i - from + 1);
     }
+    return out;
+  }
+
+  /* When the words carry their own times, those win: a word lights the moment
+     it was stamped and not a fraction earlier. */
+  function litFromTimes(line, now, elapsed, span, speed) {
+    const ts = effectiveTimes(line, span, speed);
+    let lit = 0;
+    for (let i = 0; i < ts.length; i++){ if (now >= ts[i]) lit = i + 1; else break; }
     return lit;
   }
   function lastTimeBefore(times, i){
@@ -194,6 +207,67 @@
   function nextTimedIndex(times, i){
     for (let j = i + 1; j < times.length; j++) if (times[j] != null) return { i: j, t: times[j] };
     return { i: -1, t: null };
+  }
+
+  /* ------------------------------------------------------- how a word arrives
+
+     A word switching from white to colour on one frame is a light going on.
+     What reads as singing is the word arriving: coming up out of nothing over
+     the better part of a second, sharpening as it comes.
+
+     Each style returns the same four things, so the drawing does not care
+     which one is picked: how opaque the word is, how blurred, how far below
+     its resting place, and how big. p is 0 the instant the word is due and 1
+     when it has fully arrived. */
+  const REVEALS = [
+    { id:'fade',  name:'Fade in',  note:'Out of nothing, blurred to sharp. The quiet one.' },
+    { id:'rise',  name:'Rise',     note:'Comes up from below and settles.' },
+    { id:'pop',   name:'Pop',      note:'Un-blurs, lifts, overshoots and settles back.' },
+    { id:'glow',  name:'Glow',     note:'Holds still and lights up.' },
+    { id:'plain', name:'Plain',    note:'Straight to colour, no movement.' }
+  ];
+  const easeOut = p => 1 - Math.pow(1 - p, 3);
+  const clamp01 = p => p < 0 ? 0 : p > 1 ? 1 : p;
+
+  function wordFx(kind, p, size) {
+    const u = clamp01(p), e = easeOut(u), px = size || 60;
+    switch (kind) {
+      /* the design's own: invisible and blurred to full over ~0.85s, with
+         only a whisper of movement - no pop, nothing that jumps */
+      case 'rise':
+        return { alpha:e, blur:0, dy:(1 - e) * px * 0.55, scale:1, glow:0 };
+      case 'pop': {
+        /* overshoot to 109% and settle - a damped spring, near enough */
+        const os = u >= 1 ? 1 : 1 + 0.09 * Math.sin(Math.PI * Math.min(1, u * 1.35)) * (1 - u * 0.35);
+        return { alpha:clamp01(0.25 + e * 0.75), blur:(1 - e) * px * 0.13,
+                 dy:(1 - e) * px * 0.30, scale:os, glow:e };
+      }
+      case 'glow':
+        return { alpha:clamp01(0.30 + e * 0.70), blur:0, dy:0, scale:1, glow:e };
+      case 'plain':
+        return { alpha:1, blur:0, dy:0, scale:1, glow:0 };
+      default:
+        return { alpha:e, blur:(1 - e) * px * 0.16, dy:(1 - e) * px * 0.07, scale:1, glow:0 };
+    }
+  }
+
+  /* ------------------------------------------------------------- the export
+
+     One knob, four stops. The numbers are bits per pixel per frame: what the
+     encoder is given to describe one frame's worth of picture. Text over a
+     photograph is the hardest thing to keep clean, so even the low stop is
+     generous by the standards of a talking-head video. */
+  const QUALITY = [
+    { id:'low', name:'Low',    bpp:0.06, fps:24, note:'Small file, for sending around.' },
+    { id:'mid', name:'Mid',    bpp:0.11, fps:30, note:'Fine for stories and reels.' },
+    { id:'hq',  name:'HQ',     bpp:0.19, fps:30, note:'What to upload. The default.' },
+    { id:'max', name:'Master', bpp:0.32, fps:60, note:'Keep this one. Big.' }
+  ];
+  const qualityById = id => QUALITY.filter(q => q.id === id)[0] || QUALITY[2];
+  function bitrateFor(w, h, id) {
+    const q = qualityById(id);
+    const v = Math.round(Math.min(48e6, Math.max(4e6, w * h * q.fps * q.bpp)));
+    return { videoBitsPerSecond: v, audioBitsPerSecond: q.id === 'low' ? 128000 : 192000, fps: q.fps };
   }
 
   /* ---------------------------------------------------------- the fade out
@@ -313,10 +387,19 @@
     if (isLast && duration && t > duration - 0.05)
       return { kind:'outro', text:o.outro || '', alpha:1, prev:lines[i].text, next:null };
 
+    /* Each word carries how far into its own arrival it is, so the drawing
+       can fade it rather than switch it on. due is when it lands, p runs 0 to
+       1 across the fade after that. */
+    const due = effectiveTimes(lines[i], revealSpan, speed);
+    const fade = o.fade == null ? 0.85 : Math.max(0.01, o.fade);
+    const words = wordsOf(lines[i].text).filter(w => w.trim()).map((w, k) => ({
+      text: w, due: due[k], p: clamp01((t - due[k]) / fade)
+    }));
+
     return {
       kind: 'line', index: i, text: lines[i].text,
       lit: litFromTimes(lines[i], t, elapsed, revealSpan, speed),
-      words: wordsOf(lines[i].text).filter(w => w.trim()),
+      words,
       alpha,
       prev: i > 0 ? lines[i - 1].text : null,
       next: lines[i + 1] ? lines[i + 1].text : null,
@@ -328,7 +411,9 @@
     FORMATS, formatById,
     parse, toText, stamp,
     activeAt, windowOf, wordsOf, litCount, litFromTimes, lineAlpha,
-    readWords, timedWords,
+    readWords, timedWords, effectiveTimes,
+    REVEALS, wordFx, easeOut,
+    QUALITY, qualityById, bitrateFor,
     sway, layout, wrap, frameAt
   };
 });

@@ -24,6 +24,7 @@
      before the first frame, or the words come out in a fallback. */
   @font-face{font-family:'UN-Agni';src:url('../../fonts/UN-Agni.ttf') format('truetype');font-display:block;}
   @font-face{font-family:'UN-Alakamanda';src:url('../../fonts/UN-Alakamanda-4-95.ttf') format('truetype');font-display:block;}
+  @font-face{font-family:'UN-Isiwara';src:url('../../fonts/UN-Isiwara.ttf') format('truetype');font-display:block;}
 
   :root{
     /* violet-ink - the one none of the other tools had taken */
@@ -138,6 +139,13 @@
   .wd.set em{color:var(--accentB)}
   .wd.next{border-color:var(--accent);box-shadow:0 0 0 2px var(--glowSoft)}
   .wd.lit{color:var(--accentB)}
+  /* the pick-one rows: how a word arrives, and what comes out */
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chips button{border:1px solid var(--line);border-radius:8px;padding:6px 11px;background:var(--card-2);
+    color:var(--text);font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;
+    transition:border-color .15s ease,background .15s ease}
+  .chips button:hover{border-color:var(--line3)}
+  .chips button.on{border-color:var(--accent);background:rgba(124,107,240,.16);color:var(--accentB)}
   body.tapping{caret-color:transparent}
   body.tapping .transport{box-shadow:0 0 0 2px var(--accent)}
 
@@ -189,6 +197,7 @@
       </div>
       <div class="panel" style="margin-top:14px">
         <h2><span class="dot"></span>Export<span class="tag" id="recInfo"></span></h2>
+        <div class="chips" id="qualities" style="margin-bottom:9px"></div>
         <p class="note" id="exportNote"></p>
         <div class="bar" style="margin-top:11px">
           <button class="btn on" id="recBtn">● Record the video</button>
@@ -231,7 +240,46 @@
       </div>
 
       <div class="panel">
-        <h2><span class="dot"></span>Timing</h2>
+        <h2><span class="dot"></span>Type<span class="tag" id="typeTag"></span></h2>
+        <div class="two">
+          <div class="fld"><label class="f" for="face">The words</label><select id="face"></select></div>
+          <div class="fld"><label class="f" for="cardFace">The card</label><select id="cardFace"></select></div>
+        </div>
+        <div class="fld"><label class="f" for="size">Size <span id="sizeV">100%</span></label>
+          <input id="size" type="range" min="0.55" max="1.8" step="0.05" value="1"></div>
+        <div class="bar">
+          <button class="btn sm" id="boldBtn" style="font-weight:800">B</button>
+          <button class="btn sm" id="italicBtn" style="font-style:italic">I</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2><span class="dot"></span>The mark</h2>
+        <div class="bar" style="margin-bottom:11px">
+          <button class="btn sm" id="logoBtn">Show it</button>
+        </div>
+        <div class="two">
+          <div class="fld"><label class="f" for="logoText">Name</label><input id="logoText" value="EMORTIA" maxlength="18"></div>
+          <div class="fld"><label class="f" for="logoSub">Under it</label><input id="logoSub" value="MUSIC" maxlength="18"></div>
+        </div>
+        <img id="logoThumb" class="thumb" alt="" style="display:none;height:56px;object-fit:contain;background:#0c0916">
+        <div class="drop" id="logoDrop"><b id="logoName">or drop a logo image</b>
+          <span>PNG with a clear background sits best. It replaces the name.</span>
+          <input id="logoFile" type="file" accept="image/*"></div>
+        <button class="btn sm" id="logoClear" style="margin-top:9px">Back to the name</button>
+      </div>
+
+      <div class="panel">
+        <h2><span class="dot"></span>Motion</h2>
+        <div class="fld"><label class="f">How the words arrive</label>
+          <div class="chips" id="reveals"></div>
+          <p class="note" id="revealNote" style="margin-top:7px"></p></div>
+        <div class="fld"><label class="f" for="fade">Fade <span id="fadeV">0.85s</span></label>
+          <input id="fade" type="range" min="0.05" max="2.5" step="0.05" value="0.85"></div>
+        <div class="bar" style="margin-bottom:11px">
+          <button class="btn sm" id="glowBtn">Glow</button>
+          <button class="btn sm" id="prevBtn">Line before</button>
+        </div>
         <div class="fld"><label class="f" for="speed">Word speed <span id="speedV">2.4×</span></label>
           <input id="speed" type="range" min="1" max="5" step="0.1" value="2.4"></div>
         <div class="fld"><label class="f" for="hide">Hold after a line <span id="hideV">1.5s</span></label>
@@ -288,7 +336,7 @@ const audio = new Audio();
 audio.crossOrigin = 'anonymous';
 audio.preload = 'auto';
 
-let LINES = [], ART = null, RAF = null, REC = null, RECORDING = false;
+let LINES = [], ART = null, LOGO = null, RAF = null, REC = null, RECORDING = false;
 
 /* ---------- how long the song is ----------
 
@@ -317,10 +365,27 @@ function resolveDuration(){
     setTimeout(finish, 4000);          // never hang on it
   });
 }
+/* The faces the words can be set in. The three Sinhala ones are the site's
+   own; the two Latin ones are there for a song written in English. */
+const FACES = [
+  { id:'alakamanda', name:'UN-Alakamanda', css:'"UN-Alakamanda", "Hanken Grotesk", sans-serif' },
+  { id:'agni',       name:'UN-Agni',       css:'"UN-Agni", "Hanken Grotesk", sans-serif' },
+  { id:'isiwara',    name:'UN-Isiwara',    css:'"UN-Isiwara", "Hanken Grotesk", sans-serif' },
+  { id:'hanken',     name:'Hanken Grotesk',css:'"Hanken Grotesk", system-ui, sans-serif' },
+  { id:'bricolage',  name:'Bricolage',     css:'"Bricolage Grotesque", system-ui, sans-serif' }
+];
+const faceById = id => FACES.filter(f => f.id === id)[0] || FACES[0];
+
 const S = {
   fmt:'tiktok', accent:'#e2334a',
   title:'', artist:'Emortia', writer:'Sithara Perera',
-  speed:2.4, hide:1.5, sway:1, leadIn:'Emortia', outro:'', lyrics:'', pick:0
+  speed:2.4, hide:1.5, sway:1, leadIn:'Emortia', outro:'', lyrics:'', pick:0,
+  /* how the words arrive */
+  reveal:'fade', fade:0.85, showPrev:false, glow:true,
+  /* how they are set */
+  face:'alakamanda', cardFace:'agni', size:1, bold:true, italic:false,
+  /* the mark, and what comes out */
+  logo:true, logoText:'EMORTIA', logoSub:'MUSIC', logoImg:'', quality:'hq'
 };
 
 /* ---------- theme ---------- */
@@ -376,18 +441,21 @@ function draw(t){
 
   const f = L.frameAt(t, LINES, {
     duration: songLength(), wordSpeed: S.speed, hideAfter: S.hide,
-    leadIn: S.leadIn, outro: S.outro
+    leadIn: S.leadIn, outro: S.outro, fade: S.fade
   });
 
   const X = lay.padX;
   const maxW = W - X * 2;
   const fontAt = (px, weight) => (weight || 800) + ' ' + px + 'px "Hanken Grotesk", system-ui, sans-serif';
   const mono = (px, weight) => (weight || 400) + ' ' + px + 'px "Space Mono", ui-monospace, monospace';
-  /* The words themselves are Sinhala, so they get the Sinhala faces: the
-     lyrics in Alakamanda, the card that opens and closes in Agni. Hanken is
-     left behind them, which is what draws a line written in English. */
-  const lyricFont = (px, weight) => (weight || 700) + ' ' + px + 'px "UN-Alakamanda", "Hanken Grotesk", system-ui, sans-serif';
-  const cardFont  = (px, weight) => (weight || 700) + ' ' + px + 'px "UN-Agni", "Hanken Grotesk", system-ui, sans-serif';
+  /* The words themselves are Sinhala, so they get the Sinhala faces, and both
+     the face and the weight are the user's to set. Hanken is left behind them,
+     which is what draws a line written in English. */
+  const styled = (px, face, weight) =>
+    (S.italic ? 'italic ' : '') + (weight || (S.bold ? 700 : 400)) + ' ' +
+    Math.round(px) + 'px ' + faceById(face).css;
+  const lyricFont = (px, weight) => styled(px * S.size, S.face, weight);
+  const cardFont  = (px, weight) => styled(px * S.size, S.cardFace, weight);
   const shadow = on => { cx.shadowColor = on ? 'rgba(0,0,0,0.55)' : 'transparent';
                          cx.shadowBlur = on ? Math.round(H * 0.010) : 0; };
 
@@ -426,11 +494,49 @@ function draw(t){
   credit('ARTIST', S.artist);
   credit('LYRICS', S.writer);
 
-  /* ---- top right: the clock, in the accent ---- */
+  /* ---- top right: the mark, then the clock under it ----
+
+     Opposite the song title and set the same way, so the two corners balance:
+     the song on the left, whose song it is on the right. An uploaded image
+     takes the place of the wordmark if there is one. */
   cx.textAlign = 'right';
+  let ry = lay.headY;
+
+  if (S.logo){
+    if (LOGO && LOGO.complete && LOGO.naturalWidth){
+      const lw = Math.min(maxW * 0.34, lay.titleSize * 7);
+      const lh = lw * (LOGO.naturalHeight / LOGO.naturalWidth);
+      cx.drawImage(LOGO, W - X - lw, ry - lay.titleSize * 0.2, lw, lh);
+      ry += lh + Math.round(lay.creditSize * 0.9);
+    } else if (S.logoText){
+      ry += Math.round(lay.titleSize * 1.5);
+      cx.font = fontAt(lay.titleSize, 600);
+      cx.fillStyle = 'rgba(255,255,255,0.96)';
+      cx.letterSpacing = Math.round(lay.titleSize * 0.26) + 'px';
+      cx.fillText(S.logoText.toUpperCase(), W - X, ry);
+      cx.letterSpacing = '0px';
+      /* the short rule that runs into the wordmark, mirroring the one on the
+         left - drawn after, so it stops where the text starts */
+      const markW = cx.measureText(S.logoText.toUpperCase()).width + lay.titleSize * 0.26;
+      cx.fillStyle = S.accent;
+      cx.fillRect(W - X - markW - lay.ruleW - lay.titleSize * 0.5,
+                  ry - lay.titleSize * 0.33, lay.ruleW, Math.max(2, Math.round(H * 0.0016)));
+      if (S.logoSub){
+        ry += lay.creditGap;
+        cx.font = mono(lay.creditSize, 400);
+        cx.letterSpacing = Math.round(lay.creditSize * 0.32) + 'px';
+        cx.fillStyle = 'rgba(255,255,255,0.42)';
+        cx.fillText(S.logoSub.toUpperCase(), W - X, ry);
+        cx.letterSpacing = '0px';
+      }
+    }
+  } else {
+    ry += Math.round(lay.titleSize * 1.5);
+  }
+
   cx.font = mono(lay.timeSize, 700);
   cx.fillStyle = S.accent;
-  cx.fillText(L.stamp(t), W - X, lay.headY + Math.round(lay.titleSize * 1.5));
+  cx.fillText(L.stamp(t), W - X, ry + lay.creditGap);
 
   /* ---- bottom left: the words ----
      They grow upwards off a fixed floor, so a line that wraps to two rows
@@ -450,26 +556,56 @@ function draw(t){
     const rowH = lay.activeSize * 1.30;
     const topOfBlock = lay.lyricBase - (rows.length - 1) * rowH;
 
-    /* the line before, quiet, above the block */
-    if (f.prev){
+    /* the line before, quiet, above the block - off by default, because the
+       design this follows keeps only the line being sung on the screen */
+    if (f.prev && S.showPrev){
       cx.font = lyricFont(lay.nearSize, 500);
       cx.fillStyle = 'rgba(255,255,255,0.34)';
       cx.fillText(cut(cx, f.prev, maxW), X, topOfBlock - lay.activeSize - lay.lineGap);
     }
 
-    /* the line itself, word by word */
-    cx.font = lyricFont(lay.activeSize, 700);
-    cx.globalAlpha = f.alpha;
+    /* ---- the line itself, a word at a time ----
+
+       Not a switch from white to colour on one frame, which reads as a light
+       going on. Each word arrives: it comes up out of nothing over the better
+       part of a second, sharpening as it comes. What that arrival looks like
+       is the reveal setting; the shape of it is all in wordFx. */
+    cx.font = lyricFont(lay.activeSize, S.bold ? 700 : 400);
+    const spaceW = cx.measureText(' ').width;
+    const size = lay.activeSize * S.size;
     let spoken = 0;
     rows.forEach((row, ri) => {
       const parts = row.split(/\s+/).filter(Boolean);
-      const spaceW = cx.measureText(' ').width;
       let x = X;
       const ry = topOfBlock + ri * rowH;
       parts.forEach((p, pi) => {
-        cx.fillStyle = (spoken + pi < f.lit) ? S.accent : 'rgba(255,255,255,0.95)';
-        cx.fillText(p, x, ry);
-        x += cx.measureText(p).width + spaceW;
+        const w = f.words[spoken + pi];
+        const fx = L.wordFx(S.reveal, w ? w.p : 1, size);
+        const wide = cx.measureText(p).width;
+
+        cx.save();
+        cx.globalAlpha = f.alpha * fx.alpha;
+        /* blur is what makes a word arrive rather than appear - it is the
+           expensive part of the frame, so it is only set when it is doing
+           something */
+        if (fx.blur > 0.4) cx.filter = 'blur(' + fx.blur.toFixed(1) + 'px)';
+        /* the colour comes in with the word: white until it lands, the accent
+           once it has - crossfaded, so nothing switches */
+        cx.fillStyle = mix('rgba(255,255,255,0.95)', S.accent, fx.alpha);
+        if (S.glow && fx.glow > 0.02){
+          cx.shadowColor = S.accent;
+          cx.shadowBlur = size * 0.42 * fx.glow;
+        }
+        if (fx.scale !== 1){
+          /* grow about the word's own middle, or it slides as it swells */
+          cx.translate(x + wide / 2, ry + fx.dy);
+          cx.scale(fx.scale, fx.scale);
+          cx.fillText(p, -wide / 2, 0);
+        } else {
+          cx.fillText(p, x, ry + fx.dy);
+        }
+        cx.restore();
+        x += wide + spaceW;
       });
       spoken += parts.length;
     });
@@ -482,6 +618,22 @@ function draw(t){
   cx.fillStyle = 'rgba(255,255,255,0.22)';
   cx.fillRect(X, lay.ruleY, maxW, Math.max(1, Math.round(H * 0.0008)));
 }
+/* Crossfade between two colours. A word that switches from white to the
+   accent on one frame flickers; one that crosses to it does not. */
+function rgbOf(c){
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(c).trim());
+  if (m) return [parseInt(m[1],16), parseInt(m[2],16), parseInt(m[3],16), 1];
+  const n = /rgba?\(([^)]+)\)/.exec(String(c));
+  if (n){ const p = n[1].split(',').map(Number); return [p[0],p[1],p[2], p[3] == null ? 1 : p[3]]; }
+  return [255,255,255,1];
+}
+function mix(a, b, t){
+  const u = t < 0 ? 0 : t > 1 ? 1 : t;
+  const A = rgbOf(a), B = rgbOf(b);
+  const r = Math.round(A[0] + (B[0]-A[0])*u), g = Math.round(A[1] + (B[1]-A[1])*u), bl = Math.round(A[2] + (B[2]-A[2])*u);
+  return 'rgba(' + r + ',' + g + ',' + bl + ',' + (A[3] + (B[3]-A[3])*u).toFixed(3) + ')';
+}
+
 /* a neighbouring line is a hint, not the point - one row, clipped */
 function cut(cx, text, maxW){
   if (cx.measureText(text).width <= maxW) return text;
@@ -669,16 +821,11 @@ function bestFormat(){
 }
 function bestType(){ return bestFormat().m; }
 
-/* A frame of 1080x1920 at 30fps needs a lot of room to keep small text crisp.
-   These are deliberately generous - the file is uploaded once and re-encoded
-   by the platform anyway, so the only thing that matters is what it is given. */
+/* What the encoder is given, at the chosen stop. The numbers live in lyric.js
+   with the rest of the arithmetic; this only knows the frame it is drawing. */
 function bitrates(){
   const cv = $('stage');
-  const px = cv.width * cv.height;
-  /* ~0.19 bits per pixel per frame at 30fps, floored so a square post is not
-     starved and capped so a long song does not run to a gigabyte */
-  const v = Math.round(Math.min(24e6, Math.max(10e6, px * 30 * 0.19)));
-  return { videoBitsPerSecond: v, audioBitsPerSecond: 192000 };
+  return L.bitrateFor(cv.width, cv.height, S.quality);
 }
 async function record(){
   if (RECORDING){ REC && REC.stop(); return; }
@@ -686,7 +833,7 @@ async function record(){
   if (!audio.src){ toast('Pick a song first'); return; }
 
   const cv = $('stage');
-  const vs = cv.captureStream(30);
+  const vs = cv.captureStream(bitrates().fps);
   let stream = vs;
   try {
     /* route the audio through the graph once, and keep it - a second
@@ -707,7 +854,10 @@ async function record(){
   const chunks = [];
   const fmt = bestFormat();
   const type = fmt.m;
-  REC = new MediaRecorder(stream, Object.assign(type ? { mimeType: type } : {}, bitrates()));
+  const br = bitrates();
+  REC = new MediaRecorder(stream, Object.assign(type ? { mimeType: type } : {}, {
+    videoBitsPerSecond: br.videoBitsPerSecond, audioBitsPerSecond: br.audioBitsPerSecond
+  }));
   REC.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
   REC.onstop = () => {
     RECORDING = false;
@@ -718,7 +868,7 @@ async function record(){
     a.href = URL.createObjectURL(blob);
     const f = L.formatById(S.fmt);
     const name = (S.title || 'lyric').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'lyric';
-    a.download = name + '-' + f.w + 'x' + f.h + '.' + fmt.ext;
+    a.download = name + '-' + f.w + 'x' + f.h + '-' + S.quality + '.' + fmt.ext;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     toast('Saved ' + a.download + ' · ' + (blob.size / 1048576).toFixed(1) + 'MB');
@@ -764,6 +914,57 @@ function pickTrack(i){
   save();
 }
 
+/* which of the pick-one buttons is lit, and which toggles are down */
+function paintChips(){
+  [...$('reveals').querySelectorAll('button')].forEach(b => b.classList.toggle('on', b.dataset.r === S.reveal));
+  [...$('qualities').querySelectorAll('button')].forEach(b => b.classList.toggle('on', b.dataset.q === S.quality));
+  const r = L.REVEALS.filter(x => x.id === S.reveal)[0];
+  $('revealNote').textContent = r ? r.note : '';
+  $('glowBtn').classList.toggle('on', S.glow);
+  $('prevBtn').classList.toggle('on', S.showPrev);
+  $('logoBtn').classList.toggle('on', S.logo);
+  $('logoBtn').textContent = S.logo ? 'Showing' : 'Show it';
+  $('boldBtn').classList.toggle('on', S.bold);
+  $('italicBtn').classList.toggle('on', S.italic);
+  /* the fade knob only means anything to a style that fades */
+  $('fade').disabled = S.reveal === 'plain';
+}
+/* the Type panel's tag shows what the words are actually set in */
+function paintType(){
+  $('typeTag').textContent = faceById(S.face).name +
+    (S.bold ? ' · bold' : '') + (S.italic ? ' · italic' : '');
+}
+/* What pressing record will actually produce, in the terms that matter: the
+   container, the rate, and roughly how big the file lands. */
+function showExport(){
+  if (!canRecord()){
+    $('exportNote').innerHTML = 'This browser will not record a canvas. Chrome or Edge will. <b>Save this frame</b> still works.';
+    $('recInfo').textContent = 'not available here';
+    $('recBtn').disabled = true;
+    return;
+  }
+  const fmt = bestFormat(), br = bitrates(), q = L.qualityById(S.quality);
+  const mb = (br.videoBitsPerSecond / 1e6).toFixed(0);
+  const secs = songLength();
+  const size = secs ? ' About ' + ((br.videoBitsPerSecond + br.audioBitsPerSecond) * secs / 8 / 1048576).toFixed(0) + 'MB for this song.' : '';
+  $('exportNote').innerHTML = '<b>' + q.name + '</b> – ' + q.note + ' ' + mb + ' Mbps at ' + br.fps + 'fps, written as <b>' +
+    fmt.name + '</b>.' + size + (fmt.ext === 'mp4'
+      ? ' Upload it to TikTok, Instagram or YouTube as it is.'
+      : ' Your browser will not write MP4, so this is WebM – every platform takes it, and any converter turns it into MP4.') +
+    ' Recording plays the song from the start and stops on its own at the end.';
+  $('recInfo').textContent = br.fps + 'fps · ' + fmt.ext + ' · ' + mb + ' Mbps';
+  $('recBtn').disabled = false;
+}
+
+function loadLogo(){
+  if (!S.logoImg){ LOGO = null; return; }
+  const im = new Image();
+  im.onload = () => { LOGO = im; draw(audio.currentTime || 0); };
+  im.src = S.logoImg;
+  $('logoThumb').src = S.logoImg;
+  $('logoThumb').style.display = 'block';
+}
+
 function boot(){
   load();
 
@@ -778,9 +979,13 @@ function boot(){
   $('speed').value = S.speed;   $('hide').value = S.hide;   $('swayAmt').value = S.sway;
   $('leadIn').value = S.leadIn; $('outro').value = S.outro;
   $('lyrics').value = S.lyrics || '';
+  $('fade').value = S.fade; $('size').value = S.size;
+  $('logoText').value = S.logoText; $('logoSub').value = S.logoSub;
   $('speedV').textContent = (+S.speed).toFixed(1) + '×';
   $('hideV').textContent = (+S.hide).toFixed(1) + 's';
   $('swayV').textContent = Math.round(S.sway * 100) + '%';
+  $('fadeV').textContent = (+S.fade).toFixed(2) + 's';
+  $('sizeV').textContent = Math.round(S.size * 100) + '%';
 
   setFormat(S.fmt);
   readLyrics();
@@ -801,6 +1006,43 @@ function boot(){
   bind('speed','speed', v => (+v).toFixed(1) + '×', 'speedV');
   bind('hide','hide',  v => (+v).toFixed(1) + 's', 'hideV');
   bind('swayAmt','sway', v => Math.round(v*100) + '%', 'swayV');
+  bind('fade','fade',  v => (+v).toFixed(2) + 's', 'fadeV');
+  bind('size','size',  v => Math.round(v*100) + '%', 'sizeV');
+  bind('logoText','logoText'); bind('logoSub','logoSub');
+
+  /* the faces, and the two rows of pick-one buttons */
+  const faceOpts = sel => FACES.map(f =>
+    '<option value="' + f.id + '"' + (f.id === sel ? ' selected' : '') + '>' + f.name + '</option>').join('');
+  $('face').innerHTML = faceOpts(S.face);
+  $('cardFace').innerHTML = faceOpts(S.cardFace);
+  $('face').onchange = () => { S.face = $('face').value; save(); paintType(); draw(audio.currentTime || 0); };
+  $('cardFace').onchange = () => { S.cardFace = $('cardFace').value; save(); draw(audio.currentTime || 0); };
+
+  $('reveals').innerHTML = L.REVEALS.map(r =>
+    '<button data-r="' + r.id + '">' + r.name + '</button>').join('');
+  [...$('reveals').querySelectorAll('button')].forEach(b => b.onclick = () => {
+    S.reveal = b.dataset.r; save(); paintChips(); draw(audio.currentTime || 0);
+  });
+  $('qualities').innerHTML = L.QUALITY.map(q =>
+    '<button data-q="' + q.id + '">' + q.name + '</button>').join('');
+  [...$('qualities').querySelectorAll('button')].forEach(b => b.onclick = () => {
+    S.quality = b.dataset.q; save(); paintChips(); showExport();
+  });
+
+  /* the plain on/off ones */
+  const toggle = (id, key, after) => $(id).onclick = () => {
+    S[key] = !S[key]; save(); paintChips(); if (after) after(); draw(audio.currentTime || 0);
+  };
+  toggle('glowBtn','glow'); toggle('prevBtn','showPrev'); toggle('logoBtn','logo');
+  toggle('boldBtn','bold', paintType); toggle('italicBtn','italic', paintType);
+
+  $('logoClear').onclick = () => {
+    S.logoImg = ''; LOGO = null; save();
+    $('logoThumb').style.display = 'none';
+    $('logoName').textContent = 'or drop a logo image';
+    draw(audio.currentTime || 0);
+  };
+  loadLogo(); paintChips(); paintType();
 
   let lt;
   $('lyrics').oninput = () => { clearTimeout(lt); lt = setTimeout(() => {
@@ -841,6 +1083,14 @@ function boot(){
     ['dragleave','drop'].forEach(t => d.addEventListener(t, e => { e.preventDefault(); d.classList.remove('hot'); }));
     d.addEventListener('drop', e => e.dataTransfer.files[0] && onFile(e.dataTransfer.files[0]));
   };
+  wireDrop('logoDrop','logoFile', f => {
+    const rd = new FileReader();
+    /* kept as a data URL so it survives a reload with everything else -
+       a blob URL is dead the moment the page goes */
+    rd.onload = () => { S.logoImg = rd.result; save(); loadLogo();
+      $('logoName').textContent = f.name; };
+    rd.readAsDataURL(f);
+  });
   wireDrop('audioDrop','audioFile', f => {
     audio.src = URL.createObjectURL(f); $('audioName').textContent = f.name;
     $('pick').value = ''; toast('Audio loaded');
@@ -853,20 +1103,7 @@ function boot(){
     im.src = url;
   });
 
-  if (canRecord()){
-    const fmt = bestFormat(), br = bitrates();
-    const mb = (br.videoBitsPerSecond / 1e6).toFixed(0);
-    $('exportNote').innerHTML = 'Recording plays the song from the start and captures the canvas as it goes, ' +
-      'so what you watched is what you get. It stops on its own at the end. This browser writes <b>' + fmt.name +
-      '</b> at ' + mb + ' Mbps' + (fmt.ext === 'mp4'
-        ? ' - upload it to TikTok, Instagram or YouTube as it is.'
-        : ' - your browser will not write MP4, so this is WebM. Every platform takes it, and any converter turns it into MP4.');
-    $('recInfo').textContent = '30fps · ' + fmt.ext + ' · ' + mb + ' Mbps';
-  } else {
-    $('exportNote').innerHTML = 'This browser will not record a canvas. Chrome or Edge will. <b>Save this frame</b> still works.';
-    $('recInfo').textContent = 'not available here';
-  }
-  $('recBtn').disabled = !canRecord();
+  showExport();
 
   $('foot').innerHTML = 'Everything happens in this browser - the song, the picture and the video never leave it · ' +
     'lyrics come from the .lrc files the Journal sync already wrote';

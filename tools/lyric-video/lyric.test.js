@@ -138,6 +138,80 @@ console.log('\nword by word, stamped');
   is('the frame lights the stamped words', f.lit, 3);
 }
 
+console.log('\nwhen each word is due');
+{
+  const l = L.parse('0:10 | [0:10.0]one [0:12.0]two three four')[0];
+  is('the stamped ones are their stamp', L.effectiveTimes(l, 8, 1).slice(0,2), [10, 12]);
+  is('and the rest are spread over what is left',
+     L.effectiveTimes(l, 8, 1).slice(2), [15, 18]);
+  const plain = L.parse('0:10 | one two three four')[0];
+  is('with nothing stamped it is an even spread',
+     L.effectiveTimes(plain, 10, 1), [12.5, 15, 17.5, 20]);
+  is('and the spread agrees with the old count',
+     [0,3,5,7,10].map(e => L.effectiveTimes(plain,10,1).filter(t => t <= 10+e).length),
+     [0,3,5,7,10].map(e => L.litCount(plain.text, e, 10, 1)));
+  is('an empty line has no times', L.effectiveTimes(L.parse('0:10 | ')[0] || {text:'',t:10}, 10, 1), []);
+}
+
+console.log('\nhow a word arrives');
+{
+  is('five styles', L.REVEALS.length, 5);
+  /* the point of the fade: a word is not switched on, it comes up out of
+     nothing over the better part of a second */
+  const f0 = L.wordFx('fade', 0, 60), f1 = L.wordFx('fade', 1, 60);
+  is('at the start it is invisible',  f0.alpha, 0);
+  is('and blurred',                   f0.blur > 0, true);
+  is('at the end it is solid',        f1.alpha, 1);
+  is('and sharp',                     f1.blur, 0);
+  is('it never jumps in size',        [f0.scale, L.wordFx('fade',.5,60).scale, f1.scale], [1,1,1]);
+  is('and barely moves',              L.wordFx('fade', 0, 60).dy < 60 * 0.1, true);
+  is('the fade only ever grows',
+     [0,.2,.4,.6,.8,1].every((p,i,a) => i===0 || L.wordFx('fade',p,60).alpha >= L.wordFx('fade',a[i-1],60).alpha), true);
+
+  is('rise comes from below',         L.wordFx('rise', 0, 60).dy > 20, true);
+  is('and lands',                     L.wordFx('rise', 1, 60).dy, 0);
+  is('pop overshoots',                L.wordFx('pop', 0.5, 60).scale > 1, true);
+  is('then settles back',             L.wordFx('pop', 1, 60).scale, 1);
+  is('glow holds still',              [L.wordFx('glow',0,60).dy, L.wordFx('glow',1,60).dy], [0,0]);
+  is('and lights up',                 L.wordFx('glow', 1, 60).glow, 1);
+  is('plain does nothing at all',     L.wordFx('plain', 0, 60), {alpha:1,blur:0,dy:0,scale:1,glow:0});
+  is('an unknown style falls back to the fade',
+     L.wordFx('nope', 0.4, 60), L.wordFx('fade', 0.4, 60));
+  is('progress outside 0..1 is clamped',
+     [L.wordFx('fade',-3,60).alpha, L.wordFx('fade',9,60).alpha], [0,1]);
+}
+
+console.log('\nthe frame carries the arrivals');
+{
+  const lines = L.parse('0:10 | [0:10.0]one [0:12.0]two three four');
+  const o = { duration:30, wordSpeed:2.4, hideAfter:1.5, fade:0.85 };
+  const f = L.frameAt(10.4, lines, o);
+  is('every word is described',      f.words.length, 4);
+  is('the first is part way in',     f.words[0].p > 0.4 && f.words[0].p < 0.6, true);
+  is('the second has not started',   f.words[1].p, 0);
+  is('and it knows when it is due',  f.words[1].due, 12);
+  is('once past the fade it is done', L.frameAt(11.5, lines, o).words[0].p, 1);
+  /* a shorter fade must arrive sooner - this is the knob doing something */
+  is('a quick fade is further along at the same moment',
+     L.frameAt(10.3, lines, {duration:30, wordSpeed:2.4, fade:0.4}).words[0].p >
+     L.frameAt(10.3, lines, {duration:30, wordSpeed:2.4, fade:1.6}).words[0].p, true);
+}
+
+console.log('\nexport quality');
+{
+  is('four stops', L.QUALITY.length, 4);
+  is('HQ is the middle default', L.qualityById('nope').id, 'hq');
+  const at = id => L.bitrateFor(1080, 1920, id).videoBitsPerSecond;
+  is('they climb in order',
+     [at('low'), at('mid'), at('hq'), at('max')].every((v,i,a) => i===0 || v > a[i-1]), true);
+  is('even the low one is not thin',  at('low') >= 4e6, true);
+  is('and the top one is capped',     at('max') <= 48e6, true);
+  is('a bigger frame gets more bits',
+     L.bitrateFor(1920,1080,'hq').videoBitsPerSecond > L.bitrateFor(1080,1080,'hq').videoBitsPerSecond, true);
+  is('master runs at 60fps',          L.bitrateFor(1080,1920,'max').fps, 60);
+  is('and low drops to 24',           L.bitrateFor(1080,1920,'low').fps, 24);
+}
+
 console.log('\nholding, then going');
 {
   is('while it is being sung',        L.lineAlpha(2, 5, 1.5), 1);
