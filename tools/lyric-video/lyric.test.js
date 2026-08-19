@@ -276,6 +276,49 @@ console.log('\nthe frame, whole');
   is('a line inside the cap is unaffected', capped.lit, uncapped.lit);
 }
 
+console.log('\nthe last line, and letting go of it');
+{
+  /* The shape that goes wrong: the song ends at 1:52, the last line is sung at
+     1:11, and there is forty seconds of instrumental after it. Measuring the
+     line from its window kept it on screen for all forty and then cut it dead
+     on the final frame. It should go once it has been sung. */
+  const lines = L.parse('0:20 | one two\n1:11 | [1:11.0]පස්සට [1:12.4]කැලූම් [1:13.9]නැල්ල');
+  const o = { duration: 112, wordSpeed: 2.4, hideAfter: 1.5, fade: 0.85, outro: 'Emortia' };
+  const at = t => L.frameAt(t, lines, o);
+
+  is('the last line is up while it is sung',      at(72).kind, 'line');
+  is('and solid while its words arrive',          at(73.9).alpha, 1);
+  is('still there as the last word lands',        at(74.7).kind, 'line');
+  /* sung by 1:13.9 + 0.85 fade = 1:14.75, then 1.5s of hold */
+  is('fading once it is done',
+     (a => a > 0 && a < 1)(at(75.6).alpha), true);
+  is('gone well before the song is',              at(77).kind, 'outro');
+  is('and it is the outro that is up',            at(77).text, 'Emortia');
+  is('still the outro at the end',                at(111.9).kind, 'outro');
+
+  /* it must not take the last line away before its words have even arrived */
+  is('nothing vanishes mid-word',
+     [72, 73, 74].every(t => at(t).kind === 'line' && at(t).alpha === 1), true);
+
+  /* an unstamped last line falls back to the capped reveal, not the window */
+  const plain = L.parse('0:20 | one two\n1:11 | three four five');
+  const pat = t => L.frameAt(t, plain, o);
+  is('an unstamped last line also lets go',       pat(85).kind, 'outro');
+  is('after its reveal, not after the song',      pat(72).kind, 'line');
+
+  /* a middle line is still handed over by the next one arriving */
+  is('a middle line holds until the next',        at(70).kind, 'line');
+  is('and the hold is what fades it',
+     L.lineAlpha(72, 71, 1.5) < 1, true);
+
+  /* with the hold turned off nothing fades, which is a choice, not a bug */
+  is('no hold set, the last line stays',
+     L.frameAt(90, lines, Object.assign({}, o, { hideAfter: 0 })).kind, 'line');
+
+  is('sungBy reads the last stamped word', +L.sungBy(lines[1], 71, 6, 0.85).toFixed(2), 74.75);
+  is('and the reveal when nothing is stamped',    L.sungBy(plain[1], 71, 6, 0.85), 77.85);
+}
+
 console.log('\nthe frame sizes');
 {
   is('five to choose from', L.FORMATS.length, 5);

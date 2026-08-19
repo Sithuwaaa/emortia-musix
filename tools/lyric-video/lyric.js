@@ -274,6 +274,16 @@
 
      A line hangs on after its words are done, then goes if the next one is a
      long way off - a held frame with stale words on it looks like a bug. */
+  /* When a line has finished being sung. For a stamped line that is its last
+     word, plus the fade that word is still arriving over; otherwise the end of
+     the reveal, which is capped. This is not the same as the end of its
+     window, and for the last line of a song the two are nothing alike. */
+  function sungBy(line, from, revealSpan, fade) {
+    const ts = (line && line.wordTimes ? line.wordTimes : []).filter(t => t != null);
+    const last = ts.length ? Math.max.apply(null, ts) : null;
+    return (last == null ? from + revealSpan : last) + fade;
+  }
+
   function lineAlpha(elapsed, span, hideAfter) {
     const hold = Number(hideAfter);
     if (!isFinite(hold) || hold <= 0) return 1;
@@ -381,17 +391,24 @@
        never appeared at all. Nobody sings that slowly, so the reveal is capped
        and the line simply waits once it is done. */
     const revealSpan = Math.min(span, o.maxReveal == null ? 6 : o.maxReveal);
-    const alpha = lineAlpha(elapsed, span, isLast ? 0 : hideAfter);
+    const fade = o.fade == null ? 0.85 : Math.max(0.01, o.fade);
 
-    /* past the end of the last line, the outro takes the frame */
-    if (isLast && duration && t > duration - 0.05)
+    /* A line goes when the next one arrives - except the last, which has no
+       next. Measuring it from its window kept it on screen for the whole
+       instrumental tail and then cut it dead at the final second. It should
+       go when it has been sung, so the last line is measured from its own
+       last word instead. */
+    const doneAt = sungBy(lines[i], win.from, revealSpan, fade);
+    const alpha = lineAlpha(elapsed, isLast ? Math.min(span, doneAt - win.from) : span, hideAfter);
+
+    /* the outro takes the frame once the last line has gone, or at the end */
+    if (isLast && (alpha <= 0 || (duration && t > duration - 0.05)))
       return { kind:'outro', text:o.outro || '', alpha:1, prev:lines[i].text, next:null };
 
     /* Each word carries how far into its own arrival it is, so the drawing
        can fade it rather than switch it on. due is when it lands, p runs 0 to
        1 across the fade after that. */
     const due = effectiveTimes(lines[i], revealSpan, speed);
-    const fade = o.fade == null ? 0.85 : Math.max(0.01, o.fade);
     const words = wordsOf(lines[i].text).filter(w => w.trim()).map((w, k) => ({
       text: w, due: due[k], p: clamp01((t - due[k]) / fade)
     }));
@@ -410,7 +427,7 @@
   return {
     FORMATS, formatById,
     parse, toText, stamp,
-    activeAt, windowOf, wordsOf, litCount, litFromTimes, lineAlpha,
+    activeAt, windowOf, wordsOf, litCount, litFromTimes, lineAlpha, sungBy,
     readWords, timedWords, effectiveTimes,
     REVEALS, wordFx, easeOut,
     QUALITY, qualityById, bitrateFor,
