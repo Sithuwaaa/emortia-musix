@@ -34,7 +34,8 @@ console.log('\nreading the lines');
   is('an .lrc bracket time is read',   t[0].t, 12.3);
   is('a mm:ss.s | text line is read',  t[1].t, 18.5);
   is('minutes carry',                  t[2].t, 65);
-  is('an untimed line is kept, at the end', t[3], { i:3, t:null, text:'a line with no time' });
+  is('an untimed line is kept, at the end',
+     [t[3].i, t[3].t, t[3].text], [3, null, 'a line with no time']);
   is('and the words come through',     t[0].text, 'first line');
 
   is('written back the way the editor shows it',
@@ -89,6 +90,52 @@ console.log('\nword by word');
   is('an empty line lights nothing',  L.litCount('', 5, 10, 2.4), 0);
   is('a one-word line still lights',  L.litCount('word', 9, 10, 1), 0);
   is('the words come back split',     L.wordsOf('a  b').filter(w=>w.trim()), ['a','b']);
+}
+
+console.log('\nword by word, stamped');
+{
+  const l = L.parse('0:29.3 | [0:29.3]තිස්සෙම [0:30.1]වගේ [0:31.4]ලස්සන [0:32.6]කෙල්ල');
+  is('one line, four words',      [l.length, l[0].text.split(' ').length], [1, 4]);
+  is('the tags come off the text', l[0].text, 'තිස්සෙම වගේ ලස්සන කෙල්ල');
+  is('and are kept beside it',     l[0].wordTimes, [29.3, 30.1, 31.4, 32.6]);
+  is('the line takes the first one', l[0].t, 29.3);
+  is('all four are counted',       L.timedWords(l[0]), 4);
+
+  /* the point of stamping: a word lights on its own time, not on a fraction
+     of the window - so nothing drifts however long the line is held */
+  const lit = t => L.litFromTimes(l[0], t, t - 29.3, 10, 2.4);
+  is('nothing before the first word', lit(29.2), 0);
+  is('the first word, on its tick',   lit(29.3), 1);
+  is('still one just before the next', lit(30.0), 1);
+  is('the second, on its tick',        lit(30.1), 2);
+  is('the third',                      lit(31.5), 3);
+  is('and the last',                   lit(32.6), 4);
+  is('never more than there are',      lit(99), 4);
+
+  /* stamping is done live, a word at a time, so a half-stamped line has to
+     read properly - the untimed tail carries on at the even rate */
+  const half = L.parse('0:10 | [0:10.0]one [0:12.0]two three four')[0];
+  is('the stamped ones are exact',
+     [L.litFromTimes(half, 10, 0, 8, 1), L.litFromTimes(half, 12, 2, 8, 1)], [1, 2]);
+  is('and the rest follow on',
+     L.litFromTimes(half, 17.9, 7.9, 8, 1) >= 3, true);
+  is('a line with no tags falls back to the spread',
+     L.litFromTimes(L.parse('0:10 | one two three four')[0], 15, 5, 10, 1),
+     L.litCount('one two three four', 5, 10, 1));
+
+  /* the tags have to survive a round trip, or a stamped song is lost on reload */
+  is('written back with the tags on',
+     L.toText(l), '0:29.3 | [0:29.3]තිස්සෙම [0:30.1]වගේ [0:31.4]ලස්සන [0:32.6]කෙල්ල');
+  is('a half-stamped line keeps only what it has',
+     L.toText([half]), '0:10.0 | [0:10.0]one [0:12.0]two three four');
+  is('an unstamped line is written plainly',
+     L.toText(L.parse('0:10 | one two')), '0:10.0 | one two');
+  is('and reading it back gives the same times',
+     L.parse(L.toText(l))[0].wordTimes, l[0].wordTimes);
+
+  /* the frame has to use them too, not just the helper */
+  const f = L.frameAt(31.5, l, { duration:60, wordSpeed:2.4, hideAfter:1.5 });
+  is('the frame lights the stamped words', f.lit, 3);
 }
 
 console.log('\nholding, then going');

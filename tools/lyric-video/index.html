@@ -18,6 +18,13 @@
 <script>Access.protect({ owner: true });</script>
 <script src="lyric.js"></script>
 <style>
+  /* The Sinhala faces the site already carries. Canvas will not draw a font it
+     has not loaded, and a webfont only loads when something on the page asks
+     for it - so both are declared here and the loader below waits for them
+     before the first frame, or the words come out in a fallback. */
+  @font-face{font-family:'UN-Agni';src:url('../../fonts/UN-Agni.ttf') format('truetype');font-display:block;}
+  @font-face{font-family:'UN-Alakamanda';src:url('../../fonts/UN-Alakamanda-4-95.ttf') format('truetype');font-display:block;}
+
   :root{
     /* violet-ink - the one none of the other tools had taken */
     --navy:#1b1630;--navy-2:#241d40;--accent:#7c6bf0;--accentB:#9b8dff;--accentD:#5a49c9;--accent-ink:#0c0916;
@@ -120,6 +127,19 @@
   .lrow.on{background:rgba(124,107,240,.15);box-shadow:inset 2px 0 0 var(--accent)}
   .lrow .tm{font-family:'Space Mono',monospace;font-size:11px;color:var(--accentB)}
   .lrow .tx{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* the line that is playing, a word at a time - a tagged word carries the
+     time it was given, so what is about to be stamped is never in doubt */
+  .wordrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px;min-height:34px}
+  .wd{border:1px solid var(--line);border-radius:8px;padding:4px 9px;background:var(--card-2);
+    font-size:14px;line-height:1.35;display:flex;flex-direction:column;align-items:center;gap:1px;
+    font-family:'UN-Alakamanda','Hanken Grotesk',sans-serif}
+  .wd em{font-family:'Space Mono',monospace;font-size:9.5px;font-style:normal;color:var(--muted);letter-spacing:.04em}
+  .wd.set{border-color:var(--accentD);background:rgba(124,107,240,.12)}
+  .wd.set em{color:var(--accentB)}
+  .wd.next{border-color:var(--accent);box-shadow:0 0 0 2px var(--glowSoft)}
+  .wd.lit{color:var(--accentB)}
+  body.tapping{caret-color:transparent}
+  body.tapping .transport{box-shadow:0 0 0 2px var(--accent)}
 
   .err{border:1px solid var(--bad);border-radius:11px;padding:12px 14px;background:rgba(226,96,122,.08);
     font-size:13px;line-height:1.6;margin-bottom:12px}
@@ -151,7 +171,21 @@
         </button>
         <input class="scrub" id="scrub" type="range" min="0" max="1000" value="0">
         <span class="clock" id="clock">0:00 / 0:00</span>
-        <button class="btn sm" id="stampBtn" title="Drop the current time on the line below the playhead">⌖ Stamp</button>
+        <button class="btn sm" id="stampBtn" title="Drop the current time on the next line without one">⌖ Line</button>
+        <button class="btn sm on" id="stampWordBtn" title="Tag the next word with the current time">◆ Word</button>
+      </div>
+
+      <div class="panel" style="margin-top:14px">
+        <h2><span class="dot"></span>Lyric sync<span class="tag" id="syncTag"></span></h2>
+        <p class="note">Play the song and tag as you hear it. <b>Line</b> puts the clock on the next
+          line without a time. <b>Word</b> tags the next untagged word of the line that is playing, so
+          each word lights on the beat it is sung rather than on an even share of the line.</p>
+        <div class="bar" style="margin-top:11px">
+          <button class="btn" id="tapBtn" title="Space tags the next word, Enter the next line">⌨ Tap mode</button>
+          <button class="btn" id="clearWordsBtn">Clear word times</button>
+          <button class="btn" id="reStampBtn">Clear all times</button>
+        </div>
+        <div class="wordrow" id="wordRow"></div>
       </div>
       <div class="panel" style="margin-top:14px">
         <h2><span class="dot"></span>Export<span class="tag" id="recInfo"></span></h2>
@@ -349,6 +383,11 @@ function draw(t){
   const maxW = W - X * 2;
   const fontAt = (px, weight) => (weight || 800) + ' ' + px + 'px "Hanken Grotesk", system-ui, sans-serif';
   const mono = (px, weight) => (weight || 400) + ' ' + px + 'px "Space Mono", ui-monospace, monospace';
+  /* The words themselves are Sinhala, so they get the Sinhala faces: the
+     lyrics in Alakamanda, the card that opens and closes in Agni. Hanken is
+     left behind them, which is what draws a line written in English. */
+  const lyricFont = (px, weight) => (weight || 700) + ' ' + px + 'px "UN-Alakamanda", "Hanken Grotesk", system-ui, sans-serif';
+  const cardFont  = (px, weight) => (weight || 700) + ' ' + px + 'px "UN-Agni", "Hanken Grotesk", system-ui, sans-serif';
   const shadow = on => { cx.shadowColor = on ? 'rgba(0,0,0,0.55)' : 'transparent';
                          cx.shadowBlur = on ? Math.round(H * 0.010) : 0; };
 
@@ -400,26 +439,26 @@ function draw(t){
   cx.textBaseline = 'alphabetic';
 
   if (f.kind === 'lead' || f.kind === 'outro'){
-    cx.font = fontAt(lay.cardSize, 700);
+    cx.font = cardFont(lay.cardSize, 700);
     const rows = L.wrap(f.text || '', maxW, s => cx.measureText(s).width);
     cx.fillStyle = 'rgba(255,255,255,0.95)';
     const rowH = lay.cardSize * 1.28;
     rows.forEach((r, i) => cx.fillText(r, X, lay.lyricBase - (rows.length - 1 - i) * rowH));
   } else if (f.kind === 'line'){
-    cx.font = fontAt(lay.activeSize, 700);
+    cx.font = lyricFont(lay.activeSize, 700);
     const rows = L.wrap(f.text, maxW, s => cx.measureText(s).width);
     const rowH = lay.activeSize * 1.30;
     const topOfBlock = lay.lyricBase - (rows.length - 1) * rowH;
 
     /* the line before, quiet, above the block */
     if (f.prev){
-      cx.font = fontAt(lay.nearSize, 500);
+      cx.font = lyricFont(lay.nearSize, 500);
       cx.fillStyle = 'rgba(255,255,255,0.34)';
       cx.fillText(cut(cx, f.prev, maxW), X, topOfBlock - lay.activeSize - lay.lineGap);
     }
 
     /* the line itself, word by word */
-    cx.font = fontAt(lay.activeSize, 700);
+    cx.font = lyricFont(lay.activeSize, 700);
     cx.globalAlpha = f.alpha;
     let spoken = 0;
     rows.forEach((row, ri) => {
@@ -458,6 +497,7 @@ function tick(){
   $('scrub').value = d ? Math.round((audio.currentTime / d) * 1000) : 0;
   $('clock').textContent = clock(audio.currentTime || 0) + ' / ' + clock(d);
   paintRows();
+  paintWords();
   RAF = requestAnimationFrame(tick);
 }
 function startLoop(){ if (!RAF) RAF = requestAnimationFrame(tick); }
@@ -495,14 +535,150 @@ function doStamp(){
   toast('Stamped line ' + (at + 1) + ' at ' + L.stamp(audio.currentTime || 0));
 }
 
+/* ---------- word by word ----------
+   A line spread evenly across its window is only ever roughly sung. Tagging
+   each word as it lands is what makes it exact, and it is done live: play the
+   song, hit Word on every syllable you hear. The tags are written back into
+   the lyrics as [m:ss.s]word, so they are saved with everything else. */
+
+/* the line under the playhead, and the first word in it with no time yet */
+function syncTarget(){
+  const t = audio.currentTime || 0;
+  const i = L.activeAt(LINES, t);
+  if (i < 0) return { i:-1, w:-1 };
+  const line = LINES[i];
+  const words = L.wordsOf(line.text).filter(w => w.trim());
+  const times = line.wordTimes || [];
+  let w = -1;
+  for (let k = 0; k < words.length; k++) if (times[k] == null){ w = k; break; }
+  return { i, w, line, words, times };
+}
+
+/* Writing back goes through the lyrics box, not around it: the box is what is
+   saved and what the user edits, so it stays the one copy of the words. */
+function writeLines(){
+  $('lyrics').value = L.toText(LINES);
+  S.lyrics = $('lyrics').value;
+  save(); readLyrics(); paintWords();
+}
+
+function stampWord(){
+  const tg = syncTarget();
+  if (tg.i < 0){ toast('No line is playing yet - stamp the lines first'); return; }
+  if (tg.w < 0){ toast('Every word on this line is tagged'); return; }
+  const t = audio.currentTime || 0;
+  /* the first word carries the line: tag it and the line's own time follows,
+     or the line would start before its own first word */
+  const times = (LINES[tg.i].wordTimes || []).slice();
+  while (times.length < tg.words.length) times.push(null);
+  times[tg.w] = Math.round(t * 10) / 10;
+  LINES[tg.i].wordTimes = times;
+  if (tg.w === 0) LINES[tg.i].t = Math.min(LINES[tg.i].t == null ? t : LINES[tg.i].t, times[0]);
+  writeLines();
+  if (!TAPPING) toast('“' + tg.words[tg.w] + '” at ' + L.stamp(t));
+}
+
+/* Clearing the word times leaves the line times alone - the lines are the
+   slow part to redo, and it is the words you get wrong on a first pass. */
+function clearWordTimes(){
+  const any = LINES.some(l => (l.wordTimes || []).some(t => t != null));
+  if (!any){ toast('No word times to clear'); return; }
+  LINES.forEach(l => { l.wordTimes = (l.wordTimes || []).map(() => null); });
+  writeLines();
+  toast('Word times cleared');
+}
+function clearAllTimes(){
+  if (!LINES.length) return;
+  if (!confirm('Clear every line and word time? The words stay.')) return;
+  $('lyrics').value = LINES.map(l => l.text || '').join('\n');
+  S.lyrics = $('lyrics').value;
+  save(); readLyrics(); paintWords();
+  toast('All times cleared');
+}
+
+/* Tap mode is the same two buttons on the keyboard, because tagging a song a
+   word at a time means a few hundred presses and the mouse cannot keep up.
+   Space is the word, Enter the line, Escape stops. */
+let TAPPING = false;
+function setTap(on){
+  TAPPING = !!on;
+  document.body.classList.toggle('tapping', TAPPING);
+  const b = $('tapBtn');
+  b.classList.toggle('on', TAPPING);
+  b.textContent = TAPPING ? '⌨ Tapping - space, enter, esc' : '⌨ Tap mode';
+  if (TAPPING) toast('Space tags a word, Enter a line, Esc stops');
+}
+function onTapKey(e){
+  if (!TAPPING) return;
+  const inField = /^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || '');
+  if (inField && e.key !== 'Escape') return;
+  if (e.key === ' '){ e.preventDefault(); stampWord(); }
+  else if (e.key === 'Enter'){ e.preventDefault(); doStamp(); }
+  else if (e.key === 'Escape'){ e.preventDefault(); setTap(false); }
+}
+
+/* The row under the panel shows the line being tagged, so you can see which
+   word is next without looking away from the song. */
+function paintWords(){
+  const tg = syncTarget();
+  const row = $('wordRow'), tag = $('syncTag');
+  const done = LINES.reduce((n, l) => n + L.timedWords(l), 0);
+  const all  = LINES.reduce((n, l) => n + L.wordsOf(l.text).filter(w => w.trim()).length, 0);
+  tag.textContent = all ? done + ' of ' + all + ' words tagged' : '';
+  if (tg.i < 0){ row.innerHTML = '<span class="note">Nothing playing yet.</span>'; return; }
+  const now = audio.currentTime || 0;
+  const win = L.windowOf(LINES, tg.i, songLength());
+  const lit = L.litFromTimes(tg.line, now, now - win.from,
+                             Math.min(win.to - win.from, 6), S.speed);
+  row.innerHTML = tg.words.map((w, k) => {
+    const t = tg.times[k];
+    const cls = 'wd' + (t != null ? ' set' : '') + (k === tg.w ? ' next' : '') + (k < lit ? ' lit' : '');
+    return '<span class="' + cls + '" data-w="' + k + '">' +
+      w.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])) +
+      '<em>' + (t == null ? '·' : L.stamp(t)) + '</em></span>';
+  }).join('');
+  /* clicking a tagged word jumps there, which is how a bad tag gets found */
+  [...row.querySelectorAll('.wd.set')].forEach(el => el.onclick = () => {
+    const t = tg.times[+el.dataset.w];
+    if (t != null){ audio.currentTime = t; draw(t); }
+  });
+}
+
 /* ---------- recording ----------
    A canvas gives a real video stream, and the audio element gives a real
-   audio one; together they are a file. It is WebM, because that is what a
-   browser can encode - no browser writes MP4 unaided. */
+   audio one; together they are a file.
+
+   MP4 first: this browser will encode H.264 video with AAC audio straight out
+   of MediaRecorder, which is what every phone and every uploader wants. WebM
+   is only the fallback for a browser that will not, and it is asked for last.
+   The bitrate is set high on purpose - text on a moving photograph is the one
+   thing a video codec smears, and a lyric video is nothing but text. */
 function canRecord(){ return typeof MediaRecorder !== 'undefined' && $('stage').captureStream; }
-function bestType(){
-  const want = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
-  return want.find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || '';
+const TYPES = [
+  { m:'video/mp4;codecs="avc1.640028,mp4a.40.2"', ext:'mp4',  name:'MP4 · H.264 High' },
+  { m:'video/mp4;codecs="avc1.4D0028,mp4a.40.2"', ext:'mp4',  name:'MP4 · H.264 Main' },
+  { m:'video/mp4;codecs="avc1.42E01E,mp4a.40.2"', ext:'mp4',  name:'MP4 · H.264' },
+  { m:'video/mp4',                                ext:'mp4',  name:'MP4' },
+  { m:'video/webm;codecs=vp9,opus',               ext:'webm', name:'WebM · VP9' },
+  { m:'video/webm;codecs=vp8,opus',               ext:'webm', name:'WebM · VP8' },
+  { m:'video/webm',                               ext:'webm', name:'WebM' }
+];
+function bestFormat(){
+  const ok = t => MediaRecorder.isTypeSupported ? MediaRecorder.isTypeSupported(t) : false;
+  return TYPES.find(t => ok(t.m)) || { m:'', ext:'webm', name:'the browser default' };
+}
+function bestType(){ return bestFormat().m; }
+
+/* A frame of 1080x1920 at 30fps needs a lot of room to keep small text crisp.
+   These are deliberately generous - the file is uploaded once and re-encoded
+   by the platform anyway, so the only thing that matters is what it is given. */
+function bitrates(){
+  const cv = $('stage');
+  const px = cv.width * cv.height;
+  /* ~0.19 bits per pixel per frame at 30fps, floored so a square post is not
+     starved and capped so a long song does not run to a gigabyte */
+  const v = Math.round(Math.min(24e6, Math.max(10e6, px * 30 * 0.19)));
+  return { videoBitsPerSecond: v, audioBitsPerSecond: 192000 };
 }
 async function record(){
   if (RECORDING){ REC && REC.stop(); return; }
@@ -529,21 +705,23 @@ async function record(){
   }
 
   const chunks = [];
-  const type = bestType();
-  REC = new MediaRecorder(stream, type ? { mimeType: type, videoBitsPerSecond: 12000000 } : undefined);
+  const fmt = bestFormat();
+  const type = fmt.m;
+  REC = new MediaRecorder(stream, Object.assign(type ? { mimeType: type } : {}, bitrates()));
   REC.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
   REC.onstop = () => {
     RECORDING = false;
     $('recBtn').textContent = '● Record the video';
     $('recBtn').classList.remove('rec'); $('recBtn').classList.add('on');
-    const blob = new Blob(chunks, { type: type || 'video/webm' });
+    const blob = new Blob(chunks, { type: type || 'video/' + fmt.ext });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     const f = L.formatById(S.fmt);
-    a.download = 'lyric-' + f.w + 'x' + f.h + '-' + new Date().toISOString().slice(0,10) + '.webm';
+    const name = (S.title || 'lyric').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'lyric';
+    a.download = name + '-' + f.w + 'x' + f.h + '.' + fmt.ext;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-    toast('Saved · ' + (blob.size / 1048576).toFixed(1) + 'MB');
+    toast('Saved ' + a.download + ' · ' + (blob.size / 1048576).toFixed(1) + 'MB');
   };
 
   audio.currentTime = 0;
@@ -638,6 +816,12 @@ function boot(){
   $('scrub').oninput = () => { const d = songLength();
     if (d){ audio.currentTime = (+$('scrub').value / 1000) * d; draw(audio.currentTime); } };
   $('stampBtn').onclick = doStamp;
+  $('stampWordBtn').onclick = stampWord;
+  $('tapBtn').onclick = () => setTap(!TAPPING);
+  $('clearWordsBtn').onclick = clearWordTimes;
+  $('reStampBtn').onclick = clearAllTimes;
+  document.addEventListener('keydown', onTapKey);
+  paintWords();
   $('recBtn').onclick = record;
   $('frameBtn').onclick = () => {
     $('stage').toBlob(b => {
@@ -669,18 +853,41 @@ function boot(){
     im.src = url;
   });
 
-  $('exportNote').innerHTML = canRecord()
-    ? 'Recording plays the song from the start and captures the canvas as it goes, so what you watched is what you get. It stops on its own at the end. The file is <b>WebM</b> - the only video a browser can write on its own; TikTok, Instagram and YouTube all take it, and any converter turns it into MP4 if you need one.'
-    : 'This browser will not record a canvas. Chrome or Edge will. <b>Save this frame</b> still works.';
+  if (canRecord()){
+    const fmt = bestFormat(), br = bitrates();
+    const mb = (br.videoBitsPerSecond / 1e6).toFixed(0);
+    $('exportNote').innerHTML = 'Recording plays the song from the start and captures the canvas as it goes, ' +
+      'so what you watched is what you get. It stops on its own at the end. This browser writes <b>' + fmt.name +
+      '</b> at ' + mb + ' Mbps' + (fmt.ext === 'mp4'
+        ? ' - upload it to TikTok, Instagram or YouTube as it is.'
+        : ' - your browser will not write MP4, so this is WebM. Every platform takes it, and any converter turns it into MP4.');
+    $('recInfo').textContent = '30fps · ' + fmt.ext + ' · ' + mb + ' Mbps';
+  } else {
+    $('exportNote').innerHTML = 'This browser will not record a canvas. Chrome or Edge will. <b>Save this frame</b> still works.';
+    $('recInfo').textContent = 'not available here';
+  }
   $('recBtn').disabled = !canRecord();
-  $('recInfo').textContent = canRecord() ? '30fps · webm' : 'not available here';
 
   $('foot').innerHTML = 'Everything happens in this browser - the song, the picture and the video never leave it · ' +
     'lyrics come from the .lrc files the Journal sync already wrote';
 
   draw(0);
 }
+/* Canvas silently falls back when a webfont has not loaded yet, and the fall
+   back has no Sinhala - so the first frames would come out as boxes and, worse,
+   a recording started early would keep them. Ask for both faces, then redraw. */
+function loadFonts(){
+  if (!document.fonts || !document.fonts.load) return;
+  Promise.all([
+    document.fonts.load('700 64px "UN-Alakamanda"', 'තිස්සෙම'),
+    document.fonts.load('700 64px "UN-Agni"', 'තිස්සෙම')
+  ]).then(() => { FONTS_IN = true; draw(audio.currentTime || 0); })
+    .catch(() => { FONTS_IN = true; });
+}
+let FONTS_IN = false;
+
 boot();
+loadFonts();
 </script>
 </body>
 </html>

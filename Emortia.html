@@ -608,6 +608,7 @@ html.bk-reading-on,html.bk-reading-on body{overflow:hidden;}
           </div>
         </div>
 
+        <sc-if condition="{{ showJournal }}">
         <div class="hm-card" onClick="{{ nav.blog }}" style="--hmRGB:201,149,74;position:relative;border:1px solid #453518;border-radius:12px;background:#1c1610;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;">
           <div style="display:flex;align-items:center;gap:9px;padding:10px 14px;border-bottom:1px solid var(--line);background:rgba(0,0,0,.22);">
             <span style="width:7px;height:7px;border-radius:50%;background:#dfae63;flex-shrink:0;animation:termLed 1.6s ease-in-out .4s infinite;"></span>
@@ -633,6 +634,7 @@ html.bk-reading-on,html.bk-reading-on body{overflow:hidden;}
             </sc-for>
           </div>
         </div>
+        </sc-if>
 
         <div class="hm-card" onClick="{{ nav.tools }}" style="--hmRGB:31,151,168;position:relative;border:1px solid #1c3a42;border-radius:12px;background:#0e1a1e;overflow:hidden;cursor:pointer;">
           <div style="display:flex;align-items:center;gap:9px;padding:10px 14px;border-bottom:1px solid #1c3a42;background:rgba(0,0,0,.22);">
@@ -2967,11 +2969,18 @@ class Component extends DCLogic {
     const pct = Math.min(100, (s.progress/dur)*100);
     /* Owner is a real page now, not a passphrase after a hash. It only exists
        for the account that owns the place, so it is added rather than hidden. */
-    const navDefs = [['home','Home'],['music','Music'],['blog','Journal'],['tools','Tools'],['about','About'],['contact','Contact']]
+    /* The journal is the poems, and they are not published - so the tab is
+       only there for the account that wrote them. Anyone typing #blog lands on
+       the front page instead, because the tab being gone is not a lock. */
+    const navDefs = [['home','Home'],['music','Music']]
+      .concat(s.isOwner ? [['blog','Journal']] : [])
+      .concat([['tools','Tools'],['about','About'],['contact','Contact']])
       .concat(s.isOwner ? [['owner','Owner']] : []);
+    const onBlog = s.page==='blog' && s.isOwner;
 
     return {
-      isHome:s.page==='home', isMusic:s.page==='music', isBlog:s.page==='blog', isTools:s.page==='tools', isAbout:s.page==='about', isContact:s.page==='contact',
+      isHome:s.page==='home' || (s.page==='blog' && !s.isOwner),
+      isMusic:s.page==='music', isBlog:onBlog, isTools:s.page==='tools', isAbout:s.page==='about', isContact:s.page==='contact',
       isOwnerPage: s.page==='owner' && s.isOwner,
       ownerPanel: this.renderOwnerPage(),
       tools:[
@@ -3067,12 +3076,17 @@ class Component extends DCLogic {
           hmNewMeta: newest.durLabel+' \u00b7 newest of '+this.tracks.length+' songs',
           hmPlayNewest: this.play(newest.i),
           hmInviteLine: (()=>{ const ns=this.tracks.length, np=(s.poems||[]).length;
-            return ns+' songs and '+np+' poems live here now \u2013 plus a few small tools I built to get my own work done.'; })(),
+            return s.isOwner
+              ? ns+' songs and '+np+' poems live here now \u2013 plus a few small tools I built to get my own work done.'
+              : ns+' songs live here now \u2013 plus a few small tools I built to get my own work done.'; })(),
+          /* the journal door goes with the journal tab, for the same reason */
           hmDoors: [
             {label:'Hear the songs', count:this.tracks.length+' tracks \u2192', border:'#4a2632', bg:'rgba(209,88,115,0.07)', tone:'#e87a94', go:goPage('music')},
+          ].concat(s.isOwner ? [
             {label:'Read the journal', count:((s.poems||[]).length)+' poems \u2192', border:'#453518', bg:'rgba(223,174,99,0.07)', tone:'#dfae63', go:goPage('blog')},
+          ] : []).concat([
             {label:'Try the tools', count:'7 utilities \u2192', border:'#1c3a42', bg:'rgba(63,189,208,0.07)', tone:'#3fbdd0', go:goPage('tools')},
-          ],
+          ]),
           hmMoods: this.moods.map(m=>{ const mt=this.tracks[m.track]; return { ...m,
             meta: mt?mt.t:'', go: ()=>{ this.loadTrack(m.track, true); this.setState({page:'music', menuOpen:false}); } }; }),
         };
@@ -3085,6 +3099,7 @@ class Component extends DCLogic {
         return 'songs \u00b7 '+(m>0?m+' min of music':'a few minutes of music'); })(),
       hmTrackList: (()=>{ const dots=['#e87a94','#c25a74','#8d3d52'];
         return this.tracks.slice(0,3).map((x,i)=>({ name:x.t, dot:dots[i]||'#8d3d52' })); })(),
+      showJournal: !!s.isOwner,
       hmPoemCount: (s.poems||[]).length,
       hmPoemList: (()=>{ const ps=(s.poems||[]).slice(-3).reverse(); const dots=['#dfae63','#c9954a','#8d6b34'];
         return ps.map((p,i)=>({ title:p.title||'—', dot:dots[i]||'#8d6b34' })); })(),

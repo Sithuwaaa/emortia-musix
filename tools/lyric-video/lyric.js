@@ -35,6 +35,38 @@
      Requiring one dropped the time and treated the whole line as untimed. */
   const TIME_RE = /^\s*(?:\[)?(\d{1,2}):(\d{2}(?:[.:]\d{1,3})?)(?:\])?\s*\|?\s*(.*)$/;
 
+  /* A word can carry its own time, written in front of it:
+
+       0:29.3 | [0:29.3]තිස්සෙම [0:30.1]දිස්සුන [0:31.4]ලස්සන
+
+     A line spread evenly across its window is only ever approximately sung.
+     Tagging the words is what makes it exact, and any word left untagged
+     falls back to the spread, so a half-timed line still works. */
+  const WORD_TAG = /\[(\d{1,2}):(\d{2}(?:\.\d{1,3})?)\]/;
+  const secsOf = (m, s) => parseInt(m, 10) * 60 + parseFloat(String(s).replace(':', '.'));
+
+  function readWords(body) {
+    const words = [], times = [];
+    String(body || '').split(/\s+/).filter(Boolean).forEach(tok => {
+      const m = WORD_TAG.exec(tok);
+      if (m){
+        const w = tok.slice(m[0].length);
+        /* a tag on its own belongs to the word after it */
+        if (w){ words.push(w); times.push(secsOf(m[1], m[2])); }
+        else   { words.push(''); times.push(secsOf(m[1], m[2])); }
+      } else { words.push(tok); times.push(null); }
+    });
+    /* a bare tag followed by a word: fold them together */
+    for (let i = words.length - 1; i > 0; i--){
+      if (words[i - 1] === '' && times[i] == null){
+        words[i - 1] = words[i]; times[i - 1] = times[i - 1];
+        words.splice(i, 1); times.splice(i, 1);
+      }
+    }
+    return { words: words.filter((w, i) => w !== '' || times[i] != null),
+             times: times.filter((t, i) => words[i] !== '' || t != null) };
+  }
+
   function parse(text) {
     const out = [];
     String(text == null ? '' : text).split(/\r?\n/).forEach(raw => {
@@ -45,17 +77,22 @@
       const m = TIME_RE.exec(line);
       if (!m){
         /* a line with no time still belongs, so nothing is silently dropped */
-        out.push({ t: null, text: line });
+        const w = readWords(line);
+        out.push({ t: null, text: w.words.join(' '), wordTimes: w.times });
         return;
       }
-      const secs = parseInt(m[1], 10) * 60 + parseFloat(String(m[2]).replace(':', '.'));
-      out.push({ t: isFinite(secs) ? secs : null, text: (m[3] || '').trim() });
+      const secs = secsOf(m[1], m[2]);
+      const w = readWords(m[3] || '');
+      out.push({ t: isFinite(secs) ? secs : null, text: w.words.join(' '), wordTimes: w.times });
     });
     /* timed lines carry the song; untimed ones keep the order they were in */
     return out.filter(l => l.t != null || l.text)
               .sort((a, b) => (a.t == null ? Infinity : a.t) - (b.t == null ? Infinity : b.t))
               .map((l, i) => Object.assign({ i }, l));
   }
+
+  /* how many words are timed, for showing progress while stamping */
+  const timedWords = line => (line && line.wordTimes ? line.wordTimes.filter(t => t != null).length : 0);
 
   /* back out again, in the shape the editor shows */
   const stamp = s => {
@@ -64,8 +101,16 @@
     const rest = (t - m * 60).toFixed(1).padStart(4, '0');
     return m + ':' + rest;
   };
-  const toText = lines => (lines || [])
-    .map(l => (l.t == null ? '' : stamp(l.t) + ' | ') + (l.text || '')).join('\n');
+  const toText = lines => (lines || []).map(l => {
+    const head = l.t == null ? '' : stamp(l.t) + ' | ';
+    const ws = wordsOf(l.text || '').filter(w => w.trim());
+    const ts = l.wordTimes || [];
+    /* a stamped word keeps its tag, so the timing survives being read back */
+    const body = ts.some(t => t != null)
+      ? ws.map((w, i) => (ts[i] == null ? '' : '[' + stamp(ts[i]) + ']') + w).join(' ')
+      : (l.text || '');
+    return head + body;
+  }).join('\n');
 
   /* --------------------------------------------------------- what is showing
 
@@ -110,6 +155,45 @@
     const s = Math.max(0.1, Number(speed) || 1);
     const through = span > 0 ? (elapsed / span) * s : 1;
     return Math.max(0, Math.min(words.length, Math.floor(through * words.length + 0.0001)));
+  }
+
+  /* When the words carry their own times, those win: a word lights the moment
+     it was stamped and not a fraction earlier. Words with no time of their own
+     fall in behind the last one that had one, spread across whatever is left,
+     so a line stamped half way through still reads properly. */
+  function litFromTimes(line, now, elapsed, span, speed) {
+    const times = line && line.wordTimes;
+    const words = wordsOf(line.text).filter(w => w.trim());
+    if (!words.length) return 0;
+    if (!times || !times.some(t => t != null))
+      return litCount(line.text, elapsed, span, speed);
+
+    let lit = 0;
+    for (let i = 0; i < words.length; i++){
+      const t = times[i];
+      if (t != null){ if (now >= t) lit = i + 1; else break; }
+      else {
+        /* untimed: carry on from the last stamped word at the even rate */
+        const anchorAt = lastTimeBefore(times, i);
+        const anchor = anchorAt.t == null ? (line.t || 0) : anchorAt.t;
+        const restFrom = anchorAt.i + 1;
+        const restTo = nextTimedIndex(times, i);
+        const endT = restTo.t == null ? (line.t || 0) + span : restTo.t;
+        const n = (restTo.i < 0 ? words.length : restTo.i) - restFrom;
+        const per = n > 0 ? (endT - anchor) / n : 0;
+        if (per > 0 && now >= anchor + per * (i - restFrom + 1)) lit = i + 1;
+        else break;
+      }
+    }
+    return lit;
+  }
+  function lastTimeBefore(times, i){
+    for (let j = i - 1; j >= 0; j--) if (times[j] != null) return { i: j, t: times[j] };
+    return { i: -1, t: null };
+  }
+  function nextTimedIndex(times, i){
+    for (let j = i + 1; j < times.length; j++) if (times[j] != null) return { i: j, t: times[j] };
+    return { i: -1, t: null };
   }
 
   /* ---------------------------------------------------------- the fade out
@@ -231,7 +315,7 @@
 
     return {
       kind: 'line', index: i, text: lines[i].text,
-      lit: litCount(lines[i].text, elapsed, revealSpan, speed),
+      lit: litFromTimes(lines[i], t, elapsed, revealSpan, speed),
       words: wordsOf(lines[i].text).filter(w => w.trim()),
       alpha,
       prev: i > 0 ? lines[i - 1].text : null,
@@ -243,7 +327,8 @@
   return {
     FORMATS, formatById,
     parse, toText, stamp,
-    activeAt, windowOf, wordsOf, litCount, lineAlpha,
+    activeAt, windowOf, wordsOf, litCount, litFromTimes, lineAlpha,
+    readWords, timedWords,
     sway, layout, wrap, frameAt
   };
 });
