@@ -146,6 +146,19 @@
     transition:border-color .15s ease,background .15s ease}
   .chips button:hover{border-color:var(--line3)}
   .chips button.on{border-color:var(--accent);background:rgba(124,107,240,.16);color:var(--accentB)}
+  /* the saved projects - the open one marked, the drafts told apart */
+  .projlist{display:flex;flex-direction:column;gap:6px;margin-top:11px;max-height:260px;overflow:auto}
+  .proj{display:grid;grid-template-columns:1fr auto auto;gap:9px;align-items:center;
+    padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--card-2);cursor:pointer}
+  .proj:hover{border-color:var(--line3)}
+  .proj.on{border-color:var(--accent);background:rgba(124,107,240,.12)}
+  .proj .nm{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .proj .when{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);display:block;margin-top:1px}
+  .proj .st{font-family:'Space Mono',monospace;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+    border:1px solid var(--line3);border-radius:5px;padding:2px 6px;color:var(--muted);white-space:nowrap}
+  .proj .st.done{border-color:var(--ok);color:var(--ok)}
+  .proj .x{border:none;background:none;color:var(--muted);cursor:pointer;font-size:15px;padding:0 3px;line-height:1}
+  .proj .x:hover{color:var(--bad)}
   body.tapping{caret-color:transparent}
   body.tapping .transport{box-shadow:0 0 0 2px var(--accent)}
 
@@ -203,6 +216,24 @@
           <button class="btn on" id="recBtn">● Record the video</button>
           <button class="btn" id="frameBtn">Save this frame</button>
         </div>
+      </div>
+
+      <div class="panel" style="margin-top:14px">
+        <h2><span class="dot"></span>Projects<span class="tag" id="projState"></span></h2>
+        <p class="note">Saved on the server, not in this browser – so a song you have
+          half timed is still here tomorrow, or on another machine. It saves itself as a
+          draft while you work; <b>Mark finished</b> only changes the label, and a finished
+          project still reopens.</p>
+        <div class="fld" style="margin-top:10px">
+          <label class="f" for="projName">Project name</label>
+          <input id="projName" maxlength="80" placeholder="Thissema – TikTok cut">
+        </div>
+        <div class="bar" style="margin-top:10px">
+          <button class="btn on" id="projSave">Save now</button>
+          <button class="btn" id="projDone">Mark finished</button>
+          <button class="btn" id="projNew">Start a new one</button>
+        </div>
+        <div class="projlist" id="projList"></div>
       </div>
     </div>
 
@@ -338,6 +369,12 @@ audio.preload = 'auto';
 
 let LINES = [], ART = null, LOGO = null, RAF = null, REC = null, RECORDING = false;
 
+/* What the open project is, and the files that have not been sent up yet. The
+   dropped File objects are kept because a project is only worth reopening if
+   the song and the picture come back with it. */
+let PROJ = { id:null, name:'', status:'draft', artPath:null, audioPath:null, audioName:null };
+let PENDING = { art:null, audio:null };
+
 /* ---------- how long the song is ----------
 
    Chrome hands back Infinity for these WAVs even at readyState 4, and an
@@ -399,7 +436,14 @@ let tt; function toast(m, ms){ const t = $('toast'); t.textContent = m; t.classL
   clearTimeout(tt); tt = setTimeout(() => t.classList.remove('show'), ms || 2600); }
 const clock = s => { s = Math.max(0, s|0); return (s/60|0) + ':' + String(s%60).padStart(2,'0'); };
 
-function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
+/* The browser copy is still written on every change - it is what survives a
+   refresh mid-sentence. The server copy is the one that survives the browser,
+   and it follows a beat behind. */
+function save(){
+  try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){}
+  if (typeof touchProject === 'function' && BOOTED && !RESTORING) touchProject();
+}
+let BOOTED = false, RESTORING = false;
 function load(){
   try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); if (v) Object.assign(S, v); } catch(e){}
 }
@@ -796,6 +840,198 @@ function paintWords(){
   });
 }
 
+/* ---------- projects ----------
+
+   The word timings are the expensive part of this tool - an hour of tapping
+   for one song - and they used to live in localStorage, which is one browser
+   and one clear-site-data away from gone. These put the project on the server
+   instead, and save it without being asked, because the case that matters is
+   the song that is not finished yet. */
+
+let SAVE_T = null, SAVING = false, DIRTY = false;
+
+/* Called by everything that changes the work. It marks the project dirty and
+   lets a quiet moment pass before saving - typing a lyric line should not be
+   one request per keystroke. */
+function touchProject(){
+  DIRTY = true;
+  setProjState('unsaved');
+  clearTimeout(SAVE_T);
+  SAVE_T = setTimeout(() => saveProject({ quiet:true }), 2500);
+}
+
+function setProjState(kind, extra){
+  const el = $('projState'); if (!el) return;
+  const when = PROJ.savedAt ? ' · ' + PROJ.savedAt : '';
+  el.textContent = kind === 'saving'   ? 'saving…'
+                 : kind === 'saved'    ? (PROJ.status === 'done' ? 'finished' : 'draft') + ' saved' + when
+                 : kind === 'unsaved'  ? 'unsaved changes'
+                 : kind === 'error'    ? (extra || 'not saved')
+                 : PROJ.id ? (PROJ.status === 'done' ? 'finished' : 'draft') + when : 'not saved yet';
+}
+
+/* Everything the tool holds, in one object. Kept separate from S so the shape
+   saved is deliberate rather than whatever happens to be on S that week. */
+function projectSettings(){
+  return {
+    fmt:S.fmt, accent:S.accent, title:S.title, artist:S.artist, writer:S.writer,
+    speed:S.speed, hide:S.hide, sway:S.sway, leadIn:S.leadIn, outro:S.outro,
+    reveal:S.reveal, fade:S.fade, showPrev:S.showPrev, glow:S.glow,
+    face:S.face, cardFace:S.cardFace, size:S.size, bold:S.bold, italic:S.italic,
+    logo:S.logo, logoText:S.logoText, logoSub:S.logoSub, logoImg:S.logoImg,
+    quality:S.quality
+  };
+}
+
+async function saveProject(opt){
+  const o = opt || {};
+  if (SAVING) { DIRTY = true; return; }
+  if (!window.DB || !DB.lyricSave){ if (!o.quiet) toast('Saving needs the database'); return; }
+  SAVING = true; DIRTY = false;
+  setProjState('saving');
+  try {
+    /* the files go first, so the row never points at something not there */
+    if (PENDING.art){
+      const p = await DB.lyricUpload('art', PENDING.art, PENDING.art.name);
+      if (p){ PROJ.artPath = p; PENDING.art = null; }
+      else if (!o.quiet) toast('The cover is over ' + Math.round(DB.LYRIC_MAX/1048576) + 'MB, so it was not uploaded', 5000);
+    }
+    if (PENDING.audio){
+      const p = await DB.lyricUpload('audio', PENDING.audio, PENDING.audio.name);
+      if (p){ PROJ.audioPath = p; PENDING.audio = null; }
+      else if (!o.quiet) toast('The song is over ' + Math.round(DB.LYRIC_MAX/1048576) +
+                               'MB, so only its name is saved – drop it again when you reopen', 6000);
+    }
+    const row = await DB.lyricSave({
+      id: PROJ.id,
+      name: ($('projName').value || '').trim() || S.title || 'Untitled',
+      status: PROJ.status,
+      lyrics: $('lyrics').value,
+      settings: projectSettings(),
+      artPath: PROJ.artPath, audioPath: PROJ.audioPath,
+      trackPick: S.pick === '' ? null : S.pick,
+      audioName: PROJ.audioName
+    });
+    PROJ.id = row.id; PROJ.name = row.name; PROJ.status = row.status;
+    PROJ.savedAt = new Date(row.updated_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    $('projName').value = row.name;
+    setProjState('saved');
+    if (!o.quiet) toast(row.status === 'done' ? 'Saved as finished' : 'Saved as a draft');
+    listProjects();
+    /* something changed while the save was in flight - go round again */
+    if (DIRTY) touchProject();
+  } catch(e){
+    setProjState('error', 'not saved');
+    const missing = /schema cache|does not exist/i.test(e.message || '');
+    toast(missing
+      ? 'Saving is not switched on yet – run supabase/008_lyric_projects.sql once. Your work is still kept in this browser.'
+      : (o.quiet ? 'Could not save the draft: ' + e.message : e.message), 6000);
+    DIRTY = true;
+  } finally { SAVING = false; }
+}
+
+async function listProjects(){
+  const box = $('projList'); if (!box) return;
+  if (!window.DB || !DB.lyricList){ box.innerHTML = ''; return; }
+  const { rows, error } = await DB.lyricList(100);
+  if (error){
+    /* A missing table is a migration that has not been run, not something the
+       person at the keyboard did - so it says that, rather than repeating what
+       Postgres said about a schema cache. */
+    const missing = /schema cache|does not exist|relation .* does not exist/i.test(error);
+    box.innerHTML = '<span class="note">' + (missing
+      ? 'Saving is not switched on yet – run <b>supabase/008_lyric_projects.sql</b> once, and this list works from then on. Your work is still kept in this browser meanwhile.'
+      : 'Could not read the saved projects. ' + error) + '</span>';
+    return;
+  }
+  if (!rows.length){ box.innerHTML = '<span class="note">Nothing saved yet.</span>'; return; }
+  const esc = s => String(s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  box.innerHTML = rows.map(r => {
+    const d = new Date(r.updated_at);
+    return '<div class="proj' + (r.id === PROJ.id ? ' on' : '') + '" data-id="' + r.id + '">' +
+      '<span class="nm">' + esc(r.name) +
+        '<span class="when">' + d.toLocaleDateString() + ' ' +
+        d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) + '</span></span>' +
+      '<span class="st' + (r.status === 'done' ? ' done' : '') + '">' + r.status + '</span>' +
+      '<button class="x" title="Delete" data-del="' + r.id + '">✕</button></div>';
+  }).join('');
+  [...box.querySelectorAll('.proj')].forEach(el => el.onclick = e => {
+    if (e.target.dataset.del) return;
+    openProject(el.dataset.id);
+  });
+  [...box.querySelectorAll('[data-del]')].forEach(b => b.onclick = async e => {
+    e.stopPropagation();
+    const row = rows.find(r => r.id === b.dataset.del);
+    if (!confirm('Delete “' + (row ? row.name : 'this project') + '”? This cannot be undone.')) return;
+    try {
+      await DB.lyricDelete(b.dataset.del, [row && row.art_path, row && row.audio_path]);
+      if (PROJ.id === b.dataset.del) newProject({ silent:true });
+      toast('Deleted'); listProjects();
+    } catch(err){ toast(err.message, 5000); }
+  });
+}
+
+async function openProject(id){
+  if (DIRTY && !confirm('This project has changes that are not saved. Open another anyway?')) return;
+  const r = await DB.lyricGet(id);
+  if (!r){ toast('Could not open that one'); return; }
+  clearTimeout(SAVE_T); DIRTY = false; RESTORING = true;
+
+  Object.assign(S, r.settings || {});
+  S.lyrics = r.lyrics || '';
+  S.pick = r.track_pick == null ? '' : r.track_pick;
+  PROJ = { id:r.id, name:r.name, status:r.status, artPath:r.art_path,
+           audioPath:r.audio_path, audioName:r.audio_name,
+           savedAt:new Date(r.updated_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) };
+  PENDING = { art:null, audio:null };
+
+  save();                       // the browser copy follows the server one
+  paintFields();
+  $('projName').value = r.name;
+  $('lyrics').value = S.lyrics;
+  readLyrics();
+
+  /* the song: the site's own track if that is what it was, otherwise the file
+     that went up with the project - and if it was too big to go up, its name,
+     so it is obvious what to drop back in */
+  if (S.pick !== '' && TRACKS[+S.pick]) pickTrack(+S.pick, { keepLyrics:true, keepArt: !!r.art_path });
+  else if (r.audio_path){
+    const url = await DB.lyricLink(r.audio_path, 7200);
+    if (url){ audio.src = url; $('audioName').textContent = r.audio_name || 'saved audio'; }
+  } else if (r.audio_name){
+    $('audioName').textContent = r.audio_name + ' – drop it again';
+    toast('The song was too big to save, so drop “' + r.audio_name + '” back in', 6000);
+  }
+
+  if (r.art_path){
+    const url = await DB.lyricLink(r.art_path, 7200);
+    if (url){
+      const im = new Image(); im.crossOrigin = 'anonymous';
+      im.onload = () => { ART = im; $('artThumb').src = url; $('artThumb').style.display = 'block';
+                          $('artName').textContent = 'saved cover'; draw(audio.currentTime || 0); };
+      im.src = url;
+    }
+  }
+  loadLogo();
+  RESTORING = false; DIRTY = false;
+  setProjState('saved');
+  listProjects();
+  draw(audio.currentTime || 0);
+  toast('Opened “' + r.name + '”');
+}
+
+function newProject(opt){
+  const o = opt || {};
+  if (!o.silent && DIRTY && !confirm('This project has changes that are not saved. Start a new one anyway?')) return;
+  clearTimeout(SAVE_T); DIRTY = false;
+  PROJ = { id:null, name:'', status:'draft', artPath:null, audioPath:null, audioName:null };
+  PENDING = { art:null, audio:null };
+  $('projName').value = '';
+  setProjState();
+  listProjects();
+  if (!o.silent) toast('Started a new project – the words and settings are still here to build on');
+}
+
 /* ---------- recording ----------
    A canvas gives a real video stream, and the audio element gives a real
    audio one; together they are a file.
@@ -894,7 +1130,11 @@ function setFormat(id){
   save();
 }
 
-function pickTrack(i){
+/* keepLyrics is for reopening a saved project: the track is the same, but the
+   words belong to the project and are very often ahead of the .lrc on the
+   site - fetching over them would throw away the tagging that was the work. */
+function pickTrack(i, opt){
+  const o = opt || {};
   const tr = TRACKS[i]; if (!tr) return;
   S.pick = i;
   audio.src = tr.src;
@@ -902,7 +1142,8 @@ function pickTrack(i){
   const im = new Image(); im.crossOrigin = 'anonymous';
   im.onload = () => { ART = im; $('artThumb').src = tr.img; $('artThumb').style.display = 'block';
     $('artName').textContent = tr.t + ' cover'; draw(audio.currentTime || 0); };
-  im.src = tr.img;
+  if (!o.keepArt) im.src = tr.img;
+  if (o.keepLyrics) return;
   /* the .lrc the sync tab already wrote, if there is one - nothing retyped */
   fetch(tr.lrc).then(r => r.ok ? r.text() : Promise.reject()).then(txt => {
     S.lyrics = L.toText(L.parse(txt));
@@ -956,6 +1197,27 @@ function showExport(){
   $('recBtn').disabled = false;
 }
 
+/* Every control, set from S. Boot calls it, and so does opening a project -
+   which is the whole reason it is a function and not a run of lines in boot. */
+function paintFields(){
+  $('accent').value = S.accent;
+  $('title').value = S.title; $('artist').value = S.artist; $('writer').value = S.writer;
+  $('speed').value = S.speed;   $('hide').value = S.hide;   $('swayAmt').value = S.sway;
+  $('leadIn').value = S.leadIn; $('outro').value = S.outro;
+  $('lyrics').value = S.lyrics || '';
+  $('fade').value = S.fade; $('size').value = S.size;
+  $('logoText').value = S.logoText; $('logoSub').value = S.logoSub;
+  $('pick').value = S.pick == null ? '' : String(S.pick);
+  $('speedV').textContent = (+S.speed).toFixed(1) + '×';
+  $('hideV').textContent = (+S.hide).toFixed(1) + 's';
+  $('swayV').textContent = Math.round(S.sway * 100) + '%';
+  $('fadeV').textContent = (+S.fade).toFixed(2) + 's';
+  $('sizeV').textContent = Math.round(S.size * 100) + '%';
+  setFormat(S.fmt);
+  paintChips();
+  paintType();
+}
+
 function loadLogo(){
   if (!S.logoImg){ LOGO = null; return; }
   const im = new Image();
@@ -974,20 +1236,7 @@ function boot(){
     '<option value="' + f.id + '"' + (f.id === S.fmt ? ' selected' : '') + '>' +
     f.name + ' · ' + f.w + '×' + f.h + '</option>').join('');
 
-  $('accent').value = S.accent;
-  $('title').value = S.title; $('artist').value = S.artist; $('writer').value = S.writer;
-  $('speed').value = S.speed;   $('hide').value = S.hide;   $('swayAmt').value = S.sway;
-  $('leadIn').value = S.leadIn; $('outro').value = S.outro;
-  $('lyrics').value = S.lyrics || '';
-  $('fade').value = S.fade; $('size').value = S.size;
-  $('logoText').value = S.logoText; $('logoSub').value = S.logoSub;
-  $('speedV').textContent = (+S.speed).toFixed(1) + '×';
-  $('hideV').textContent = (+S.hide).toFixed(1) + 's';
-  $('swayV').textContent = Math.round(S.sway * 100) + '%';
-  $('fadeV').textContent = (+S.fade).toFixed(2) + 's';
-  $('sizeV').textContent = Math.round(S.size * 100) + '%';
-
-  setFormat(S.fmt);
+  paintFields();
   readLyrics();
 
   $('pick').onchange = e => { if (e.target.value !== '') pickTrack(+e.target.value); };
@@ -1064,6 +1313,27 @@ function boot(){
   $('reStampBtn').onclick = clearAllTimes;
   document.addEventListener('keydown', onTapKey);
   paintWords();
+
+  /* the projects */
+  $('projSave').onclick = () => saveProject({});
+  $('projNew').onclick  = () => newProject({});
+  $('projName').oninput = () => touchProject();
+  $('projDone').onclick = () => {
+    PROJ.status = PROJ.status === 'done' ? 'draft' : 'done';
+    $('projDone').textContent = PROJ.status === 'done' ? 'Back to draft' : 'Mark finished';
+    saveProject({});
+  };
+  /* A tab closed on an unsaved draft is exactly the case this is all for, so
+     the browser is asked to hold on while the last save goes out. */
+  window.addEventListener('beforeunload', e => {
+    if (!DIRTY) return;
+    saveProject({ quiet:true });
+    e.preventDefault(); e.returnValue = '';
+  });
+  BOOTED = true;
+  setProjState();
+  listProjects();
+
   $('recBtn').onclick = record;
   $('frameBtn').onclick = () => {
     $('stage').toBlob(b => {
@@ -1094,9 +1364,13 @@ function boot(){
   wireDrop('audioDrop','audioFile', f => {
     audio.src = URL.createObjectURL(f); $('audioName').textContent = f.name;
     $('pick').value = ''; toast('Audio loaded');
+    /* held so the project can carry the song, not just its name */
+    PENDING.audio = f; PROJ.audioPath = null; PROJ.audioName = f.name; S.pick = '';
+    touchProject();
   });
   wireDrop('artDrop','artFile', f => {
     const url = URL.createObjectURL(f);
+    PENDING.art = f; PROJ.artPath = null; touchProject();
     const im = new Image();
     im.onload = () => { ART = im; $('artThumb').src = url; $('artThumb').style.display = 'block';
       $('artName').textContent = f.name; draw(audio.currentTime || 0); };

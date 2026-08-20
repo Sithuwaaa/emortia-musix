@@ -448,8 +448,91 @@
       .subscribe();
   }
 
+  /* ---------------------------------------------------- lyric video projects
+
+     Timing a song word by word is an hour that used to live in one browser.
+     These keep it on the server instead, saved as a draft while the work is
+     still going, so an unfinished song survives a cleared cache or a move to
+     another machine. */
+  const LYRIC = 'lyric_projects', LBUCKET = 'lyric';
+  /* past this the browser is holding the whole file in memory to send it, and
+     a WAV is not worth that - the name is remembered instead */
+  const LYRIC_MAX = 60 * 1024 * 1024;
+
+  async function lyricList(limit){
+    const c = await client(); if (!c) return { rows: [], error: 'offline' };
+    const { data, error } = await c.from(LYRIC).select('*')
+      .order('updated_at', { ascending: false }).limit(limit || 100);
+    if (error) return { rows: [], error: error.message };
+    return { rows: data || [], error: null };
+  }
+
+  async function lyricGet(id){
+    const c = await client(); if (!c) return null;
+    const { data, error } = await c.from(LYRIC).select('*').eq('id', id).single();
+    return error ? null : data;
+  }
+
+  /* Files are filed under the owner's uid because the storage policies read
+     that first path segment - it is what stops one account reaching another's
+     artwork by guessing. */
+  async function lyricUpload(kind, blob, name){
+    const c = await client(); if (!c) throw new Error('Not connected.');
+    const s = await session(); if (!s) throw new Error('Sign in first.');
+    if (blob.size > LYRIC_MAX) return null;      // caller falls back to the name
+    const ext = (String(name || '').match(/\.([a-z0-9]{1,5})$/i) || [, 'bin'])[1].toLowerCase();
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const path = s.user.id + '/' + stamp + '-' + kind + '.' + ext;
+    const { error } = await c.storage.from(LBUCKET).upload(path, blob, {
+      contentType: blob.type || 'application/octet-stream', upsert: false });
+    if (error) throw new Error(error.message);
+    return path;
+  }
+
+  async function lyricLink(path, seconds){
+    const c = await client(); if (!c || !path) return null;
+    const { data, error } = await c.storage.from(LBUCKET)
+      .createSignedUrl(path, seconds || 7200);
+    return error ? null : (data ? data.signedUrl : null);
+  }
+
+  /* Saving the same project again updates it rather than piling up copies -
+     which is what lets this be called on a timer while the work goes on. */
+  async function lyricSave(p){
+    const c = await client(); if (!c) throw new Error('Not connected.');
+    const s = await session(); if (!s) throw new Error('Sign in first.');
+    const row = {
+      name: p.name || 'Untitled',
+      status: p.status === 'done' ? 'done' : 'draft',
+      lyrics: p.lyrics || '',
+      settings: p.settings || {},
+      art_path: p.artPath || null,
+      audio_path: p.audioPath || null,
+      track_pick: p.trackPick == null ? null : String(p.trackPick),
+      audio_name: p.audioName || null,
+      created_by: s.user.id
+    };
+    const q = p.id
+      ? c.from(LYRIC).update(row).eq('id', p.id).select().single()
+      : c.from(LYRIC).insert(row).select().single();
+    const { data, error } = await q;
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  /* The files go with the row, for the same reason as the ESN images: a row
+     deleted with its art left behind is storage nobody can find again. */
+  async function lyricDelete(id, paths){
+    const c = await client(); if (!c) throw new Error('Not connected.');
+    const keep = (paths || []).filter(Boolean);
+    if (keep.length) await c.storage.from(LBUCKET).remove(keep);
+    const { error } = await c.from(LYRIC).delete().eq('id', id);
+    if (error) throw new Error(error.message);
+  }
+
   window.DB = { configured, client, session, signIn, signUp, signOut, onAuth, emailForUsername, myProfile, setUsername,
                 esnList, esnSave, esnDelete, esnUpload, esnLink, esnSubscribe,
+                lyricList, lyricGet, lyricSave, lyricDelete, lyricUpload, lyricLink, LYRIC_MAX,
                 load, publish, subscribe,
                 publishBook, loadBook, subscribeBook,
                 listTodos, addTodo, updateTodo, setTodoDone, subscribeTodos,
