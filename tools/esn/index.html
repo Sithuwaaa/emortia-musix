@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="../_lib/owner-config.js"></script>
 <script src="../_lib/owner.js"></script>
 <script src="../_lib/supabase-config.js"></script>
@@ -181,6 +182,18 @@
   td.k1{font-family:'Space Mono',monospace;color:var(--accentB);white-space:nowrap}
   td.wrap{white-space:normal;min-width:160px}
   .thumb{width:52px;height:38px;object-fit:cover;border-radius:6px;background:#000;cursor:zoom-in;display:block}
+  /* the picture, and the one thing anyone wants to do with it that is not
+     looking at it - the arrow sits on the corner rather than in a menu */
+  .shots{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .shot{position:relative;display:inline-block;line-height:0}
+  .shot .dl{position:absolute;right:-3px;bottom:-3px;width:19px;height:19px;padding:0;
+    border:1px solid var(--line3);border-radius:50%;background:var(--card);color:var(--text);
+    font-size:10px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    opacity:0;transition:opacity .15s ease}
+  .shot:hover .dl,.shot .dl:focus{opacity:1}
+  .shot .dl:hover{border-color:var(--accent);color:var(--accentB)}
+  /* on a phone there is no hover, so it is simply always there */
+  @media (hover:none){ .shot .dl{opacity:1} }
   .chip{display:inline-block;padding:1px 7px;border:1px solid var(--line3);border-radius:6px;
     font-family:'Space Mono',monospace;font-size:10.5px;margin:1px 3px 1px 0;color:var(--muted);white-space:nowrap}
 
@@ -195,9 +208,10 @@
   .exmeta{font-family:'Space Mono',monospace;font-size:11.5px;color:var(--muted);margin-top:3px}
 
   #lightbox{position:fixed;inset:0;z-index:120;background:rgba(10,5,3,.92);display:none;
-    align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
+    align-items:center;justify-content:center;padding:24px;cursor:zoom-out;flex-direction:column;gap:14px}
   #lightbox.on{display:flex}
-  #lightbox img{max-width:100%;max-height:100%;border-radius:10px;box-shadow:0 30px 80px rgba(0,0,0,.7)}
+  #lightbox img{max-width:100%;max-height:calc(100% - 62px);border-radius:10px;box-shadow:0 30px 80px rgba(0,0,0,.7)}
+  #lightDl{cursor:pointer;flex-shrink:0}
 
   footer{max-width:1180px;margin:0 auto;padding:0 14px 30px;color:var(--muted);font-size:12.5px;line-height:1.7}
   .toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:var(--navy-2);
@@ -220,7 +234,8 @@
 <main><div id="view"></div></main>
 <footer id="foot"></footer>
 <div class="toast" id="toast"></div>
-<div id="lightbox"><img id="lightimg" alt=""></div>
+<div id="lightbox"><img id="lightimg" alt="">
+  <button class="btn on" id="lightDl">⬇ Download this picture</button></div>
 
 <script>
 /* ============================================================
@@ -322,7 +337,15 @@ async function loadSites(){
 }
 
 /* ---------- what the database already has ---------- */
+/* The gate and the database keep separate sessions: this browser can still
+   hold a week-long sign-in for the site while the database session behind it
+   has quietly expired. When that happens every policy sees a stranger, the
+   query comes back empty with no error at all, and the tab used to say
+   "Nothing filed yet" - which is how a record filed on one laptop looks
+   deleted on another. It is worth telling them apart. */
+let SIGNED_IN = true;
 async function loadFiled(){
+  try { SIGNED_IN = !!(await window.DB.session()); } catch(e){ SIGNED_IN = false; }
   const r = await window.DB.esnList(500);
   if (r.error){ LOAD_ERR = r.error; FILED = []; return; }
   FILED = (r.rows || []).map(E.fromRow);
@@ -436,6 +459,15 @@ function renderAdd(){
   let h = '';
   if (LOAD_ERR){ const t = speak(LOAD_ERR);
     h += '<div class="err">' + esc(t.full) + '</div>'; }
+  /* A card sitting here unfiled is in this browser and nowhere else, which is
+     why one can be on the office laptop and not on the one at home. Saying so
+     costs a line and saves an afternoon of looking for it. */
+  const unfiled = DRAFTS.filter(d => !d.saved && (d.siteId || d.cards.some(c => c.serial))).length;
+  if (unfiled) h += '<div class="err" style="border-color:var(--warn);background:rgba(242,163,58,.08)">' +
+    unfiled + (unfiled === 1 ? ' site is' : ' sites are') + ' still only in this browser. ' +
+    'Press <b>File it</b> on ' + (unfiled === 1 ? 'it' : 'each of them') +
+    ' to put ' + (unfiled === 1 ? 'it' : 'them') + ' on the server, or ' +
+    (unfiled === 1 ? 'it' : 'they') + ' will not be here on another machine.</div>';
   h += '<div class="bar">' +
     '<button class="btn on" id="addSite">+ Add Site</button>' +
     '<span class="note">Paste a screenshot straight into a slot with <b>Ctrl+V</b>.</span></div>';
@@ -446,6 +478,11 @@ function renderAdd(){
 
 /* ---------- the filed tab ---------- */
 function renderFiled(){
+  /* an empty list from a stale database session is not an empty database */
+  if (!FILED.length && !SIGNED_IN) return '<div class="empty"><div class="big">🔑</div>' +
+    'Your database sign-in has expired on this browser, so nothing can be read.<br>' +
+    'Sign out and back in, and everything filed will be here.<br>' +
+    '<span class="note">Nothing has been lost – records filed on another machine are still on the server.</span></div>';
   if (!FILED.length) return '<div class="empty"><div class="big">📷</div>Nothing filed yet.<br>' +
     'What gets saved on the Add tab lands here, for everyone signed in.</div>';
   const rows = FILED.map(r => {
@@ -457,8 +494,13 @@ function renderFiled(){
       '<td class="wrap">' + (cards.length
           ? cards.map(c => '<span class="chip">' + esc(c.type || '—') + ' · ' + esc(c.serial) + '</span>').join('')
           : '<span class="note">—</span>') + '</td>' +
-      '<td>' + ['esnPhoto','esnFull','omIpPhoto'].map(k => r[k]
-          ? '<img class="thumb" data-shot="' + esc(r[k]) + '" alt="' + k + '">' : '').join(' ') + '</td>' +
+      '<td><div class="shots">' + ['esnPhoto','esnFull','omIpPhoto'].map(k => r[k]
+          ? '<span class="shot"><img class="thumb" data-shot="' + esc(r[k]) + '" alt="' + k + '">' +
+            '<button class="dl" title="Download the ' + esc(KIND_LABEL[k]) + ' picture" ' +
+            'data-dl="' + esc(r.id) + '" data-kind="' + k + '">⬇</button></span>' : '').join('') +
+        (['esnPhoto','esnFull','omIpPhoto'].filter(k => r[k]).length > 1
+          ? '<button class="btn sm" data-dlall="' + esc(r.id) + '" title="Download every picture on this site">All</button>' : '') +
+        '</div></td>' +
       '<td class="wrap note">' + esc(r.note || '') + '</td>' +
       '<td class="note" style="white-space:nowrap">' + esc((r.createdAt || '').replace('T',' ').slice(0,16)) + '<br>' +
         esc(r.createdName || '') + '</td>' +
@@ -497,13 +539,17 @@ function actionsHtml(r){
 /* ---------- the export tab ---------- */
 function renderExport(){
   return '<div class="panel"><h2><span class="dot"></span>Take it out<span class="tag">' + FILED.length + ' filed</span></h2>' +
-    '<p class="note" style="margin-bottom:14px">One row per card, with the site repeated down its rows so the sheet can be sorted and filtered without looking anything up again. The picture columns carry links that work for an hour.</p>' +
-    '<div class="exrow"><div><div class="exname">Excel</div>' +
-      '<div class="exmeta">' + E.COLS.length + ' columns · every record filed</div></div>' +
-      '<button class="btn on" id="bXls">⬇ Excel</button></div>' +
+    '<p class="note" style="margin-bottom:14px">One row per card, with the site repeated down its rows so the sheet can be sorted and filtered without looking anything up again.</p>' +
+    '<div class="exrow"><div><div class="exname">Excel and the pictures</div>' +
+      '<div class="exmeta">a zip: the sheet, and a photos folder – the picture columns name the files</div></div>' +
+      '<button class="btn on" id="bZip">⬇ Zip</button></div>' +
+    '<div class="exrow"><div><div class="exname">Excel on its own</div>' +
+      '<div class="exmeta">' + E.COLS.length + ' columns · picture columns are links that stop working after an hour</div></div>' +
+      '<button class="btn" id="bXls">⬇ Excel</button></div>' +
     '<div class="exrow"><div><div class="exname">CSV</div>' +
       '<div class="exmeta">the same thing, for anything that will not open xlsx</div></div>' +
       '<button class="btn" id="bCsv">⬇ CSV</button></div>' +
+    '<p class="note" style="margin-top:12px">The pictures go out at the size they were filed, so a zip of a lot of sites is a big download – it is built in this tab, so leave it open until it saves.</p>' +
   '</div>';
 }
 
@@ -615,6 +661,33 @@ function download(name, blob){
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
+/* A signed link points at another origin, and a download attribute is ignored
+   across origins - the browser navigates to the picture instead of saving it.
+   Fetching it into a blob first is what makes it actually save, and it is what
+   lets the file be named after the site rather than a storage path. */
+async function shotBlob(path){
+  const u = await linkFor(path);
+  if (!u) throw new Error('That picture could not be reached.');
+  const res = await fetch(u);
+  if (!res.ok) throw new Error('That picture could not be fetched (' + res.status + ').');
+  return await res.blob();
+}
+const KIND_LABEL = { esnPhoto:'ESN', esnFull:'ESN-full', omIpPhoto:'OM-IP' };
+function shotName(rec, kind, path){
+  const ext = (String(path || '').match(/\.([a-z0-9]{1,5})$/i) || [, 'png'])[1];
+  const site = String(rec.siteId || 'site').toUpperCase().replace(/[^A-Z0-9_-]+/g, '');
+  return site + '-' + (KIND_LABEL[kind] || kind) + '.' + ext;
+}
+async function downloadShot(rec, kind){
+  const path = rec[kind];
+  if (!path){ toast('There is no picture there'); return; }
+  try {
+    toast('Fetching the picture…');
+    download(shotName(rec, kind, path), await shotBlob(path));
+    toast('Saved ' + shotName(rec, kind, path));
+  } catch(e){ toast(e.message, 5000); }
+}
+
 /* ---------- wiring ---------- */
 function wire(){
   const add = $('addSite');
@@ -716,7 +789,32 @@ function wire(){
   /* filed: tap a thumbnail to see it properly */
   [...document.querySelectorAll('img[data-shot]')].forEach(im => im.onclick = async () => {
     const u = await linkFor(im.dataset.shot); if (!u) return;
+    /* remembered so the lightbox's own button knows what it is showing */
+    LIGHT = { path: im.dataset.shot, rec: recOfShot(im.dataset.shot), kind: kindOfShot(im.dataset.shot) };
     $('lightimg').src = u; $('lightbox').classList.add('on');
+  });
+
+  /* the arrow on the corner of a thumbnail */
+  [...document.querySelectorAll('[data-dl]')].forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    const r = FILED.find(x => x.id === b.dataset.dl);
+    if (r) downloadShot(r, b.dataset.kind);
+  });
+
+  /* every picture on one site, one after another */
+  [...document.querySelectorAll('[data-dlall]')].forEach(b => b.onclick = async e => {
+    e.stopPropagation();
+    const r = FILED.find(x => x.id === b.dataset.dlall); if (!r) return;
+    const kinds = ['esnPhoto','esnFull','omIpPhoto'].filter(k => r[k]);
+    b.disabled = true;
+    for (const k of kinds){
+      try { download(shotName(r, k, r[k]), await shotBlob(r[k])); }
+      catch(err){ toast(err.message, 5000); }
+      /* a breath between saves, or the browser drops all but the first */
+      await new Promise(res => setTimeout(res, 400));
+    }
+    b.disabled = false;
+    toast(kinds.length + ' pictures saved for ' + r.siteId);
   });
 
   /* bring a filed record back to the Add tab to be corrected */
@@ -772,6 +870,50 @@ function wire(){
     } catch(e){ toast(e.message, 5000); }
     x.disabled = false; x.textContent = '⬇ Excel';
   };
+  /* Excel with the pictures actually in it. A link in a spreadsheet is not the
+     picture - it needs the tool, a sign-in, and it stops working after an
+     hour, which is no use to anyone opening the sheet next week. So the sheet
+     and the files go out together and the picture columns name the file. */
+  const z = $('bZip');
+  if (z) z.onclick = async () => {
+    if (!FILED.length){ toast('Nothing filed yet'); return; }
+    if (typeof JSZip === 'undefined'){ toast('The zip library did not load – try the Excel button', 5000); return; }
+    z.disabled = true;
+    const zip = new JSZip(), photos = zip.folder('photos');
+    const names = {};                        // path -> the name it gets in the zip
+    const taken = {};
+    let got = 0, missed = 0, total = 0;
+    FILED.forEach(r => ['esnPhoto','esnFull','omIpPhoto'].forEach(k => { if (r[k]) total++; }));
+
+    try {
+      for (const r of FILED){
+        for (const k of ['esnPhoto','esnFull','omIpPhoto']){
+          const path = r[k]; if (!path || names[path]) continue;
+          let nm = shotName(r, k, path);
+          /* two records on the same site would otherwise write the same name */
+          if (taken[nm]) nm = nm.replace(/(\.[a-z0-9]+)$/i, '-' + (++taken[nm]) + '$1');
+          else taken[nm] = 1;
+          z.textContent = 'Fetching ' + (got + missed + 1) + '/' + total + '…';
+          try { photos.file(nm, await shotBlob(path)); names[path] = 'photos/' + nm; got++; }
+          catch(e){ names[path] = '(picture missing)'; missed++; }
+        }
+      }
+      z.textContent = 'Zipping…';
+      const wb = XLSX.utils.book_new();
+      const rows = [E.COLS].concat(E.toRows(FILED, names));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'ESN');
+      zip.file('esn-' + new Date().toISOString().slice(0,10) + '.xlsx',
+               XLSX.write(wb, { bookType:'xlsx', type:'array' }));
+      const blob = await zip.generateAsync({ type:'blob', compression:'DEFLATE',
+                                             compressionOptions:{ level:1 } });
+      download('esn-' + new Date().toISOString().slice(0,10) + '.zip', blob);
+      toast(FILED.length + ' records and ' + got + ' pictures' +
+            (missed ? ' · ' + missed + ' could not be fetched' : '') +
+            ' · ' + (blob.size/1048576).toFixed(1) + 'MB', 6000);
+    } catch(e){ toast(e.message, 6000); }
+    z.disabled = false; z.textContent = '⬇ Zip';
+  };
+
   const c = $('bCsv');
   if (c) c.onclick = async () => {
     if (!FILED.length){ toast('Nothing filed yet'); return; }
@@ -783,7 +925,20 @@ function wire(){
   };
 }
 
+/* which picture the lightbox is showing, so its button can save that one */
+let LIGHT = null;
+const recOfShot = path => FILED.find(r => ['esnPhoto','esnFull','omIpPhoto'].some(k => r[k] === path));
+const kindOfShot = path => {
+  const r = recOfShot(path); if (!r) return 'esnPhoto';
+  return ['esnPhoto','esnFull','omIpPhoto'].find(k => r[k] === path) || 'esnPhoto';
+};
+
 $('lightbox').onclick = () => $('lightbox').classList.remove('on');
+$('lightDl').onclick = async e => {
+  e.stopPropagation();                       // the backdrop closes; the button must not
+  if (!LIGHT || !LIGHT.rec){ toast('Nothing to save'); return; }
+  await downloadShot(LIGHT.rec, LIGHT.kind);
+};
 addEventListener('keydown', e => { if (e.key === 'Escape') $('lightbox').classList.remove('on'); });
 
 /* ---------- boot ---------- */

@@ -274,6 +274,46 @@
     return null;
   }
 
+  /* Two sessions sit behind these pages: this one, which lasts seven days in
+     localStorage, and the database's own, which is shorter and renews itself
+     from a refresh token. They can come apart - and when they do the page
+     opens as normal while every query quietly returns nothing, because to the
+     database there is nobody there. That is indistinguishable from an empty
+     database, and it is how a record filed on one laptop looks missing on
+     another. So the gate checks the far end too, and says so. */
+  async function verifyRemote() {
+    if (!session() || !remote()) return true;
+    var live = null;
+    try { live = await window.DB.session(); } catch (e) { return true; }  // offline is not expired
+    if (live) return true;
+    banner();
+    return false;
+  }
+
+  function banner() {
+    if (document.getElementById('acc-stale')) return;
+    var run = function () {
+      if (document.getElementById('acc-stale')) return;
+      var d = document.createElement('div');
+      d.id = 'acc-stale';
+      d.setAttribute('role', 'alert');
+      d.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:200;padding:11px 16px;' +
+        'background:#8c2f2f;color:#fff;font:600 13.5px/1.5 system-ui,sans-serif;' +
+        'display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;' +
+        'box-shadow:0 2px 14px rgba(0,0,0,.35)';
+      d.innerHTML = '<span>Your sign-in has expired here, so saved data cannot be read. ' +
+        'Nothing has been lost.</span>';
+      var b = document.createElement('button');
+      b.textContent = 'Sign in again';
+      b.style.cssText = 'border:1px solid rgba(255,255,255,.6);background:transparent;color:#fff;' +
+        'border-radius:8px;padding:5px 13px;font:inherit;cursor:pointer';
+      b.onclick = signOut;
+      d.appendChild(b);
+      document.body.appendChild(d);
+    };
+    if (document.body) run(); else addEventListener('DOMContentLoaded', run);
+  }
+
   function signOut() {
     clear();
     try { if (window.DB && window.DB.signOut) window.DB.signOut(); } catch (e) {}
@@ -546,7 +586,13 @@
   function protect(opts) {
     opts = opts || {};
     var root = document.documentElement;
-    if (opts.owner ? isOwner() : signedIn()) { showChip(); return; }
+    if (opts.owner ? isOwner() : signedIn()) {
+      showChip();
+      /* the page opens either way - this only tells them if the far end has
+         since forgotten who they are, rather than letting it look empty */
+      verifyRemote();
+      return;
+    }
     root.style.visibility = 'hidden';
     var open = function () {
       root.style.visibility = '';
@@ -572,7 +618,7 @@
     signedIn: signedIn, currentUser: currentUser, currentEmail: currentEmail,
     daysLeft: daysLeft, isOwner: isOwner,
     signIn: signIn, signUp: signUp, signOut: signOut, guard: guard, protect: protect,
-    rename: rename, refresh: refresh,
+    rename: rename, refresh: refresh, verifyRemote: verifyRemote,
     canSignUp: remote, applyOwner: applyOwner, chip: showChip,
     makeUserLine: makeUserLine, CSS: CSS, gateMarkup: gateMarkup, wire: wire,
     days: DAYS, userCount: USERS.length

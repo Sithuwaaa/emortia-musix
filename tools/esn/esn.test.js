@@ -115,6 +115,14 @@ console.log('\nthe card list');
   is('empty rows are not counted', E.liveCards(rec).length, 2);
   is('a serial with no type still counts', E.liveCards(rec)[1].serial, '9');
   is('the card list is a suggestion, not a rule', E.CARD_TYPES.length > 10, true);
+  /* the list is the boards in the cabinet - radios and power gear are read
+     somewhere else and were only ever noise in this dropdown */
+  is('ESN is on it, being the number the tool is for',
+     E.CARD_TYPES.indexOf('ESN'), 0);
+  is('the BBU boards are all there',
+     ['UMPT','UBBP','UPEU','UEIU','FAN'].every(p => E.CARD_TYPES.some(t => t.indexOf(p) === 0)), true);
+  is('and nothing that is not one of them',
+     E.CARD_TYPES.filter(t => /^(RRU|Radio|DCDU|SFP|BBU|BB\d)/i.test(t)), []);
 }
 
 console.log('\nthe export');

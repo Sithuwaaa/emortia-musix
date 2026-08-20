@@ -11,15 +11,18 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  /* Card types seen so far. The list is a starting point, never a constraint —
-     the field is free text, because every batch brings a card nobody wrote
-     down in advance. */
+  /* What goes in the BBU, and nothing else. The radios and the power gear were
+     on this list and did not belong: what is being read off a screen here is
+     the boards in the cabinet. ESN is on it because that is the number the
+     whole tool is named after and it was the one thing you had to type out.
+
+     The list is a starting point, never a constraint — the field is free text,
+     because every batch brings a board nobody wrote down in advance. */
   const CARD_TYPES = [
+    'ESN',
     'UMPTg2', 'UMPTb1', 'UMPTe1', 'UMPTe2',
     'UBBPg1a', 'UBBPg2', 'UBBPd2', 'UBBPd4', 'UBBPe4', 'UBBPe6',
-    'BBU3910', 'BBU5900', 'BB6630', 'BB6631',
-    'RRU5909', 'RRU5910', 'Radio 2271', 'Radio 4415',
-    'UPEU', 'FAN', 'DCDU', 'SFP'
+    'UPEU', 'UEIU', 'FAN'
   ];
 
   const norm = v => v == null ? '' : String(v).replace(/\s+/g, ' ').trim();
