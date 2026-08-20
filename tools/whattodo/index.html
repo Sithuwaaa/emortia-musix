@@ -17,6 +17,7 @@
 <script src="../_lib/access.js"></script>
 <script>Access.protect({ owner: true });</script>
 <script src="../_lib/authgate.js"></script>
+<script src="todo.js"></script>
 <style>
   :root{
     /* rose - the one accent the other tools had not taken, and it ties back to
@@ -141,6 +142,18 @@
   .task .body{flex:1;min-width:0}
   .task .t{font-size:15.5px;font-weight:600;line-height:1.35;word-break:break-word}
   .task .n{color:var(--muted);font-size:13px;margin-top:3px;white-space:pre-wrap;word-break:break-word}
+  /* the steps under a heading - each one its own box, cleared on its own */
+  .steps{display:flex;flex-direction:column;gap:2px;margin-top:7px}
+  .step{display:flex;align-items:flex-start;gap:9px;padding:3px 6px;margin-left:-6px;
+    border-radius:7px;cursor:pointer;font-size:13.5px;line-height:1.45;color:var(--text)}
+  .step:hover{background:var(--card-2)}
+  .step input{margin:2px 0 0;width:15px;height:15px;flex-shrink:0;accent-color:var(--accent);cursor:pointer}
+  .step.on span{text-decoration:line-through;text-decoration-color:var(--line3);color:var(--muted)}
+  /* how much of the heading is left, so a long list reads at a glance */
+  .task .count{font-family:'Space Mono',monospace;font-size:10.5px;font-weight:400;
+    border:1px solid var(--line3);border-radius:6px;padding:1px 6px;margin-left:8px;
+    color:var(--muted);vertical-align:middle;white-space:nowrap}
+  .task .count.all{border-color:var(--ok);color:var(--ok)}
   .task .when{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.04em;margin-top:7px;color:var(--muted)}
   .task .when b{color:var(--warn);font-weight:400}
   .tick{flex-shrink:0;width:26px;height:26px;border-radius:50%;border:2px solid var(--line3);background:none;
@@ -301,22 +314,31 @@ const dayKey = d => { const x = new Date(d);
    dashboard is what is left to do; the calendar is what the month held. A job
    finished on Tuesday still happened on Tuesday, and a month that empties
    itself as you work through it cannot tell you what you did. */
+/* Nothing carries a deadline any more, so a job sits on the day it was
+   cleared once it has been, and on the day it was written down until then.
+   That reads as a record of the month either way: what was taken on, and what
+   was got through. A job old enough to still have a deadline keeps using it. */
 function tasksByDay(){
   const m = new Map();
   for (const t of TODOS){
-    if (!t.due) continue;
-    const k = dayKey(t.due);
+    const at = window.TodoCore.calendarDate(t);
+    if (!at) continue;
+    const k = dayKey(at);
     if (!m.has(k)) m.set(k, []);
     m.get(k).push(t);
   }
-  /* still to do first, each group by the hour it is due */
+  /* still to do first, then by the hour within the day */
   for (const list of m.values())
-    list.sort((a, b) => (a.done === b.done ? new Date(a.due) - new Date(b.due) : (a.done ? 1 : -1)));
+    list.sort((a, b) => (a.done === b.done
+      ? new Date(window.TodoCore.calendarDate(a)) - new Date(window.TodoCore.calendarDate(b))
+      : (a.done ? 1 : -1)));
   return m;
 }
-const undated = () => pending().filter(t => !t.due);
+/* every job lands on a day now, so nothing is left over to list underneath */
+const undated = () => [];
 function dayState(t){
   if (t.done) return 'done';
+  if (!t.due) return '';
   const diff = new Date(t.due) - Date.now();
   return diff < 0 ? 'over' : diff < 3600e3 ? 'soon' : '';
 }
@@ -584,6 +606,38 @@ async function refresh(){
 /* Ticking one off takes it out of the dashboard but not out of the list: it
    is marked, not dropped, so the calendar can still show the day it was for.
    Un-ticking puts it back. */
+/* Ticking one step of a heading. The step lives in the note text, so this is a
+   note rewrite - and when the last one goes, the heading goes with it, which is
+   the whole reason for writing jobs this way. Unticking a step on a finished
+   heading puts the heading back, or a job would stay cleared with work left. */
+async function markStep(id, k, want, el){
+  if (BUSY) return; BUSY = true;
+  const t = TODOS.find(x => x.id === id);
+  if (!t){ BUSY = false; return; }
+  const T = window.TodoCore;
+  const before = t.note;
+  const note = T.toggleItem(t.note, k, want);
+  const finished = T.allItemsDone(note);
+  try {
+    await window.AuthGate.require();
+    await window.DB.updateTodo(id, { title: t.title, note, due: t.due || null });
+    t.note = note;
+    /* the heading follows its steps, in both directions */
+    if (finished !== !!t.done){
+      await window.DB.setTodoDone(id, finished);
+      t.done = finished;
+      t.done_at = finished ? new Date().toISOString() : null;
+    }
+    refreshPill(); render();
+    toast(finished ? 'All done – “' + t.title + '” is cleared'
+                   : (want ? 'Step done' : 'Step back on the list'));
+  } catch (err){
+    t.note = before;
+    if (el) el.checked = !want;                 // put the box back as it was
+    toast(err.message, 6000);
+  } finally { BUSY = false; }
+}
+
 async function markDone(id, el, done){
   if (BUSY) return; BUSY = true;
   const want = done === undefined ? true : !!done;
@@ -628,16 +682,37 @@ function forInput(due){
 function taskHTML(t){
   const w = whenText(t.due);
   const done = !!t.done;
-  const when = done
-    ? 'done' + (t.done_at ? ' ' + new Date(t.done_at).toLocaleDateString([], { day:'2-digit', month:'short' }) : '')
-    : w.text;
+  const T = window.TodoCore;
+
+  /* The note is a checklist. The title is the heading someone wrote and the
+     note is the steps under it, cleared one at a time - so each line gets its
+     own box rather than sitting in a paragraph nobody can tick. */
+  const items = T.noteItems(t.note);
+  const ticked = items.filter(i => i.done).length;
+  const steps = items.length
+    ? '<div class="steps">' + items.map((it, k) =>
+        '<label class="step' + (it.done ? ' on' : '') + '">' +
+          '<input type="checkbox" data-step="' + esc(t.id) + '" data-k="' + k + '"' +
+            (it.done ? ' checked' : '') + '>' +
+          '<span>' + esc(it.text) + '</span></label>').join('') +
+      '</div>' : '';
+
+  /* Added, and cleared once it has been - the two dates that were asked for
+     and the two that are actually worth knowing. */
+  const dates = T.dateLine(t);
+
   return '<div class="task ' + (done ? 'is-done' : w.state) + '">' +
     (done
       ? '<button class="tick back" data-undo="' + esc(t.id) + '" title="Put it back on the list">↩</button>'
       : '<button class="tick" data-id="' + esc(t.id) + '" title="Mark done">✓</button>') +
-    '<div class="body"><div class="t">' + esc(t.title) + '</div>' +
-    (t.note ? '<div class="n">' + esc(t.note) + '</div>' : '') +
-    '<div class="when">' + (!done && w.state === 'over' ? '<b>' + esc(when) + '</b>' : esc(when)) + '</div>' +
+    '<div class="body"><div class="t">' + esc(t.title) +
+      (items.length ? '<span class="count' + (ticked === items.length ? ' all' : '') + '">' +
+        ticked + '/' + items.length + '</span>' : '') + '</div>' +
+    steps +
+    (dates ? '<div class="when">' + esc(dates) + '</div>' : '') +
+    /* an old job still carrying a deadline keeps showing it */
+    (!done && t.due ? '<div class="when">' +
+      (w.state === 'over' ? '<b>' + esc(w.text) + '</b>' : esc(w.text)) + '</div>' : '') +
     '</div>' +
     '<button class="edit" data-edit="' + esc(t.id) + '" title="Change it">Edit</button>' +
     '</div>';
@@ -677,7 +752,7 @@ function renderCalendar(){
     if (k === CAL_SEL) cls.push('sel');
     const shown = list.slice(0, 4).map(t => '<span class="cal-dot ' + dayState(t) + '"></span>').join('');
     cells += '<div class="' + cls.join(' ') + '" data-d="' + k + '" title="' +
-      esc(list.length ? list.length + (list.length === 1 ? ' job' : ' jobs') : 'nothing due') + '">' +
+      esc(list.length ? list.length + (list.length === 1 ? ' job' : ' jobs') : 'nothing here') + '">' +
       '<span class="num">' + d.getDate() + '</span>' +
       '<span class="cal-dots">' + shown +
         (list.length > 4 ? '<span class="cal-more">+' + (list.length - 4) + '</span>' : '') +
@@ -703,9 +778,9 @@ function renderCalendar(){
     const list = byDay.get(CAL_SEL) || [];
     const d = new Date(CAL_SEL + 'T00:00:00');
     h += '<div class="day-head">' + esc(d.toLocaleDateString([], { weekday:'long', day:'numeric', month:'long' })) +
-         ' · ' + (list.length ? list.length + (list.length === 1 ? ' job' : ' jobs') : 'nothing due') + '</div>';
+         ' · ' + (list.length ? list.length + (list.length === 1 ? ' job' : ' jobs') : 'nothing here') + '</div>';
     h += list.length ? list.map(taskHTML).join('')
-       : '<div class="empty" style="padding:26px 20px">Nothing due this day.</div>';
+       : '<div class="empty" style="padding:26px 20px">Nothing on this day.</div>';
   }
   if (loose.length){
     h += '<div class="day-head">' + loose.length +
@@ -744,15 +819,14 @@ function renderAdd(){
       (editing ? 'Change this job' : 'Add a job') + '</h2>' +
     '<p class="note" style="margin-bottom:15px">' +
       (editing ? 'Whatever you change here replaces what is on the list, everywhere.'
-               : 'It lands on the calendar under its due date, on every device.') + '</p>' +
+               : 'Put the heading at the top and the steps in the notes, one to a line – ' +
+                 'each one gets its own box to tick, and the heading clears itself when the last is done.') + '</p>' +
     '<div class="field"><label for="tTitle">What needs doing</label>' +
-      '<input id="tTitle" maxlength="200" placeholder="e.g. Send the weekly update" value="' +
+      '<input id="tTitle" maxlength="200" placeholder="e.g. Close out the BD5071 site" value="' +
         (editing ? v(t.title) : '') + '"></div>' +
-    '<div class="field"><label for="tNote">Notes (optional)</label>' +
-      '<textarea id="tNote" maxlength="2000" placeholder="Anything worth remembering">' +
+    '<div class="field"><label for="tNote">The steps, one to a line</label>' +
+      '<textarea id="tNote" maxlength="2000" placeholder="Call the vendor&#10;Send the drawing&#10;Book the crane">' +
         (editing ? v(t.note) : '') + '</textarea></div>' +
-    '<div class="field"><label for="tDue">Due (optional)</label>' +
-      '<input id="tDue" type="datetime-local" value="' + (editing ? forInput(t.due) : '') + '"></div>' +
     '<div class="addrow">' +
       '<button class="go" id="addBtn">' + (editing ? 'Save the change' : 'Add to the list') + '</button>' +
       (editing ? '<button class="btn" id="cancelBtn">Cancel</button>' : '') +
@@ -767,6 +841,8 @@ function render(){
     const stb = $('stopBtn'); if (stb && !stb.disabled) stb.onclick = () => { stopAlarm(); toast('Alarm stopped'); };
     [...document.querySelectorAll('.tick[data-id]')].forEach(b => b.onclick = () => markDone(b.dataset.id, b, true));
     [...document.querySelectorAll('.tick[data-undo]')].forEach(b => b.onclick = () => markDone(b.dataset.undo, b, false));
+    [...document.querySelectorAll('input[data-step]')].forEach(b =>
+      b.onchange = () => markStep(b.dataset.step, +b.dataset.k, b.checked, b));
     [...document.querySelectorAll('.edit[data-edit]')].forEach(b => b.onclick = () => startEdit(b.dataset.edit));
   }
   if (ACTIVE === 'Calendar'){
@@ -792,21 +868,19 @@ function render(){
          reaching for a node that no longer exists. */
       const title = $('tTitle').value.trim();
       const note = $('tNote').value.trim();
-      const dueRaw = $('tDue').value;
       const editId = EDIT_ID;                    // read before the awaits too
+      /* An edit keeps whatever deadline the job already had. Nothing sets one
+         any more, but a job written before the field went should not lose it
+         because someone fixed a typo in its title. */
+      const due = (editId && t && t.due) ? t.due : null;
       if (!title){ toast('Give it a title first'); $('tTitle').focus(); return; }
       add.disabled = true; add.textContent = editId ? 'Saving…' : 'Adding…';
       try {
         await window.AuthGate.require();
-        const due = dueRaw ? new Date(dueRaw).toISOString() : null;
         if (editId) await window.DB.updateTodo(editId, { title, note, due });
         else        await window.DB.addTodo({ title, note, due });
         EDIT_ID = null;
         await refresh();
-        /* The calendar is set to the day it is due, so opening it later lands
-           there - but the dashboard is what you came back to work from, so
-           that is where it goes. */
-        if (due){ const d = new Date(due); CAL_M = new Date(d.getFullYear(), d.getMonth(), 1); CAL_SEL = dayKey(d); }
         ACTIVE = 'Dashboard'; buildTabs(); render();
         toast(editId ? 'Changed' : 'Added');
       } catch (err){
