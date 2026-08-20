@@ -17,6 +17,9 @@
 <script src="../_lib/access.js"></script>
 <script>Access.protect({ owner: true });</script>
 <script src="lyric.js"></script>
+<!-- Turns the encoder's output into an actual .mp4. WebCodecs hands back raw
+     H.264 and AAC; without a muxer they are not a file anything will play. -->
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.1/build/mp4-muxer.min.js"></script>
 <style>
   /* The Sinhala faces the site already carries. Canvas will not draw a font it
      has not loaded, and a webfont only loads when something on the page asks
@@ -159,6 +162,11 @@
   .proj .st.done{border-color:var(--ok);color:var(--ok)}
   .proj .x{border:none;background:none;color:var(--muted);cursor:pointer;font-size:15px;padding:0 3px;line-height:1}
   .proj .x:hover{color:var(--bad)}
+  /* how far through the render it is - an export that takes a while with no
+     sign of moving reads as a hang */
+  .exbar{display:none;width:100%;height:5px;border-radius:3px;background:var(--card-2);
+    border:1px solid var(--line);overflow:hidden;margin-top:10px}
+  .exbar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s ease}
   body.tapping{caret-color:transparent}
   body.tapping .transport{box-shadow:0 0 0 2px var(--accent)}
 
@@ -213,7 +221,8 @@
         <div class="chips" id="qualities" style="margin-bottom:9px"></div>
         <p class="note" id="exportNote"></p>
         <div class="bar" style="margin-top:11px">
-          <button class="btn on" id="recBtn">● Record the video</button>
+          <button class="btn on" id="recBtn">⬇ Export the video</button>
+          <div class="exbar" id="exBar"><i></i></div>
           <button class="btn" id="frameBtn">Save this frame</button>
         </div>
       </div>
@@ -1032,7 +1041,186 @@ function newProject(opt){
   if (!o.silent) toast('Started a new project – the words and settings are still here to build on');
 }
 
-/* ---------- recording ----------
+/* ---------- exporting ----------
+
+   Recording meant playing the song and filming the screen: it took as long as
+   the song, it dropped frames whenever the machine was busy, and what came out
+   depended on how the tab happened to be running at the time.
+
+   This renders instead. Every frame is drawn from the clock and handed to the
+   encoder as fast as the machine will take it, so a two minute song does not
+   cost two minutes, nothing is dropped, and the same project exports the same
+   file every time. The song is decoded and encoded alongside it. */
+function canExport(){
+  return typeof VideoEncoder !== 'undefined' && typeof AudioEncoder !== 'undefined'
+      && typeof Mp4Muxer !== 'undefined';
+}
+
+/* H.264 High, then Main. Baseline is not offered here - this browser reports
+   it unsupported for encoding while both of the others work. */
+async function pickCodec(W, H, bitrate, fps){
+  for (const codec of ['avc1.640028', 'avc1.4D0028']){
+    try {
+      const s = await VideoEncoder.isConfigSupported({ codec, width:W, height:H, bitrate, framerate:fps });
+      if (s && s.supported) return codec;
+    } catch(e){}
+  }
+  return null;
+}
+
+let EXPORTING = false;
+/* Encoding a 1080x1920 frame is the whole cost of an export - drawing one is
+   under a millisecond. On a machine with no hardware encoder that runs slower
+   than the song does, so the wait is shown honestly, with how long is left and
+   a button that stops it, rather than a spinner and a hope. */
+function exportProgress(pct, label, etaMs){
+  const b = $('recBtn');
+  const left = etaMs > 0 ? ' · ' + (etaMs > 90000
+    ? Math.round(etaMs / 60000) + ' min left'
+    : Math.max(1, Math.round(etaMs / 1000)) + 's left') : '';
+  b.textContent = '■ Stop · ' + label + (pct == null ? '' : ' ' + Math.round(pct * 100) + '%') + left;
+  const bar = $('exBar');
+  if (bar){ bar.style.display = 'block'; bar.firstElementChild.style.width = Math.round((pct||0)*100) + '%'; }
+}
+
+async function exportVideo(){
+  if (EXPORTING) { CANCEL_EXPORT = true; return; }
+  if (!audio.src){ toast('Pick a song first'); return; }
+  if (!canExport()) return recordVideo();          // older browser: film it instead
+
+  const cv = $('stage'), W = cv.width, H = cv.height;
+  const br = bitrates(), fps = br.fps;
+  const dur = await resolveDuration();
+  if (!dur || !isFinite(dur)){ toast('The song length could not be read'); return; }
+
+  const codec = await pickCodec(W, H, br.videoBitsPerSecond, fps);
+  if (!codec){ toast('This browser will not encode at ' + W + '×' + H + ' – filming it instead', 5000);
+               return recordVideo(); }
+
+  EXPORTING = true; CANCEL_EXPORT = false;
+  const btn = $('recBtn');
+  btn.classList.add('rec'); btn.classList.remove('on');
+  const wasAt = audio.currentTime;
+  audio.pause();
+
+  try {
+    /* the song, decoded once, so it can be re-encoded rather than re-recorded */
+    exportProgress(0, 'Reading the song…');
+    let pcm = null;
+    try {
+      const buf = await (await fetch(audio.src)).arrayBuffer();
+      const actx = new (window.AudioContext || window.webkitAudioContext)();
+      pcm = await actx.decodeAudioData(buf);
+      actx.close();
+    } catch(e){
+      toast('The song could not be decoded, so the video will be silent: ' + e.message, 6000);
+    }
+
+    const { Muxer, ArrayBufferTarget } = Mp4Muxer;
+    const chans = pcm ? Math.min(2, pcm.numberOfChannels) : 0;
+    const muxer = new Muxer({
+      target: new ArrayBufferTarget(),
+      fastStart: 'in-memory',            // the moov goes first, so it streams
+      video: { codec:'avc', width:W, height:H, frameRate:fps },
+      audio: pcm ? { codec:'aac', sampleRate:pcm.sampleRate, numberOfChannels:chans } : undefined
+    });
+
+    let encErr = null;
+    const venc = new VideoEncoder({
+      output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+      error: e => { encErr = e; }
+    });
+    venc.configure({ codec, width:W, height:H, bitrate:br.videoBitsPerSecond,
+                     framerate:fps, latencyMode:'quality' });
+
+    /* Every frame comes off the clock, exactly as the preview draws it. A
+       keyframe every two seconds keeps seeking usable without costing much. */
+    const total = Math.max(1, Math.ceil(dur * fps));
+    const frameDur = Math.round(1e6 / fps);
+    const startedAt = performance.now();
+    for (let i = 0; i < total; i++){
+      if (CANCEL_EXPORT) throw new Error('cancelled');
+      if (encErr) throw encErr;
+      const t = i / fps;
+      draw(t);
+      const frame = new VideoFrame(cv, { timestamp: Math.round(t * 1e6), duration: frameDur });
+      venc.encode(frame, { keyFrame: i % (fps * 2) === 0 });
+      frame.close();
+      /* let the encoder catch up rather than queueing the whole song into
+         memory - this is what keeps a long track from exhausting the tab */
+      if (venc.encodeQueueSize > 12){
+        while (venc.encodeQueueSize > 4) await new Promise(r => setTimeout(r, 0));
+      }
+      if (i % 15 === 0){
+        const done = i / total;
+        const spent = performance.now() - startedAt;
+        /* measured from what has actually been encoded, not guessed from the
+           frame count - the first frames are always the slowest */
+        const eta = i > 30 ? (spent / Math.max(i, 1)) * (total - i) : 0;
+        exportProgress(done * 0.88, 'Rendering', eta);
+        await new Promise(r => setTimeout(r, 0));     // let the page paint
+      }
+    }
+    exportProgress(0.9, 'Finishing the picture…');
+    await venc.flush();
+    venc.close();
+
+    if (pcm){
+      exportProgress(0.93, 'Encoding the song…');
+      let aErr = null;
+      const aenc = new AudioEncoder({
+        output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
+        error: e => { aErr = e; }
+      });
+      aenc.configure({ codec:'mp4a.40.2', sampleRate:pcm.sampleRate,
+                       numberOfChannels:chans, bitrate:br.audioBitsPerSecond });
+      /* only as much of the song as the video covers, or a track with a long
+         tail would leave audio playing over a frame that is not there */
+      const end = Math.min(pcm.length, Math.ceil(dur * pcm.sampleRate));
+      const STEP = 10240;
+      for (let off = 0; off < end; off += STEP){
+        if (aErr) throw aErr;
+        const n = Math.min(STEP, end - off);
+        const flat = new Float32Array(n * chans);
+        for (let c = 0; c < chans; c++)
+          flat.set(pcm.getChannelData(c).subarray(off, off + n), c * n);
+        const ad = new AudioData({
+          format:'f32-planar', sampleRate:pcm.sampleRate, numberOfFrames:n,
+          numberOfChannels:chans, timestamp: Math.round(off / pcm.sampleRate * 1e6), data: flat
+        });
+        aenc.encode(ad); ad.close();
+        if (aenc.encodeQueueSize > 16){
+          while (aenc.encodeQueueSize > 4) await new Promise(r => setTimeout(r, 0));
+        }
+      }
+      await aenc.flush();
+      aenc.close();
+      if (aErr) throw aErr;
+    }
+
+    exportProgress(0.99, 'Writing the file…');
+    muxer.finalize();
+    const blob = new Blob([muxer.target.buffer], { type:'video/mp4' });
+    const f = L.formatById(S.fmt);
+    const name = (S.title || 'lyric').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'lyric';
+    const file = name + '-' + f.w + 'x' + f.h + '-' + S.quality + '.mp4';
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = file; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    toast('Exported ' + file + ' · ' + L.humanSize(blob.size), 6000);
+  } catch(e){
+    toast(e.message === 'cancelled' ? 'Export stopped' : ('Export failed: ' + e.message), 6000);
+  } finally {
+    EXPORTING = false; CANCEL_EXPORT = false;
+    const bar = $('exBar'); if (bar) bar.style.display = 'none';
+    btn.textContent = '⬇ Export the video';
+    btn.classList.remove('rec'); btn.classList.add('on');
+    audio.currentTime = wasAt; draw(wasAt);
+  }
+}
+let CANCEL_EXPORT = false;
+
+/* ---------- recording (the fallback) ----------
    A canvas gives a real video stream, and the audio element gives a real
    audio one; together they are a file.
 
@@ -1063,7 +1251,7 @@ function bitrates(){
   const cv = $('stage');
   return L.bitrateFor(cv.width, cv.height, S.quality);
 }
-async function record(){
+async function recordVideo(){
   if (RECORDING){ REC && REC.stop(); return; }
   if (!canRecord()){ toast('This browser will not record a canvas', 5000); return; }
   if (!audio.src){ toast('Pick a song first'); return; }
@@ -1097,7 +1285,7 @@ async function record(){
   REC.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
   REC.onstop = () => {
     RECORDING = false;
-    $('recBtn').textContent = '● Record the video';
+    $('recBtn').textContent = '⬇ Export the video';
     $('recBtn').classList.remove('rec'); $('recBtn').classList.add('on');
     const blob = new Blob(chunks, { type: type || 'video/' + fmt.ext });
     const a = document.createElement('a');
@@ -1178,22 +1366,28 @@ function paintType(){
 /* What pressing record will actually produce, in the terms that matter: the
    container, the rate, and roughly how big the file lands. */
 function showExport(){
-  if (!canRecord()){
-    $('exportNote').innerHTML = 'This browser will not record a canvas. Chrome or Edge will. <b>Save this frame</b> still works.';
+  if (!canExport() && !canRecord()){
+    $('exportNote').innerHTML = 'This browser will not write video. Chrome or Edge will. <b>Save this frame</b> still works.';
     $('recInfo').textContent = 'not available here';
     $('recBtn').disabled = true;
     return;
   }
-  const fmt = bestFormat(), br = bitrates(), q = L.qualityById(S.quality);
-  const mb = (br.videoBitsPerSecond / 1e6).toFixed(0);
+  const br = bitrates(), q = L.qualityById(S.quality);
+  const cv = $('stage');
+  const mb = (br.videoBitsPerSecond / 1e6).toFixed(1);
   const secs = songLength();
-  const size = secs ? ' About ' + ((br.videoBitsPerSecond + br.audioBitsPerSecond) * secs / 8 / 1048576).toFixed(0) + 'MB for this song.' : '';
-  $('exportNote').innerHTML = '<b>' + q.name + '</b> – ' + q.note + ' ' + mb + ' Mbps at ' + br.fps + 'fps, written as <b>' +
-    fmt.name + '</b>.' + size + (fmt.ext === 'mp4'
-      ? ' Upload it to TikTok, Instagram or YouTube as it is.'
-      : ' Your browser will not write MP4, so this is WebM – every platform takes it, and any converter turns it into MP4.') +
-    ' Recording plays the song from the start and stops on its own at the end.';
-  $('recInfo').textContent = br.fps + 'fps · ' + fmt.ext + ' · ' + mb + ' Mbps';
+  /* The size is the thing worth knowing before you wait, not after - this was
+     the whole complaint about the old numbers. */
+  const size = secs
+    ? ' About <b>' + L.humanSize(L.estimateBytes(cv.width, cv.height, S.quality, secs)) + '</b> for this song.'
+    : '';
+  $('exportNote').innerHTML = '<b>' + q.name + '</b> – ' + q.note + ' ' + mb + ' Mbps at ' + br.fps + 'fps.' + size +
+    (canExport()
+      ? ' It renders rather than records, so it does not take as long as the song and drops nothing. ' +
+        'The file is <b>MP4</b> – upload it to TikTok, Instagram or YouTube as it is.'
+      : ' This browser cannot render offline, so it falls back to filming the canvas while the song plays – ' +
+        'that takes as long as the song, and the file is ' + bestFormat().name + '.');
+  $('recInfo').textContent = br.fps + 'fps · ' + (canExport() ? 'mp4' : bestFormat().ext) + ' · ' + mb + ' Mbps';
   $('recBtn').disabled = false;
 }
 
@@ -1334,7 +1528,7 @@ function boot(){
   setProjState();
   listProjects();
 
-  $('recBtn').onclick = record;
+  $('recBtn').onclick = exportVideo;
   $('frameBtn').onclick = () => {
     $('stage').toBlob(b => {
       const a = document.createElement('a'); a.href = URL.createObjectURL(b);

@@ -204,11 +204,15 @@ console.log('\nexport quality');
   const at = id => L.bitrateFor(1080, 1920, id).videoBitsPerSecond;
   is('they climb in order',
      [at('low'), at('mid'), at('hq'), at('max')].every((v,i,a) => i===0 || v > a[i-1]), true);
-  is('even the low one is not thin',  at('low') >= 4e6, true);
-  is('and the top one is capped',     at('max') <= 48e6, true);
+  /* Low still has to be watchable - it is a small file, not a bad one. */
+  is('even the low one is not thin',  at('low') >= 800e3, true);
+  is('and the top one is capped',     at('max') <= 12e6, true);
   is('a bigger frame gets more bits',
      L.bitrateFor(1920,1080,'hq').videoBitsPerSecond > L.bitrateFor(1080,1080,'hq').videoBitsPerSecond, true);
-  is('master runs at 60fps',          L.bitrateFor(1080,1920,'max').fps, 60);
+  /* Master ran at 60fps and it was the single biggest reason a song came out
+     near a gigabyte. The picture is a photograph drifting slowly behind text -
+     there is nothing in it that 60 frames a second shows and 30 does not. */
+  is('master runs at 30, not 60',     L.bitrateFor(1080,1920,'max').fps, 30);
   is('and low drops to 24',           L.bitrateFor(1080,1920,'low').fps, 24);
 }
 
@@ -339,6 +343,38 @@ console.log('\nthe frame sizes');
      [tall.headY / 1920 < 0.15, wide.headY / 1080 < 0.15], [true, true]);
   is('and the words clear the hairline',
      [tall.lyricBase < tall.ruleY, wide.lyricBase < wide.ruleY], [true, true]);
+}
+
+console.log('\nwhat the file will weigh');
+{
+  /* These were set three times too high once: Master came out near forty
+     megabits and a three minute song ran to most of a gigabyte. Nothing here
+     should ever ask for more than twelve. */
+  is('four stops to pick from', L.QUALITY.length, 4);
+  is('none of them exceeds the ceiling',
+     L.QUALITY.every(q => L.bitrateFor(1080, 1920, q.id).videoBitsPerSecond <= 12e6), true);
+  is('and they climb in order',
+     L.QUALITY.map(q => L.bitrateFor(1080, 1920, q.id).videoBitsPerSecond)
+      .every((v, i, a) => i === 0 || v > a[i-1]), true);
+  is('HQ at 1080x1920 is about four megabits',
+     Math.round(L.bitrateFor(1080, 1920, 'hq').videoBitsPerSecond / 1e5) / 10, 3.7);
+  /* the number that matters: a three minute song at the largest stop */
+  is('three minutes at Master stays well under a gigabyte',
+     L.estimateBytes(1080, 1920, 'max', 180) < 200 * 1048576, true);
+  is('and a two minute one at HQ is a sane upload',
+     L.estimateBytes(1080, 1920, 'hq', 120) < 70 * 1048576, true);
+  is('a tiny frame still gets a floor',
+     L.bitrateFor(64, 64, 'low').videoBitsPerSecond, 800e3);
+
+  is('nothing long is nothing big',   L.estimateBytes(1080, 1920, 'hq', 0), 0);
+  is('and a negative song is nothing', L.estimateBytes(1080, 1920, 'hq', -5), 0);
+  is('an unknown stop falls back to HQ',
+     L.bitrateFor(1080, 1920, 'nope').videoBitsPerSecond, L.bitrateFor(1080, 1920, 'hq').videoBitsPerSecond);
+
+  is('sizes read as people write them',
+     [L.humanSize(900), L.humanSize(5000), L.humanSize(5*1048576), L.humanSize(90*1048576), L.humanSize(2*1073741824)],
+     ['900B', '5KB', '5.0MB', '90MB', '2.00GB']);
+  is('nothing is 0B', L.humanSize(0), '0B');
 }
 
 console.log('\nwrapping');

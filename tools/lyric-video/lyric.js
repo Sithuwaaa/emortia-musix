@@ -258,17 +258,39 @@
      photograph is the hardest thing to keep clean, so even the low stop is
      generous by the standards of a talking-head video. */
   const QUALITY = [
-    { id:'low', name:'Low',    bpp:0.06, fps:24, note:'Small file, for sending around.' },
-    { id:'mid', name:'Mid',    bpp:0.11, fps:30, note:'Fine for stories and reels.' },
-    { id:'hq',  name:'HQ',     bpp:0.19, fps:30, note:'What to upload. The default.' },
-    { id:'max', name:'Master', bpp:0.32, fps:60, note:'Keep this one. Big.' }
+    { id:'low', name:'Low',    bpp:0.020, fps:24, note:'Small enough to send in a message.' },
+    { id:'mid', name:'Mid',    bpp:0.035, fps:30, note:'Fine for stories and reels.' },
+    { id:'hq',  name:'HQ',     bpp:0.060, fps:30, note:'What to upload. The default.' },
+    { id:'max', name:'Master', bpp:0.100, fps:30, note:'The one to keep. Larger.' }
   ];
   const qualityById = id => QUALITY.filter(q => q.id === id)[0] || QUALITY[2];
   function bitrateFor(w, h, id) {
     const q = qualityById(id);
-    const v = Math.round(Math.min(48e6, Math.max(4e6, w * h * q.fps * q.bpp)));
+    /* The ceiling is the point of this table. These were set three times
+       higher once and Master came out near forty megabits, which put a three
+       minute song at close to a gigabyte for nothing anyone could see. What is
+       on screen is a still photograph drifting behind text - about the most
+       compressible thing there is - and HQ at 1080x1920 lands near four
+       megabits, which is what the platforms ask for anyway. */
+    const v = Math.round(Math.min(12e6, Math.max(800e3, w * h * q.fps * q.bpp)));
     return { videoBitsPerSecond: v, audioBitsPerSecond: q.id === 'low' ? 128000 : 192000, fps: q.fps };
   }
+
+  /* Roughly what will come out, so the size can be on screen before anyone
+     waits for it rather than after. Audio and container overhead are in it,
+     because a figure that is only the video track is not the file you get. */
+  function estimateBytes(w, h, id, seconds) {
+    const br = bitrateFor(w, h, id);
+    const s = Math.max(0, Number(seconds) || 0);
+    return Math.round((br.videoBitsPerSecond + br.audioBitsPerSecond) * s / 8 * 1.02);
+  }
+  const humanSize = bytes => {
+    const b = Math.max(0, Number(bytes) || 0);
+    if (b < 1024) return Math.round(b) + 'B';
+    if (b < 1048576) return (b / 1024).toFixed(0) + 'KB';
+    if (b < 1073741824) return (b / 1048576).toFixed(b < 10485760 ? 1 : 0) + 'MB';
+    return (b / 1073741824).toFixed(2) + 'GB';
+  };
 
   /* ---------------------------------------------------------- the fade out
 
@@ -430,7 +452,7 @@
     activeAt, windowOf, wordsOf, litCount, litFromTimes, lineAlpha, sungBy,
     readWords, timedWords, effectiveTimes,
     REVEALS, wordFx, easeOut,
-    QUALITY, qualityById, bitrateFor,
+    QUALITY, qualityById, bitrateFor, estimateBytes, humanSize,
     sway, layout, wrap, frameAt
   };
 });
