@@ -871,8 +871,11 @@ function render(){
       const editId = EDIT_ID;                    // read before the awaits too
       /* An edit keeps whatever deadline the job already had. Nothing sets one
          any more, but a job written before the field went should not lose it
-         because someone fixed a typo in its title. */
-      const due = (editId && t && t.due) ? t.due : null;
+         because someone fixed a typo in its title. The job is looked up here:
+         the copy in renderAdd is that function's own and is long out of scope
+         by the time this runs. */
+      const before = editId ? TODOS.find(x => x.id === editId) : null;
+      const due = before && before.due ? before.due : null;
       if (!title){ toast('Give it a title first'); $('tTitle').focus(); return; }
       add.disabled = true; add.textContent = editId ? 'Saving…' : 'Adding…';
       try {
