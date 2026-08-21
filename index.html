@@ -1,6 +1,15 @@
 <!DOCTYPE html>
 <html>
 <head>
+<!-- Every path in this file is written relative to the site root - tools/,
+     audio/, poems/, fonts/. That was fine while the address was always "/",
+     but the pages have their own addresses now, and a relative path resolves
+     against whatever the address currently is: standing on /tools/ turned
+     tools/whattodo/ into /tools/tools/whattodo/, and would have done the same
+     to every song and every font. This pins them all to the root, wherever
+     the address happens to be. It must stay first in the head, ahead of
+     anything with a relative URL. -->
+<base href="/">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <template id="__bundler_thumbnail" data-bg-color="#170d10">
