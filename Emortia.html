@@ -1048,10 +1048,11 @@ class Component extends DCLogic {
       src: x.src || ('audio/' + slugify(x.t) + '.mp3'),
     }));
     const pp=this.loadPlayerPrefs();
-    // The site opens on the front page. The journal design file this book came
-    // from starts on 'blog' so the book is on screen while you work on it —
-    // convenient there, wrong for a visitor arriving at the door.
-    this.state = { page:'home', theme:'burgundy', menuOpen:false, poems:[], poemsLoaded:false,
+    // The site opens on whatever the address says, and on the front page when
+    // it says nothing. The journal design file this book came from starts on
+    // 'blog' so the book is on screen while you work on it — convenient there,
+    // wrong for a visitor arriving at the door.
+    this.state = { page:this.startPage(), theme:'burgundy', menuOpen:false, poems:[], poemsLoaded:false,
       bkOpen:false, bkIdx:0, bkSpread:false, bkDrag:null, bkInk:0, bkVol:0, bkShelf:true, bkPer:10,
       bkSingle:(window.matchMedia && window.matchMedia('(max-width:700px)').matches), playing:false, idx:0, progress:0, volume:pp.volume, muted:pp.muted, shuffle:pp.shuffle, repeat:pp.repeat,
       /* the queue and the words share one drawer, so one flag says which face
@@ -1234,6 +1235,12 @@ class Component extends DCLogic {
     this.probeDurations();
     this._checkHash=()=>this.setState({});   // hash is read at render time; just force a re-render
     window.addEventListener('hashchange', this._checkHash);
+    /* the back button, which until now did nothing on this site at all */
+    this._onPop=()=>{
+      const p = this.pageFor(location.pathname) || 'home';
+      this.setState({ page:p, drawer:'', menuOpen:false, sortOpen:false });
+    };
+    window.addEventListener('popstate', this._onPop);
     // leaving browser fullscreen (Esc) should close the now-playing screen too
     this._onFsChange=()=>{
       const inFs=!!(document.fullscreenElement||document.webkitFullscreenElement);
@@ -1318,6 +1325,7 @@ class Component extends DCLogic {
     clearTimeout(this._bkFitT);
     if(this._onKey) window.removeEventListener('keydown', this._onKey);
     if(this._checkHash) window.removeEventListener('hashchange', this._checkHash);
+    if(this._onPop) window.removeEventListener('popstate', this._onPop);
     if(this._onWheel) window.removeEventListener('wheel', this._onWheel);
     if(this._onFsChange){
       document.removeEventListener('fullscreenchange', this._onFsChange);
@@ -1336,7 +1344,59 @@ class Component extends DCLogic {
     }
   }
 
-  go(p){ return ()=>this.setState({page:p, drawer:'', menuOpen:false, sortOpen:false}); }
+  /* ---- the address bar ----
+     Every page was one state change and the URL never moved, so /music could
+     not be linked, bookmarked, or reached with the back button. Each page has
+     a path now and clicking one pushes it.
+
+     GitHub Pages serves files, not routes, so a refresh on /music asks the
+     server for a file that is not there. 404.html catches that, remembers the
+     path and bounces to the root, and restoreRoute below puts it back - which
+     is why the address survives a reload. /tools is the awkward one: a real
+     tools/ directory exists, so the server redirects /tools to /tools/ before
+     404.html ever runs. Writing the trailing slash ourselves skips that hop. */
+  static get ROUTES(){
+    return [
+      ['home',    '/'],
+      ['music',   '/music'],
+      ['blog',    '/journal'],
+      ['tools',   '/tools/'],
+      ['about',   '/about'],
+      ['contact', '/contact'],
+      ['owner',   '/owner']
+    ];
+  }
+  pathFor(p){
+    const r = Component.ROUTES.filter(x => x[0] === p)[0];
+    return r ? r[1] : '/';
+  }
+  pageFor(path){
+    const clean = String(path || '/').replace(/\/+$/, '') || '/';
+    const r = Component.ROUTES.filter(x => (x[1].replace(/\/+$/, '') || '/') === clean)[0];
+    return r ? r[0] : null;
+  }
+  /* the page to open on arrival: the path, or whatever 404.html stashed */
+  startPage(){
+    let path = location.pathname;
+    try {
+      const saved = sessionStorage.getItem('emortia_route');
+      if (saved){ sessionStorage.removeItem('emortia_route'); path = saved; }
+    } catch(e){}
+    const p = this.pageFor(path);
+    /* normalise on the way in, so /tools and /tools/ settle on one form */
+    const canon = this.pathFor(p || 'home');
+    if (p && canon !== location.pathname)
+      { try { history.replaceState({ page:p }, '', canon); } catch(e){} }
+    return p || 'home';
+  }
+  setPage(p, replace){
+    const path = this.pathFor(p);
+    if (location.pathname !== path){
+      try { history[replace ? 'replaceState' : 'pushState']({ page:p }, '', path); } catch(e){}
+    }
+    this.setState({ page:p, drawer:'', menuOpen:false, sortOpen:false });
+  }
+  go(p){ return ()=>this.setPage(p); }
   play(i){ return ()=>this.loadTrack(i, true); }
 
   // An <img> built here rather than in the markup: a {{ slot }} written into a
@@ -3064,7 +3124,7 @@ class Component extends DCLogic {
       hmTicker: (()=>{ const t=this.tracks.map(x=>x.t).slice(0,6); return t.length?t.concat(['new music','emortia']):['emortia','new music']; })(),
       hmNowMeta: s.playing ? (t.durLabel+' \u00b7 '+this.fmt(s.progress)) : t.durLabel,
       ...(()=>{
-        const goPage=(p)=>()=>this.setState({page:p, menuOpen:false});
+        const goPage=(p)=>()=>this.setPage(p);
         const newest=this.tracks[this.tracks.length-1];
         return {
           hmNewTitle: newest.t,
@@ -3088,7 +3148,7 @@ class Component extends DCLogic {
             {label:'Try the tools', count:'7 utilities \u2192', border:'#1c3a42', bg:'rgba(63,189,208,0.07)', tone:'#3fbdd0', go:goPage('tools')},
           ]),
           hmMoods: this.moods.map(m=>{ const mt=this.tracks[m.track]; return { ...m,
-            meta: mt?mt.t:'', go: ()=>{ this.loadTrack(m.track, true); this.setState({page:'music', menuOpen:false}); } }; }),
+            meta: mt?mt.t:'', go: ()=>{ this.loadTrack(m.track, true); this.setPage('music'); } }; }),
         };
       })(),
       /* the number on the front page counts what this visitor can open */

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Emortia</title>
+<style>
+  html,body{height:100%;margin:0;background:#170d10;color:#f3e7ea;
+    font-family:'Hanken Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+  .mid{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center}
+  .spin{width:34px;height:34px;border-radius:50%;border:3px solid rgba(255,255,255,.15);
+    border-top-color:#d15873;animation:t .8s linear infinite}
+  @keyframes t{to{transform:rotate(360deg)}}
+  a{color:#e87a94}
+  .gone{display:none}
+</style>
+</head>
+<body>
+<div class="mid">
+  <div class="spin" id="spin"></div>
+  <div id="msg">Finding that page…</div>
+  <div class="gone" id="lost">
+    <h1 style="font-family:'Bricolage Grotesque',sans-serif;font-size:28px;margin:0 0 8px">Nothing here</h1>
+    <p style="color:#b09aa1;margin:0 0 16px">That address does not match anything on the site.</p>
+    <a href="/">Back to the front page</a>
+  </div>
+</div>
+<script>
+/* GitHub Pages serves files, not routes. A visitor who refreshes on /music, or
+   follows a link straight to it, asks the server for a file that does not
+   exist and lands here. So this remembers where they were going, sends them to
+   the root where the app does live, and the app puts the address back.
+
+   Only the site's own pages are forwarded. Anything else really is a wrong
+   address and is told so, rather than being bounced to the front page as if it
+   had been found - a redirect for every typo hides broken links. */
+(function () {
+  var KNOWN = ['/music', '/journal', '/tools', '/about', '/contact', '/owner'];
+  var path = location.pathname.replace(/\/+$/, '') || '/';
+  var ok = KNOWN.indexOf(path) >= 0;
+
+  if (ok) {
+    try { sessionStorage.setItem('emortia_route', path); } catch (e) {}
+    /* replace, not assign: the broken address should not sit in the history
+       waiting for the back button to land on it again */
+    location.replace('/' + location.search + location.hash);
+    return;
+  }
+  document.getElementById('spin').style.display = 'none';
+  document.getElementById('msg').style.display = 'none';
+  document.getElementById('lost').style.display = 'block';
+})();
+</script>
+</body>
+</html>
