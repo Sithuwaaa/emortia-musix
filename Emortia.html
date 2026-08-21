@@ -468,11 +468,22 @@ html.bk-reading-on,html.bk-reading-on body{overflow:hidden;}
 /* The CV dates sit in their own rail so the eye can run down them. On a phone
    that rail costs more width than it is worth and leaves the role titles
    breaking mid-word, so the dates go above the role instead. */
-.cv-role{display:grid;grid-template-columns:minmax(0,132px) 1fr;gap:22px;}
+.cv-role{display:grid;grid-template-columns:minmax(0,120px) 18px 1fr;gap:0 20px;}
 .cv-dash{display:none;}
+/* the rail: a node per role, and a hairline joining it to the next one */
+.cv-node{position:relative;display:flex;justify-content:center;padding-top:8px;}
+.cv-dot{width:11px;height:11px;border-radius:50%;border:2px solid var(--accentB);
+  background:var(--bg);flex-shrink:0;position:relative;z-index:1;}
+.cv-dot.live{background:var(--accentB);box-shadow:0 0 0 4px var(--glowSoft);}
+.cv-rail{position:absolute;top:20px;bottom:-14px;width:1px;background:var(--line3);}
+.cv-head{grid-template-columns:1fr;}
+@media (min-width:900px){ .cv-head{grid-template-columns:minmax(0,0.9fr) minmax(0,1.1fr);gap:48px;} }
 @media (max-width:760px){
+  /* the rail costs more width than it earns on a phone, and the titles were
+     breaking mid-word to pay for it */
   .cv-role{grid-template-columns:1fr;gap:8px;}
   .cv-role .cv-br{display:none;}
+  .cv-role .cv-node{display:none;}
   .cv-dash{display:inline;}
 }
 @keyframes termRoll{0%,42%{transform:translateY(0);}50%,92%{transform:translateY(-1.6em);}100%{transform:translateY(0);}}
@@ -2245,77 +2256,108 @@ class Component extends DCLogic {
       style:{fontFamily:mono,fontSize:'12px',letterSpacing:'0.2em',color:'var(--accent)',
         textTransform:'uppercase',marginBottom:'14px'}}, text);
 
-    /* the numbers, which say more in four words than the paragraph does */
+    /* The numbers say more in four words than the paragraph does, so they are
+       given the accent - which on this page is the violet the About section
+       sets for itself, not the rose the rest of the site runs on. */
     const stats = [
       ['7+',   'years in telecom'],
-      ['196+', 'sites operated'],
+      ['196+', 'sites maintained'],
       ['4',    'vendor platforms'],
-      ['3',    'operator networks']
+      ['3',    'national networks']
     ].map((s,i)=>React.createElement('div',{key:i,
       style:{border:'1px solid var(--line)',borderRadius:'14px',background:'var(--panelS)',
-        padding:'18px 16px'}},
+        padding:'20px 18px'}},
       React.createElement('div',{style:{fontFamily:"'Bricolage Grotesque',sans-serif",fontWeight:800,
-        fontSize:'clamp(26px,3.4vw,36px)',lineHeight:1,color:'var(--text)'}}, s[0]),
-      React.createElement('div',{style:{fontFamily:mono,fontSize:'11.5px',color:'var(--dim)',
-        marginTop:'7px',letterSpacing:'0.04em'}}, s[1])));
+        fontSize:'clamp(28px,3.6vw,40px)',lineHeight:1,color:'var(--accentB)',letterSpacing:'-0.02em'}}, s[0]),
+      React.createElement('div',{style:{fontFamily:mono,fontSize:'10.5px',color:'var(--mute)',
+        marginTop:'9px',letterSpacing:'0.13em',textTransform:'uppercase'}}, s[1])));
 
     /* Dates in their own rail so the eye can run down them, the way a CV is
        actually read. The current role carries a live dot. */
-    const roles = this.cvRoles().map((r,i)=>React.createElement('div',{key:i, className:'cv-role',
-      style:{padding:'22px 0',borderTop:i?'1px solid var(--line)':'none'}},
+    /* A rail with a node per role, so four jobs read as one run of work rather
+       than four separate blocks. The node is filled on the job being done now
+       and hollow on the ones finished, which is the whole shape at a glance. */
+    const roles = this.cvRoles().map((r,i,all)=>React.createElement('div',{key:i, className:'cv-role',
+      style:{paddingBottom:'32px'}},
       React.createElement('div',{className:'cv-when',
-        style:{fontFamily:mono,fontSize:'12px',lineHeight:1.7,
-        color:r.live?'var(--accent)':'var(--dim)',whiteSpace:'nowrap'}},
-        r.live?React.createElement('span',{style:{display:'inline-block',width:'7px',height:'7px',
-          borderRadius:'50%',background:'var(--accent)',marginRight:'8px',verticalAlign:'middle',
-          animation:'termLed 1.8s ease-in-out infinite'}}):null,
-        r.from,
+        style:{fontFamily:mono,fontSize:'12px',lineHeight:1.7,whiteSpace:'nowrap',paddingTop:'3px'}},
+        React.createElement('span',{style:{color:'var(--accentB)'}}, r.from),
         /* stacked on a wide screen, side by side with a dash on a narrow one -
            without the dash the two dates run together as "Aug 2025Present" */
         React.createElement('br',{className:'cv-br'}),
-        React.createElement('span',{className:'cv-dash'},' – '),
-        r.to),
+        React.createElement('span',{className:'cv-dash',style:{color:'var(--mute)'}},' – '),
+        React.createElement('span',{style:{color:'var(--mute)'}}, r.to)),
+      React.createElement('div',{className:'cv-node'},
+        React.createElement('span',{className:'cv-dot'+(r.live?' live':'')}),
+        i < all.length - 1 ? React.createElement('span',{className:'cv-rail'}) : null),
       React.createElement('div',null,
         React.createElement('div',{style:{fontFamily:"'Bricolage Grotesque',sans-serif",fontWeight:700,
-          fontSize:'clamp(18px,2.2vw,23px)',letterSpacing:'-0.01em',color:'var(--text)',lineHeight:1.25}}, r.title),
-        React.createElement('div',{style:{fontFamily:mono,fontSize:'12.5px',color:'var(--text2)',
-          margin:'6px 0 14px'}}, r.org),
+          fontSize:'clamp(19px,2.3vw,25px)',letterSpacing:'-0.015em',color:'var(--text)',lineHeight:1.22}}, r.title),
+        React.createElement('div',{style:{fontSize:'14px',color:'var(--dim)',
+          margin:'7px 0 15px'}}, r.org),
         r.bullets.map((b,j)=>React.createElement('div',{key:j,
-          style:{display:'flex',gap:'11px',color:'var(--dim)',fontSize:'15px',
-            lineHeight:1.65,marginBottom:'9px'}},
-          React.createElement('span',{style:{color:'var(--line3)',flexShrink:0}},'—'),
+          style:{display:'flex',gap:'12px',color:'var(--dim)',fontSize:'15px',
+            lineHeight:1.65,marginBottom:'10px'}},
+          React.createElement('span',{style:{color:'var(--accentB)',flexShrink:0,opacity:0.8}},'—'),
           React.createElement('span',null,b))))));
 
+    /* The year in the accent, and how it ended on its own line rather than
+       trailing the school after a dot - "followed" and "merit pass" say
+       different things and neither should read as part of an address. */
     const eduRows = this.cvEducation().map((e,i)=>React.createElement('div',{key:i,
-      style:{display:'grid',gridTemplateColumns:'56px 1fr',gap:'14px',padding:'13px 0',
-        borderTop:i?'1px solid var(--line)':'none'}},
-      React.createElement('div',{style:{fontFamily:mono,fontSize:'12px',color:'var(--dim)'}}, e.y),
+      style:{display:'grid',gridTemplateColumns:'54px 1fr',gap:'16px',marginBottom:'22px'}},
+      React.createElement('div',{style:{fontFamily:mono,fontSize:'12px',color:'var(--accentB)',paddingTop:'2px'}}, e.y),
       React.createElement('div',null,
-        React.createElement('div',{style:{fontSize:'15px',lineHeight:1.45,color:'var(--text)'}}, e.t),
-        React.createElement('div',{style:{fontFamily:mono,fontSize:'11.5px',color:'var(--dim)',marginTop:'4px'}},
-          e.w + (e.note ? ' · ' + e.note : '')))));
+        React.createElement('div',{style:{fontSize:'15.5px',lineHeight:1.4,color:'var(--text)',fontWeight:600}}, e.t),
+        React.createElement('div',{style:{fontSize:'13.5px',color:'var(--dim)',marginTop:'4px'}}, e.w),
+        e.note ? React.createElement('div',{style:{fontFamily:mono,fontSize:'10px',
+          letterSpacing:'0.13em',textTransform:'uppercase',color:'var(--mute)',marginTop:'6px'}}, e.note) : null)));
 
-    const listBlock = (title, items) => React.createElement('div',null,
-      React.createElement('div',{style:{fontFamily:mono,fontSize:'11px',letterSpacing:'0.16em',
-        color:'var(--text2)',textTransform:'uppercase',marginBottom:'12px'}}, title),
+    /* Each group in its own bordered panel with hairlines between the rows.
+       Three plain stacked lists ran together into one grey column and there
+       was no telling where the skills stopped and the languages started. */
+    const listBlock = (title, items, render) => React.createElement('div',{
+      style:{border:'1px solid var(--line)',borderRadius:'14px',background:'var(--panelS)',
+        padding:'4px 18px 6px'}},
+      React.createElement('div',{style:{fontFamily:mono,fontSize:'10px',letterSpacing:'0.16em',
+        color:'var(--accentB)',textTransform:'uppercase',padding:'16px 0 4px'}}, title),
       items.map((s,i)=>React.createElement('div',{key:i,
-        style:{color:'var(--dim)',fontSize:'14.5px',lineHeight:1.6,marginBottom:'7px'}}, s)));
+        style:{padding:'12px 0',borderTop:'1px solid var(--line)',
+          display:'flex',gap:'12px',alignItems:'baseline'}},
+        render ? render(s) : React.createElement(React.Fragment,null,
+          React.createElement('span',{style:{color:'var(--accentB)',opacity:0.55,flexShrink:0,
+            fontFamily:mono,fontSize:'11px'}}, String(i+1).padStart(2,'0')),
+          React.createElement('span',{style:{color:'var(--dim)',fontSize:'14.5px',lineHeight:1.55}}, s)))));
+
+    /* a language is a name and a level, so it is set as two columns */
+    const langRow = (s) => React.createElement(React.Fragment,null,
+      React.createElement('span',{style:{color:'var(--text)',fontSize:'14.5px',flex:1}}, s[0]),
+      React.createElement('span',{style:{fontFamily:mono,fontSize:'10.5px',color:'var(--mute)',
+        letterSpacing:'0.1em',textTransform:'uppercase',textAlign:'right'}}, s[1]));
 
     return React.createElement('section',{
       style:{animation:'fadeUp 0.5s ease',padding:'0 0 70px'}},
 
-      React.createElement('div',{style:{borderTop:'1px solid var(--line)',paddingTop:'42px'}},
-        eyebrow('The other half · engineering'),
-        React.createElement('p',{style:{color:'var(--text2)',fontSize:'17px',lineHeight:1.7,
-          margin:'0 0 30px',maxWidth:'70ch'}},
-          'Telecommunications engineer with over seven years of hands-on work in telecom operations, ' +
-          'maintenance and project delivery across the Airtel, Dialog and SLT-Mobitel networks. Multi-vendor ' +
-          'BBU and microwave commissioning – Huawei, Ericsson, ZTE, Wi-Bas – on a foundation of network ' +
-          'infrastructure, wireless technology and troubleshooting. Currently Assistant Project Manager on the ' +
-          'Dialog Lamp Pole Project, where the engineering sits alongside team coordination, progress reporting ' +
-          'and keeping every party talking to each other.'),
+      /* The headline carries the job title and the paragraph sits beside it,
+         rather than a label with a wall of text under it. It is the one place
+         on this page that gets to be loud. */
+      React.createElement('div',{style:{borderTop:'1px solid var(--line)',paddingTop:'46px'}},
+        React.createElement('div',{className:'cv-head',
+          style:{display:'grid',gap:'32px',alignItems:'start',marginBottom:'34px'}},
+          React.createElement('div',null,
+            eyebrow('The other half · engineering'),
+            React.createElement('h3',{style:{fontFamily:"'Bricolage Grotesque',sans-serif",fontWeight:800,
+              fontSize:'clamp(30px,4vw,50px)',letterSpacing:'-0.03em',lineHeight:1.03,
+              color:'var(--text)',margin:0}},
+              'Telecommunications', React.createElement('br'), 'engineer.')),
+          React.createElement('p',{style:{color:'var(--text2)',fontSize:'16.5px',lineHeight:1.72,
+            margin:0}},
+            'Over seven years of hands-on experience in telecom operations, maintenance and project ' +
+            'delivery across the Airtel, Dialog and SLT-Mobitel networks – configuring and commissioning ' +
+            'multi-vendor BBU and microwave systems, and now leading field teams as Assistant Project ' +
+            'Manager on the Dialog Lamp Pole Project.')),
         React.createElement('div',{style:{display:'grid',
-          gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:'12px',marginBottom:'46px'}}, stats)),
+          gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:'12px',marginBottom:'52px'}}, stats)),
 
       React.createElement('div',{style:{marginBottom:'46px'}}, eyebrow('Experience'), roles),
 
@@ -2323,7 +2365,7 @@ class Component extends DCLogic {
         gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:'44px',
         borderTop:'1px solid var(--line)',paddingTop:'38px'}},
         React.createElement('div',null, eyebrow('Education'), eduRows),
-        React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:'32px'}},
+        React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:'16px'}},
           listBlock('Technical', [
             'Multi-vendor RAN & MW commissioning – Huawei, Ericsson, ZTE, Wi-Bas',
             'Moshell, LMT On-Site, NetEco, Huawei ISDP, WH24',
@@ -2337,9 +2379,9 @@ class Component extends DCLogic {
             'Adaptability and time management'
           ]),
           listBlock('Languages', [
-            'Sinhala – fluent',
-            'English – professional working proficiency'
-          ]))),
+            ['Sinhala', 'fluent'],
+            ['English', 'professional working']
+          ], langRow))),
 
       React.createElement('div',{style:{borderTop:'1px solid var(--line)',marginTop:'38px',
         paddingTop:'26px',display:'flex',gap:'18px',alignItems:'center',flexWrap:'wrap'}},
