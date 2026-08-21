@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <!-- Every path in this file is written relative to the site root - tools/,
      audio/, poems/, fonts/. That was fine while the address was always "/",
@@ -25,13 +25,13 @@
     <text x="600" y="560" font-family="Georgia, serif" font-size="52" font-weight="700" fill="#f7edf0" text-anchor="middle">Emortia</text>
   </svg>
 </template>
-<script src="tools/_lib/owner-config.js"></script>
-<script src="tools/_lib/owner.js"></script>
-<script src="tools/_lib/supabase-config.js"></script>
-<script src="tools/_lib/db.js"></script>
-<script src="tools/_lib/access-config.js"></script>
-<script src="tools/_lib/access.js"></script>
-<script src="./support.js"></script>
+<script src="tools/_lib/owner-config.js" defer></script>
+<script src="tools/_lib/owner.js" defer></script>
+<script src="tools/_lib/supabase-config.js" defer></script>
+<script src="tools/_lib/db.js" defer></script>
+<script src="tools/_lib/access-config.js" defer></script>
+<script src="tools/_lib/access.js" defer></script>
+<script src="./support.js" defer></script>
 </head>
 <body>
 <x-dc>
@@ -724,7 +724,7 @@ html.bk-reading-on,html.bk-reading-on body{overflow:hidden;}
 
       <!-- 2f · who's behind it -->
       <div style="margin-top:46px;border:1px solid var(--line2);border-radius:18px;background:var(--surface2);padding:clamp(22px,3vw,34px);display:flex;gap:clamp(20px,3vw,34px);align-items:center;flex-wrap:wrap;">
-        <img src="media/portrait.jpg" alt="Sithara Perera" style="width:132px;height:160px;object-fit:cover;border-radius:14px;flex-shrink:0;filter:saturate(.85);box-shadow:0 18px 40px -18px rgba(0,0,0,.9);"></img>
+        <img src="media/portrait.webp" alt="Sithara Perera" width="760" height="950" loading="lazy" decoding="async" style="width:132px;height:160px;object-fit:cover;border-radius:14px;flex-shrink:0;filter:saturate(.85);box-shadow:0 18px 40px -18px rgba(0,0,0,.9);"></img>
         <div style="flex:1;min-width:240px;">
           <div style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.2em;color:#8a7cf0;text-transform:uppercase;">The person making it</div>
           <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:28px;letter-spacing:-0.025em;margin:10px 0 12px;">Sithara Perera</div>
@@ -882,7 +882,7 @@ html.bk-reading-on,html.bk-reading-on body{overflow:hidden;}
     <section style="animation:fadeUp 0.5s ease;padding:40px 0 60px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:48px;align-items:start;">
       <div class="about-portrait" style="position:sticky;top:90px;">
         <div style="aspect-ratio:3/4;border-radius:20px;border:1px solid var(--line3);position:relative;overflow:hidden;">
-          <img src="media/portrait.jpg" alt="Portrait of Sithara Perera" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></img>
+          <img src="media/portrait.webp" alt="Portrait of Sithara Perera" width="760" height="950" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></img>
         </div>
       </div>
       <div>
@@ -1041,13 +1041,13 @@ class Component extends DCLogic {
     super(props);
     const raw = [
       // d = fallback seconds, replaced by the file's real duration once metadata loads
-      {t:'Harana Hitha', a:'Emortia', d:111, tone:'var(--artA)', src:'audio/harana-hitha.wav', img:'audio/art/harana-hitha.png'},
-      {t:'Napuru Hitha', a:'Emortia', d:44, tone:'#312338', src:'audio/napuru-hitha.wav', img:'audio/art/napuru-hitha.png'},
-      {t:'Suwanda Vitharayi', a:'Emortia', d:97, tone:'#1f2e2c', src:'audio/suwanda-vitharayi.wav', img:'audio/art/suwanda-vitharayi.png'},
-      {t:'Punchi Kella', a:'Emortia', d:73, tone:'#3d2a1e', src:'audio/punchi-kella.wav', img:'audio/art/punchi-kella.png'},
-      {t:'Parissam', a:'Emortia', d:120, tone:'#23303f', src:'audio/parissam.wav', img:'audio/art/parissam.png'},
-      {t:'Hadathi Mala', a:'Emortia', d:98, tone:'#3a2436', src:'audio/hadathi-mala.wav', img:'audio/art/hadathi-mala.png'},
-      {t:'Thissema', a:'Emortia', d:112, tone:'#412f2b', src:'audio/thissema.wav', img:'audio/art/thissema.png'},
+      {t:'Harana Hitha', a:'Emortia', d:111, tone:'var(--artA)', src:'audio/harana-hitha.wav', img:'audio/art/harana-hitha.webp'},
+      {t:'Napuru Hitha', a:'Emortia', d:44, tone:'#312338', src:'audio/napuru-hitha.wav', img:'audio/art/napuru-hitha.webp'},
+      {t:'Suwanda Vitharayi', a:'Emortia', d:97, tone:'#1f2e2c', src:'audio/suwanda-vitharayi.wav', img:'audio/art/suwanda-vitharayi.webp'},
+      {t:'Punchi Kella', a:'Emortia', d:73, tone:'#3d2a1e', src:'audio/punchi-kella.wav', img:'audio/art/punchi-kella.webp'},
+      {t:'Parissam', a:'Emortia', d:120, tone:'#23303f', src:'audio/parissam.wav', img:'audio/art/parissam.webp'},
+      {t:'Hadathi Mala', a:'Emortia', d:98, tone:'#3a2436', src:'audio/hadathi-mala.wav', img:'audio/art/hadathi-mala.webp'},
+      {t:'Thissema', a:'Emortia', d:112, tone:'#412f2b', src:'audio/thissema.wav', img:'audio/art/thissema.webp'},
     ];
     const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
     this.tracks = raw.map((x,i)=>({
@@ -1411,9 +1411,18 @@ class Component extends DCLogic {
   // An <img> built here rather than in the markup: a {{ slot }} written into a
   // src="" is fetched literally before it can be filled, which is a 404 on
   // every load. Nothing to fetch until there is a real path.
-  artImg(src, style){
+  /* The covers are square and 900px, so width and height are stated rather
+     than left to be discovered - the browser can then keep the space before
+     the bytes arrive, and nothing on the page jumps as they land. Lazy by
+     default: a track list is mostly below the fold and most of it is never
+     scrolled to. eager is for the one that is already on screen. */
+  artImg(src, style, eager){
     if(typeof src!=='string' || !src) return null;
-    return React.createElement('img',{src, alt:'', style:{objectFit:'cover',flexShrink:0,...style}});
+    return React.createElement('img',{
+      src, alt:'', width:900, height:900,
+      loading: eager ? 'eager' : 'lazy',
+      decoding: 'async',
+      style:{objectFit:'cover',flexShrink:0,...style}});
   }
 
   socials(large){
@@ -1908,7 +1917,7 @@ class Component extends DCLogic {
     return React.createElement(React.Fragment,null,
       this.bkRunning(vol?vol.title:null, 'left'),
       React.createElement('div',{key:'m',style:{display:'flex',flexDirection:'column',flexShrink:0}},
-        React.createElement('div',{style:{fontFamily:"'UN-Agni',serif",lineHeight:1.22,
+        React.createElement('div',{lang:'si',style:{fontFamily:"'UN-Agni',serif",lineHeight:1.22,
           fontSize:single?'clamp(20px,5.4vw,28px)':'clamp(22px,2.8vw,36px)',color:'#1d1510'}}, p.title),
         React.createElement('div',{style:{width:'34%',height:'2px',background:'#8a3049',margin:'6% 0 7%'}}),
         React.createElement('div',{style:{fontFamily:"'Space Mono',monospace",lineHeight:1.5,
@@ -1923,7 +1932,7 @@ class Component extends DCLogic {
     return React.createElement(React.Fragment,null,
       single?null:this.bkRunning(p.title,'right'),
       React.createElement('div',{key:'b',style:{flex:1,display:'flex',alignItems:'center',minHeight:0,overflow:'hidden'}},
-        React.createElement('div',{className:'bk-verse'+(single?' single':''), key:inkKey,
+        React.createElement('div',{className:'bk-verse'+(single?' single':''), key:inkKey, lang:'si',
           style:{fontFamily:"'UN-Alakamanda',serif",color:'#1c140e'}},
           this.poemLines(p.body, inkKey))),
       this.bkFolio(folio,'right'));
@@ -1957,7 +1966,7 @@ class Component extends DCLogic {
       React.createElement('div',{key:'h',
         style:{display:'flex',flexDirection:'column',flex:1,minHeight:0,overflow:'hidden'}},
         React.createElement('div',{style:{display:'flex',alignItems:'baseline',gap:'10px'}},
-          React.createElement('div',{style:{fontFamily:"'UN-Agni',serif",lineHeight:1.22,
+          React.createElement('div',{lang:'si',style:{fontFamily:"'UN-Agni',serif",lineHeight:1.22,
             fontSize:single?'clamp(21px,5.4vw,28px)':'clamp(23px,2.8vw,36px)',color:'#1d1510'}},'පටුන'),
           C>1?React.createElement('div',{style:{fontFamily:"'Space Mono',monospace",
             fontSize:'clamp(8.5px,.95vw,11px)',letterSpacing:'.16em',color:'#9c8c6c'}}, (chunk+1)+' / '+C):null),
@@ -1972,7 +1981,7 @@ class Component extends DCLogic {
                 flexShrink:0,lineHeight:1.35,background:on?'rgba(138,48,73,.10)':'transparent'}},
               React.createElement('div',{style:{fontFamily:"'Space Mono',monospace",fontSize:'clamp(8.5px,.95vw,11px)',
                 color:'#9c8c6c',minWidth:'1.9em'}}, (i+1)+'.'),
-              React.createElement('div',{style:{fontFamily:"'UN-Alakamanda',serif",
+              React.createElement('div',{lang:'si',style:{fontFamily:"'UN-Alakamanda',serif",
                 fontSize:n>12?'clamp(12px,1.25vw,16px)':'clamp(13px,1.45vw,19px)',
                 color:on?'#8a3049':'#241a12',flex:'0 1 auto',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}, p.title),
               // the dotted leader that carries the eye across to the number
@@ -2146,7 +2155,7 @@ class Component extends DCLogic {
               React.createElement('div',{style:{fontFamily:"'Space Mono',monospace",fontSize:'clamp(7px,.8vw,9px)',
                 letterSpacing:'0.34em',textTransform:'uppercase',color:'rgba(88,58,24,.7)',
                 textShadow:'0 1px 0 rgba(255,240,210,.45)'}},'Emortia'),
-              React.createElement('div',{style:{fontFamily:"'UN-Agni',serif",fontSize:'clamp(17px,2.1vw,27px)',
+              React.createElement('div',{lang:'si',style:{fontFamily:"'UN-Agni',serif",fontSize:'clamp(17px,2.1vw,27px)',
                 lineHeight:1.16,color:v.ink,textShadow:'0 1px 0 rgba(255,240,210,.55)'}}, v.title),
               React.createElement('div',{style:{width:'54%',height:'1px',
                 background:'linear-gradient(90deg,transparent,rgba(110,76,34,.6),transparent)'}})))),
@@ -2233,7 +2242,7 @@ class Component extends DCLogic {
       React.createElement('div',{style:{position:'absolute',inset:'5.5% 6%',border:'1px solid rgba(122,84,40,.28)',borderRadius:'2px'}}),
       React.createElement('div',{style:{position:'relative',display:'flex',flexDirection:'column',alignItems:'center',gap:'5%',textAlign:'center'}},
         React.createElement('div',{style:{fontFamily:"'Space Mono',monospace",fontSize:'clamp(9px,1.1vw,11px)',letterSpacing:'0.42em',textTransform:'uppercase',color:'rgba(88,58,24,.72)',textShadow:'0 1px 0 rgba(255,240,210,.5)'}},'Emortia'),
-        React.createElement('div',{style:{fontFamily:"'UN-Agni',serif",fontSize:'clamp(26px,4.4vw,56px)',lineHeight:1.14,color:vol.ink,
+        React.createElement('div',{lang:'si',style:{fontFamily:"'UN-Agni',serif",fontSize:'clamp(26px,4.4vw,56px)',lineHeight:1.14,color:vol.ink,
           textShadow:'0 1px 0 rgba(255,240,210,.6),0 -1px 1px rgba(80,50,16,.32)'}}, vol.title),
         React.createElement('div',{style:{width:'clamp(60px,10vw,110px)',height:'1px',background:'linear-gradient(90deg,transparent,rgba(110,76,34,.6),transparent)'}}),
         React.createElement('div',{style:{fontFamily:"'EB Garamond',serif",fontStyle:'italic',fontSize:'clamp(13px,1.6vw,18px)',color:'rgba(96,66,30,.8)'}}, vol.sub),
@@ -2570,7 +2579,9 @@ class Component extends DCLogic {
     const lines=ly.map((l,i)=>{
       const isA=i===active;
       const near=synced && Math.abs(i-active)===1;
-      return React.createElement('div',{key:i, id:'lyric-'+i, className:'lyrics-line',
+      /* the words are Sinhala, and a screen reader that thinks they are
+         English reads them as nonsense */
+      return React.createElement('div',{key:i, id:'lyric-'+i, className:'lyrics-line', lang:'si',
         onClick: (synced && l.time!=null)? ()=>{ this.audio.currentTime=l.time; this._lastLyricIdx=-1; this.setState({progress:l.time}); this.syncLyricsScroll(); } : undefined,
         style:{
           padding:'10px 2px', cursor:synced?'pointer':'default',

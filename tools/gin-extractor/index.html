@@ -8,8 +8,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b03a56'/%3E%3Cg fill='%23170d10'%3E%3Crect x='8' y='13' width='3' height='8' rx='1.5'/%3E%3Crect x='13' y='9' width='3' height='14' rx='1.5'/%3E%3Crect x='18' y='11' width='3' height='10' rx='1.5'/%3E%3Crect x='23' y='8' width='3' height='15' rx='1.5'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="icon-192.png">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 <style>
   :root{
     --navy:#16203a;
@@ -202,8 +202,17 @@
 </main>
 
 <script>
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+/* pdf.js is deferred now, so it does not exist while this script is being
+   parsed - setting the worker here would have thrown before the page drew
+   anything. It is set on the way in to the one function that reads a PDF,
+   which is the first moment it is needed and the first moment it exists. */
+let PDF_WORKER_SET = false;
+function readyPdfjs(){
+  if (PDF_WORKER_SET) return;
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  PDF_WORKER_SET = true;
+}
 
 /* ---------- persistence (v3 schema: one row per material) ---------- */
 const STORE_KEY = 'gin_rows_v4';
@@ -319,6 +328,7 @@ const JUNK_RE = /^Page\s*No\b|^\d{2}\.\d{2}\.\d{4}\s*\/\s*\d{2}:\d{2}|^GIN\s*:/i
 
 async function parsePDF(file) {
   const buf = await file.arrayBuffer();
+  readyPdfjs();
   const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
 
   const allLines = [];
