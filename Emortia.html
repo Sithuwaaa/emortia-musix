@@ -465,27 +465,6 @@ html.bk-reading-on,html.bk-reading-on body{overflow:hidden;}
 .term-card>*{position:relative;z-index:1;}
 @keyframes tickerRun{to{transform:translateX(-50%);}}
 @media (max-width:700px){.hm-feature{grid-template-columns:1fr !important;}}
-/* The CV dates sit in their own rail so the eye can run down them. On a phone
-   that rail costs more width than it is worth and leaves the role titles
-   breaking mid-word, so the dates go above the role instead. */
-.cv-role{display:grid;grid-template-columns:minmax(0,120px) 18px 1fr;gap:0 20px;}
-.cv-dash{display:none;}
-/* the rail: a node per role, and a hairline joining it to the next one */
-.cv-node{position:relative;display:flex;justify-content:center;padding-top:8px;}
-.cv-dot{width:11px;height:11px;border-radius:50%;border:2px solid var(--accentB);
-  background:var(--bg);flex-shrink:0;position:relative;z-index:1;}
-.cv-dot.live{background:var(--accentB);box-shadow:0 0 0 4px var(--glowSoft);}
-.cv-rail{position:absolute;top:20px;bottom:-14px;width:1px;background:var(--line3);}
-.cv-head{grid-template-columns:1fr;}
-@media (min-width:900px){ .cv-head{grid-template-columns:minmax(0,0.9fr) minmax(0,1.1fr);gap:48px;} }
-@media (max-width:760px){
-  /* the rail costs more width than it earns on a phone, and the titles were
-     breaking mid-word to pay for it */
-  .cv-role{grid-template-columns:1fr;gap:8px;}
-  .cv-role .cv-br{display:none;}
-  .cv-role .cv-node{display:none;}
-  .cv-dash{display:inline;}
-}
 @keyframes termRoll{0%,42%{transform:translateY(0);}50%,92%{transform:translateY(-1.6em);}100%{transform:translateY(0);}}
 .hm-card{transition:border-color .22s ease,transform .22s ease,box-shadow .3s ease;}
 .hm-card:hover{transform:translateY(-2px);border-color:rgba(var(--hmRGB),.7) !important;box-shadow:0 20px 48px -22px rgba(var(--hmRGB),.6);}
@@ -909,18 +888,14 @@ html.bk-reading-on,html.bk-reading-on body{overflow:hidden;}
       <div>
         <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:0.2em;color:var(--accent);text-transform:uppercase;">Who's behind it</div>
         <h2 style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(36px,5vw,60px);letter-spacing:-0.03em;margin:6px 0 24px;">About</h2>
-        <p style="color:var(--text2);font-size:18px;line-height:1.7;margin:0 0 18px;">Sithara Perera is a producer and sound designer who never quite picked a lane. Half the week is spent writing music; the other half is spent running the small machine that lets the music exist.</p>
-        <p style="color:var(--dim);font-size:16px;line-height:1.7;margin:0 0 28px;">This site is both halves in one place: a player for the work, and a workspace for everything around it. Built warm, kept honest.</p>
-        <div style="display:flex;flex-wrap:wrap;gap:8px;">
-          <sc-for list="{{ skills }}" as="sk" hint-placeholder-count="6">
-            <span style="font-family:'Space Mono',monospace;font-size:12px;color:var(--dim);border:1px solid var(--line3);border-radius:999px;padding:7px 14px;">{{ sk }}</span>
-          </sc-for>
-        </div>
+        <p style="color:var(--text2);font-size:18px;line-height:1.7;margin:0 0 18px;">Producer and sound designer by night, telecommunications engineer by day – Emortia never quite picked a lane. Half the week is spent writing music; the other half is spent on towers, links and BBUs across the Airtel, Dialog and SLT-Mobitel networks.</p>
+        <p style="color:var(--dim);font-size:16px;line-height:1.7;margin:0 0 18px;">Eight-plus years in telecom operations, maintenance and project delivery, commissioning multi-vendor BBU and microwave systems. Currently Assistant Project Manager on the Dialog Lamp Pole Project, where the engineering sits alongside coordinating field teams, progress reporting and stakeholder communication.</p>
+        <p style="color:var(--dim);font-size:16px;line-height:1.7;margin:0 0 30px;">This site is both halves in one place: a player for the work, and a workspace for everything around it. Built warm, kept honest.</p>
+        <!-- Three groups rather than one unlabelled row: the same chip, but it
+             now says which half of the week it belongs to. -->
+        {{ aboutSkills }}
       </div>
     </section>
-    <!-- the CV, full width under the intro rather than squeezed into the
-         column beside the portrait -->
-    {{ aboutCV }}
     </sc-if>
 
     <!-- ============ CONTACT ============ -->
@@ -1087,7 +1062,7 @@ class Component extends DCLogic {
     // wrong for a visitor arriving at the door.
     this.state = { page:this.startPage(), theme:'burgundy', menuOpen:false, poems:[], poemsLoaded:false,
       bkOpen:false, bkIdx:0, bkSpread:false, bkDrag:null, bkInk:0, bkVol:0, bkShelf:true, bkPer:10,
-      bkSingle:(window.matchMedia && window.matchMedia('(max-width:700px)').matches), playing:false, idx:0, progress:0, volume:pp.volume, muted:pp.muted, shuffle:pp.shuffle, repeat:pp.repeat,
+      bkSingle:(window.matchMedia && window.matchMedia('(max-width:700px)').matches), playing:false, idx:0, picked:false, progress:0, volume:pp.volume, muted:pp.muted, shuffle:pp.shuffle, repeat:pp.repeat,
       /* the queue and the words share one drawer, so one flag says which face
          of it is showing: '' shut, 'queue', or 'lyrics' */
       drawer:'',
@@ -1119,7 +1094,7 @@ class Component extends DCLogic {
     this.audio.currentTime = 0;
     this._lastLyricIdx = -1;
     this.loadLyrics(i);
-    this.setState({ idx:i, progress:0, audioMissing:false });
+    this.setState({ idx:i, picked:true, progress:0, audioMissing:false });
     if(autoplay){
       this.audio.play().catch(()=>this.setState({playing:false, audioMissing:true}));
     }
@@ -1263,8 +1238,10 @@ class Component extends DCLogic {
 
   componentDidMount(){
     this.bindAudioEvents();
-    this.loadTrack(this.state.idx, false);
-    this.loadLyrics(this.state.idx);
+    /* The player used to open with the first track already loaded, so the
+       bar read 'Harana Hitha' and row one sat highlighted before anyone had
+       asked for anything. Nothing is chosen now until someone chooses it -
+       the durations are still read, because the list shows them. */
     this.probeDurations();
     this._checkHash=()=>this.setState({});   // hash is read at render time; just force a re-render
     window.addEventListener('hashchange', this._checkHash);
@@ -2191,206 +2168,40 @@ class Component extends DCLogic {
               cnt ? cnt+(cnt===1?' leaf':' leaves') : 'empty')));
       }));
   }
-  /* ---- About: the engineering half ----
+  /* ---- About: what the two halves are made of ----
 
-     The music side of this site says nothing about the day job, and the day
-     job is most of the working week. This is the CV, on the page, in full -
-     roles, education, what the tools were built with.
+     One unlabelled row of chips could not say which half of the week it
+     belonged to - production and RAN commissioning sat side by side as if
+     they were the same job. Three labelled groups instead: the studio, the
+     tools, and the way the work gets run.
 
-     What is deliberately not here: no phone number, no email, no home
-     address, no date of birth, no marital status, and no referee names or
-     their numbers. Those belong on a document sent to someone who asked for
-     it, not on a public page that anyone can read and any crawler can keep.
-     The page says the details are on request and points at Contact. */
-  cvRoles(){
+     Nothing personal is here and nothing personal goes here: no phone
+     number, no email, no home address, no date of birth, no marital status,
+     no referee names. Those belong in a document sent to someone who asked
+     for it, not on a page a crawler can keep. */
+  aboutGroups(){
     return [
-      { from:'Aug 2025', to:'Present', live:true,
-        title:'Site Engineer → Assistant Project Manager',
-        org:'Tooway Engineers (Pvt) Ltd · Rajagiriya',
-        bullets:[
-          'Serving as Assistant Project Manager on the Dialog Lamp Pole Project, coordinating field teams and overseeing day-to-day execution.',
-          'Configured and commissioned microwave links (Huawei, Ericsson, Wi-Bas) and BBU systems (Huawei, Ericsson) across the Lamp Pole Project.',
-          'Configured and commissioned ZTE BBU systems and microwave links on the SLT-Mobitel project.',
-          'Project Coordinator for the Dialog Ericsson–Huawei rectifier swap, owning all project documentation and coordination.',
-          'Tracked and reported progress to the Dialog project team and internal management; managed faulty-equipment replacement via WH24.',
-          'Handled correspondence with every party involved – the Dialog project team, NOC teams, subcontractors and vendors.'
-        ] },
-      { from:'Dec 2024', to:'Apr 2025',
-        title:'Site Engineer',
-        org:'Unitelworks (Pvt) Ltd · Ja-Ela',
-        bullets:[
-          'Executed Dialog Cisco to Huawei ATN swap tasks with minimal downtime, to a fixed project schedule.',
-          'Conducted Dialog broadband and 4G upgrade site surveys using the Huawei ISDP app, reporting accurately for clean handovers.'
-        ] },
-      { from:'Jul 2018', to:'Nov 2024',
-        title:'Technical Officer → Engineer',
-        org:'NMI Group of Companies, Airtel Managed Services · Colombo',
-        bullets:[
-          'Ran end-to-end telecom operations across 196+ sites – alarm monitoring, fault rectification and preventive maintenance.',
-          'Configured and commissioned Huawei BBU, RTN and microwave systems, performed VSWR testing, and kept 2G/3G/4G uptime.',
-          'Handled TSSR surveys and technical reporting, and coordinated subcontractors for network expansion and quality assurance.'
-        ] },
-      { from:'Oct 2017', to:'Jul 2018',
-        title:'Operator',
-        org:'Contrinex Ceylon (Pvt) Ltd · Wattala',
-        bullets:[
-          'Pre-testing and final testing of inductive and photoelectric sensors, to catch quality before dispatch.',
-          'Labelling and packaging of sensors for distribution.'
-        ] }
+      ['Studio', ['Production','Mixing','Sound design','Live visuals','Art direction','Songwriting']],
+      ['Technical', ['RAN & MW commissioning','Multi-vendor BBU','Moshell','NetEco','Huawei ISDP',
+                     'Excel automation','VBA macros','Python scripting','Web development','PostgreSQL','Git & GitHub']],
+      ['Professional', ['Project coordination','Field team management','Stakeholder comms',
+                        'Technical reporting','Site surveys','Fault rectification']]
     ];
   }
-  cvEducation(){
-    return [
-      { y:'2026', t:'Certificate Program in Web Design and Development', w:'SLIIT · Malabe', note:'following now' },
-      { y:'2025', t:'Pearson BTEC HND in Electrical and Electronic Engineering', w:'Skills College of Technology · Nugegoda', note:'merit pass' },
-      { y:'2018', t:'City & Guilds Advanced Diploma in Telecommunication Systems', w:'SLT Training Centre · Welisara', note:'followed' },
-      { y:'2017', t:'City & Guilds Diploma in Telecommunication Systems', w:'SLT Training Centre · Welisara', note:'followed' },
-      { y:'2015', t:'GCE Advanced Level', w:'Anuradhapura Central College', note:'' },
-      { y:'2011', t:'GCE Ordinary Level', w:'Anuradhapura Central College', note:'' }
-    ];
-  }
-
-  renderAboutCV(){
+  renderAboutSkills(){
     const mono = "'Space Mono',monospace";
-    const eyebrow = (text) => React.createElement('div',{
-      style:{fontFamily:mono,fontSize:'12px',letterSpacing:'0.2em',color:'var(--accent)',
-        textTransform:'uppercase',marginBottom:'14px'}}, text);
-
-    /* The numbers say more in four words than the paragraph does, so they are
-       given the accent - which on this page is the violet the About section
-       sets for itself, not the rose the rest of the site runs on. */
-    const stats = [
-      ['7+',   'years in telecom'],
-      ['196+', 'sites maintained'],
-      ['4',    'vendor platforms'],
-      ['3',    'national networks']
-    ].map((s,i)=>React.createElement('div',{key:i,
-      style:{border:'1px solid var(--line)',borderRadius:'14px',background:'var(--panelS)',
-        padding:'20px 18px'}},
-      React.createElement('div',{style:{fontFamily:"'Bricolage Grotesque',sans-serif",fontWeight:800,
-        fontSize:'clamp(28px,3.6vw,40px)',lineHeight:1,color:'var(--accentB)',letterSpacing:'-0.02em'}}, s[0]),
-      React.createElement('div',{style:{fontFamily:mono,fontSize:'10.5px',color:'var(--mute)',
-        marginTop:'9px',letterSpacing:'0.13em',textTransform:'uppercase'}}, s[1])));
-
-    /* Dates in their own rail so the eye can run down them, the way a CV is
-       actually read. The current role carries a live dot. */
-    /* A rail with a node per role, so four jobs read as one run of work rather
-       than four separate blocks. The node is filled on the job being done now
-       and hollow on the ones finished, which is the whole shape at a glance. */
-    const roles = this.cvRoles().map((r,i,all)=>React.createElement('div',{key:i, className:'cv-role',
-      style:{paddingBottom:'32px'}},
-      React.createElement('div',{className:'cv-when',
-        style:{fontFamily:mono,fontSize:'12px',lineHeight:1.7,whiteSpace:'nowrap',paddingTop:'3px'}},
-        React.createElement('span',{style:{color:'var(--accentB)'}}, r.from),
-        /* stacked on a wide screen, side by side with a dash on a narrow one -
-           without the dash the two dates run together as "Aug 2025Present" */
-        React.createElement('br',{className:'cv-br'}),
-        React.createElement('span',{className:'cv-dash',style:{color:'var(--mute)'}},' – '),
-        React.createElement('span',{style:{color:'var(--mute)'}}, r.to)),
-      React.createElement('div',{className:'cv-node'},
-        React.createElement('span',{className:'cv-dot'+(r.live?' live':'')}),
-        i < all.length - 1 ? React.createElement('span',{className:'cv-rail'}) : null),
-      React.createElement('div',null,
-        React.createElement('div',{style:{fontFamily:"'Bricolage Grotesque',sans-serif",fontWeight:700,
-          fontSize:'clamp(19px,2.3vw,25px)',letterSpacing:'-0.015em',color:'var(--text)',lineHeight:1.22}}, r.title),
-        React.createElement('div',{style:{fontSize:'14px',color:'var(--dim)',
-          margin:'7px 0 15px'}}, r.org),
-        r.bullets.map((b,j)=>React.createElement('div',{key:j,
-          style:{display:'flex',gap:'12px',color:'var(--dim)',fontSize:'15px',
-            lineHeight:1.65,marginBottom:'10px'}},
-          React.createElement('span',{style:{color:'var(--accentB)',flexShrink:0,opacity:0.8}},'—'),
-          React.createElement('span',null,b))))));
-
-    /* The year in the accent, and how it ended on its own line rather than
-       trailing the school after a dot - "followed" and "merit pass" say
-       different things and neither should read as part of an address. */
-    const eduRows = this.cvEducation().map((e,i)=>React.createElement('div',{key:i,
-      style:{display:'grid',gridTemplateColumns:'54px 1fr',gap:'16px',marginBottom:'22px'}},
-      React.createElement('div',{style:{fontFamily:mono,fontSize:'12px',color:'var(--accentB)',paddingTop:'2px'}}, e.y),
-      React.createElement('div',null,
-        React.createElement('div',{style:{fontSize:'15.5px',lineHeight:1.4,color:'var(--text)',fontWeight:600}}, e.t),
-        React.createElement('div',{style:{fontSize:'13.5px',color:'var(--dim)',marginTop:'4px'}}, e.w),
-        e.note ? React.createElement('div',{style:{fontFamily:mono,fontSize:'10px',
-          letterSpacing:'0.13em',textTransform:'uppercase',color:'var(--mute)',marginTop:'6px'}}, e.note) : null)));
-
-    /* Each group in its own bordered panel with hairlines between the rows.
-       Three plain stacked lists ran together into one grey column and there
-       was no telling where the skills stopped and the languages started. */
-    const listBlock = (title, items, render) => React.createElement('div',{
-      style:{border:'1px solid var(--line)',borderRadius:'14px',background:'var(--panelS)',
-        padding:'4px 18px 6px'}},
-      React.createElement('div',{style:{fontFamily:mono,fontSize:'10px',letterSpacing:'0.16em',
-        color:'var(--accentB)',textTransform:'uppercase',padding:'16px 0 4px'}}, title),
-      items.map((s,i)=>React.createElement('div',{key:i,
-        style:{padding:'12px 0',borderTop:'1px solid var(--line)',
-          display:'flex',gap:'12px',alignItems:'baseline'}},
-        render ? render(s) : React.createElement(React.Fragment,null,
-          React.createElement('span',{style:{color:'var(--accentB)',opacity:0.55,flexShrink:0,
-            fontFamily:mono,fontSize:'11px'}}, String(i+1).padStart(2,'0')),
-          React.createElement('span',{style:{color:'var(--dim)',fontSize:'14.5px',lineHeight:1.55}}, s)))));
-
-    /* a language is a name and a level, so it is set as two columns */
-    const langRow = (s) => React.createElement(React.Fragment,null,
-      React.createElement('span',{style:{color:'var(--text)',fontSize:'14.5px',flex:1}}, s[0]),
-      React.createElement('span',{style:{fontFamily:mono,fontSize:'10.5px',color:'var(--mute)',
-        letterSpacing:'0.1em',textTransform:'uppercase',textAlign:'right'}}, s[1]));
-
-    return React.createElement('section',{
-      style:{animation:'fadeUp 0.5s ease',padding:'0 0 70px'}},
-
-      /* The headline carries the job title and the paragraph sits beside it,
-         rather than a label with a wall of text under it. It is the one place
-         on this page that gets to be loud. */
-      React.createElement('div',{style:{borderTop:'1px solid var(--line)',paddingTop:'46px'}},
-        React.createElement('div',{className:'cv-head',
-          style:{display:'grid',gap:'32px',alignItems:'start',marginBottom:'34px'}},
-          React.createElement('div',null,
-            eyebrow('The other half · engineering'),
-            React.createElement('h3',{style:{fontFamily:"'Bricolage Grotesque',sans-serif",fontWeight:800,
-              fontSize:'clamp(30px,4vw,50px)',letterSpacing:'-0.03em',lineHeight:1.03,
-              color:'var(--text)',margin:0}},
-              'Telecommunications', React.createElement('br'), 'engineer.')),
-          React.createElement('p',{style:{color:'var(--text2)',fontSize:'16.5px',lineHeight:1.72,
-            margin:0}},
-            'Over seven years of hands-on experience in telecom operations, maintenance and project ' +
-            'delivery across the Airtel, Dialog and SLT-Mobitel networks – configuring and commissioning ' +
-            'multi-vendor BBU and microwave systems, and now leading field teams as Assistant Project ' +
-            'Manager on the Dialog Lamp Pole Project.')),
-        React.createElement('div',{style:{display:'grid',
-          gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:'12px',marginBottom:'52px'}}, stats)),
-
-      React.createElement('div',{style:{marginBottom:'46px'}}, eyebrow('Experience'), roles),
-
-      React.createElement('div',{style:{display:'grid',
-        gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:'44px',
-        borderTop:'1px solid var(--line)',paddingTop:'38px'}},
-        React.createElement('div',null, eyebrow('Education'), eduRows),
-        React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:'16px'}},
-          listBlock('Technical', [
-            'Multi-vendor RAN & MW commissioning – Huawei, Ericsson, ZTE, Wi-Bas',
-            'Moshell, LMT On-Site, NetEco, Huawei ISDP, WH24',
-            'Excel automation – advanced formulas, VBA macros, dashboards',
-            'Web development – HTML/CSS/JavaScript, PostgreSQL/Supabase, Git & GitHub',
-            'Python scripting for data extraction and reporting'
-          ]),
-          listBlock('Working strengths', [
-            'Project coordination and field team management',
-            'Stakeholder communication and technical reporting',
-            'Adaptability and time management'
-          ]),
-          listBlock('Languages', [
-            ['Sinhala', 'fluent'],
-            ['English', 'professional working']
-          ], langRow))),
-
-      React.createElement('div',{style:{borderTop:'1px solid var(--line)',marginTop:'38px',
-        paddingTop:'26px',display:'flex',gap:'18px',alignItems:'center',flexWrap:'wrap'}},
-        React.createElement('span',{style:{fontFamily:mono,fontSize:'12.5px',color:'var(--dim)'}},
-          'References and contact details on request.'),
-        React.createElement('button',{onClick:this.go('contact'),
-          style:{fontFamily:mono,fontSize:'12.5px',color:'var(--text)',background:'none',
-            border:'1px solid var(--line3)',borderRadius:'999px',padding:'9px 18px',cursor:'pointer'}},
-          'Get in touch →')));
+    return React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:'26px'}},
+      this.aboutGroups().map((g,i)=>React.createElement('div',{key:i,
+        /* a hairline above every group but the first, so the three read as
+           one list in sections rather than three loose piles */
+        style:i?{borderTop:'1px solid var(--line)',paddingTop:'26px'}:null},
+        React.createElement('div',{style:{fontFamily:mono,fontSize:'11px',letterSpacing:'0.2em',
+          color:'var(--accent)',textTransform:'uppercase',marginBottom:'14px'}}, g[0]),
+        React.createElement('div',{style:{display:'flex',flexWrap:'wrap',gap:'8px'}},
+          g[1].map((s,j)=>React.createElement('span',{key:j,
+            style:{fontFamily:mono,fontSize:'12px',color:'var(--dim)',
+              border:'1px solid var(--line3)',borderRadius:'999px',padding:'7px 14px',
+              whiteSpace:'nowrap'}}, s))))));
   }
 
   renderJournal(){
@@ -3327,7 +3138,7 @@ class Component extends DCLogic {
       toggleMenu: ()=>this.setState(st=>({menuOpen:!st.menuOpen})),
       /* numbered by where it sits now, not by where it sits in the file — a
          sorted list that still read 01..07 in the old order would be a lie */
-      tracks: this.sortedTracks().map((x,pos)=>{ const cur=x.i===s.idx; const pn=cur&&s.playing; return { ...x, num:String(pos+1).padStart(2,'0'), artReady:(typeof x.img==='string' && x.img.length>0), artImg:this.artImg(x.img,{width:'42px',height:'42px',borderRadius:'7px'}), artImgSm:this.artImg(x.img,{width:'34px',height:'34px',borderRadius:'8px'}), current:cur, notCurrent:!cur, playingNow:pn, notPlayingNow:!pn, titleColor: cur?'var(--accent)':'var(--text)', onPlay:this.play(x.i), hasArt:!!x.img, noArt:!x.img }; }),
+      tracks: this.sortedTracks().map((x,pos)=>{ const cur=s.picked && x.i===s.idx; const pn=cur&&s.playing; return { ...x, num:String(pos+1).padStart(2,'0'), artReady:(typeof x.img==='string' && x.img.length>0), artImg:this.artImg(x.img,{width:'42px',height:'42px',borderRadius:'7px'}), artImgSm:this.artImg(x.img,{width:'34px',height:'34px',borderRadius:'8px'}), current:cur, notCurrent:!cur, playingNow:pn, notPlayingNow:!pn, titleColor: cur?'var(--accent)':'var(--text)', onPlay:this.play(x.i), hasArt:!!x.img, noArt:!x.img }; }),
 
       sortOpen: s.sortOpen, sortShut: !s.sortOpen,
       sortLabel: (SORTS.find(x=>x[0]===s.sortBy)||SORTS[0])[1],
@@ -3343,8 +3154,15 @@ class Component extends DCLogic {
       })),
       catMeta: (()=>{ const n=this.tracks.length; const tot=this.tracks.reduce((a,b)=>a+(b.dur||0),0); const m=Math.round(tot/60); return this.tracks[0].a+' · '+n+' songs · '+(m>0?m+' min':'—'); })(),
 
-      curTitle:t.t, curArtist:t.a, curInitial:t.initial, curTone:t.tone, curDur:t.durLabel, curTime:this.fmt(s.progress),
-      curArt:t.img||'', curHasArt:!!t.img, curNoArt:!t.img, curArtReady: (typeof t.img==='string' && t.img.length>0),
+      /* Until a song is chosen the bar says so rather than naming one nobody
+         asked for - the empty tile stands in for the artwork. */
+      curTitle: s.picked ? t.t : 'Nothing playing',
+      curArtist: s.picked ? t.a : 'Pick a song to start',
+      curInitial:t.initial, curTone: s.picked ? t.tone : 'var(--surface2)',
+      curDur: s.picked ? t.durLabel : '0:00', curTime:this.fmt(s.progress),
+      curArt: s.picked ? (t.img||'') : '',
+      curHasArt: s.picked && !!t.img, curNoArt: !(s.picked && !!t.img),
+      curArtReady: s.picked && (typeof t.img==='string' && t.img.length>0),
       curArtImgSm: this.artImg(t.img,{width:'52px',height:'52px',borderRadius:'8px'}),
       curArtImgLg: this.artImg(t.img,{width:'190px',height:'190px',borderRadius:'14px',boxShadow:'0 18px 46px rgba(0,0,0,0.5)'}),
       curArtImgDock: this.artImg(t.img,{width:'46px',height:'46px',borderRadius:'10px',border:'1px solid var(--line3)'}),
@@ -3420,7 +3238,13 @@ class Component extends DCLogic {
       musicWave: this.wave({ n:52, maxH:54, barW:4, gap:3, origin:'center', cushion:true }),
 
       nav: { home:this.go('home'), music:this.go('music'), blog:this.go('blog'), tools:this.go('tools'), about:this.go('about'), contact:this.go('contact') },
-      togglePlay: ()=>{ if(this.audio.paused) this.audio.play().catch(()=>this.setState({playing:false, audioMissing:true})); else this.audio.pause(); },
+      /* With nothing chosen there is no src to play, and calling play on an
+         empty element only raises the missing-audio error. Pressing play
+         before picking anything starts the list from the top instead, which
+         is what the button looks like it should do. */
+      togglePlay: ()=>{
+        if(!this.state.picked){ const order=this.playOrder(); this.loadTrack(order.length?order[0]:0, true); return; }
+        if(this.audio.paused) this.audio.play().catch(()=>this.setState({playing:false, audioMissing:true})); else this.audio.pause(); },
       startPlay: ()=>this.audio.play().catch(()=>this.setState({playing:false, audioMissing:true})),
       playNext: ()=>this.playNextTrack(),
       playPrev: ()=>this.playPrevTrack(),
@@ -3458,8 +3282,7 @@ class Component extends DCLogic {
       fsView: this.renderFsView(),
 
       journalContent: this.renderJournal(),
-      skills:['Production','Mixing','Sound design','Live visuals','Art direction','Songwriting'],
-      aboutCV: this.renderAboutCV(),
+      aboutSkills: this.renderAboutSkills(),
 
       cName:s.contact.name, cEmail:s.contact.email, cMsg:s.contact.msg, sent:s.sent, notSent:!s.sent,
       onField:{
