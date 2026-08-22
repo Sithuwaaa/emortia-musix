@@ -504,6 +504,53 @@ html.bk-reading-on,html.bk-reading-on body{overflow:hidden;}
 @keyframes tickerRun{to{transform:translateX(-50%);}}
 @media (max-width:700px){.hm-feature{grid-template-columns:1fr !important;}}
 
+/* ---- the front page ---- */
+.hero{position:relative;border-radius:24px;border:1px solid var(--line);overflow:hidden;
+  background:radial-gradient(130% 100% at 18% -12%,var(--bg2),var(--bg) 66%);
+  min-height:clamp(420px,62vh,620px);display:flex;align-items:flex-end;
+  padding:clamp(26px,4vw,46px);margin-top:16px;}
+/* the covers, dimmed and faded out towards the bottom so the name has
+   somewhere quiet to sit */
+.hero-wall{position:absolute;inset:0;display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(clamp(110px,15vw,190px),1fr));
+  gap:clamp(8px,1.2vw,16px);padding:clamp(8px,1.2vw,16px);align-content:start;
+  pointer-events:none;opacity:.42;
+  -webkit-mask-image:linear-gradient(180deg,#000 0%,#000 26%,transparent 82%);
+  mask-image:linear-gradient(180deg,#000 0%,#000 26%,transparent 82%);}
+.hero-wall .tile{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;
+  background:var(--surface2)}
+.hero-wall .tile img{width:100%;height:100%;object-fit:cover;display:block}
+/* every other column nudged down, so it reads as a wall and not a table */
+.hero-wall .tile:nth-child(even){transform:translateY(clamp(14px,2.4vw,34px))}
+
+.hero-front{position:relative;width:100%}
+.wm{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;
+  font-size:clamp(52px,12vw,168px);line-height:.86;letter-spacing:-.045em;
+  margin:0 0 clamp(18px,2.4vw,30px);color:var(--text);}
+.wm span{display:inline-block;will-change:transform,filter}
+/* each letter rises from below and settles from blurred to sharp */
+@keyframes wmRise{from{opacity:0;transform:translateY(.4em);filter:blur(16px)}
+  to{opacity:1;transform:none;filter:blur(0)}}
+.wm span{animation:wmRise .85s cubic-bezier(.2,.75,.2,1) both}
+
+.hero-act{display:flex;align-items:center;gap:clamp(14px,2vw,26px);flex-wrap:wrap}
+.playall{display:inline-flex;align-items:center;gap:10px;background:var(--accent);color:#fff;
+  border:none;border-radius:999px;padding:13px 24px;cursor:pointer;font-family:'Space Mono',monospace;
+  font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;
+  transition:background .18s ease,transform .18s ease,box-shadow .18s ease;}
+.playall:hover{background:var(--accentB);transform:translateY(-1px);box-shadow:0 12px 30px var(--glowSoft)}
+.spin-now{display:flex;align-items:center;gap:11px;min-width:0}
+.spin-dot{width:9px;height:9px;border-radius:50%;background:var(--accentB);flex-shrink:0;
+  box-shadow:0 0 0 4px var(--glowSoft);animation:termLed 1.9s ease-in-out infinite}
+.spin-lab{display:block;font-family:'Space Mono',monospace;font-size:9.5px;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--mute)}
+.spin-tit{display:block;font-size:14.5px;font-weight:600;color:var(--text2);margin-top:2px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:46vw}
+@media (prefers-reduced-motion:reduce){
+  .wm span{animation:none}
+  .spin-dot{animation:none}
+}
+
 /* ---- waiting ----
    One shape for every wait on the site: the logo's bars carried on into a
    waveform, playing. Full and solid on the left, trailing away to dots on the
@@ -615,33 +662,27 @@ html.bk-reading-on,html.bk-reading-on body{overflow:hidden;}
     <!-- ============ HOME ============ -->
     <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
     <section style="animation:fadeUp 0.5s ease;padding:30px 0 70px;">
-      <!-- HERO: spinning record over drifting petals -->
-      <div style="position:relative;border-radius:24px;border:1px solid var(--line);background:radial-gradient(130% 100% at 18% -12%,var(--bg2),var(--bg) 66%);overflow:hidden;padding:clamp(30px,5vw,58px) clamp(20px,4vw,44px);margin-top:16px;">
-        <div style="position:absolute;inset:0;pointer-events:none;overflow:hidden;">
-          <div style="position:absolute;left:5%;top:0;width:min(46vw,340px);height:min(46vw,340px);border-radius:50%;background:radial-gradient(circle,var(--accent),transparent 66%);filter:blur(34px);animation:heroBloom 8s ease-in-out infinite;"></div>
-          <div style="position:absolute;right:-8%;top:24%;width:min(38vw,290px);height:min(38vw,290px);border-radius:50%;background:radial-gradient(circle,var(--accentD),transparent 68%);filter:blur(38px);animation:heroBloom 11s ease-in-out infinite 2s;"></div>
-          {{ heroPetals }}
-        </div>
-        <div style="position:relative;display:flex;align-items:center;gap:clamp(22px,4vw,48px);flex-wrap:wrap;">
-          <div style="position:relative;width:clamp(180px,25vw,286px);height:clamp(180px,25vw,286px);flex-shrink:0;perspective:900px;">
-            <div style="position:absolute;inset:0;transform-style:preserve-3d;animation:{{ flipAnim }} 0.8s cubic-bezier(.4,0,.2,1) both;"><div style="position:absolute;inset:0;border-radius:50%;background:repeating-radial-gradient(circle at 50% 50%,var(--surface2) 0 2px,var(--surface) 2px 4px);box-shadow:0 22px 52px rgba(0,0,0,.6),inset 0 0 60px rgba(0,0,0,.62);animation:vinylSpin 7s linear infinite;animation-play-state:{{ spinState }};">
-              <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:34%;height:34%;border-radius:50%;background:linear-gradient(150deg,var(--accentB),var(--accentD));"></div>
-              <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:7%;height:7%;border-radius:50%;background:var(--bg);"></div>
-            </div>
-            <div style="position:absolute;inset:0;border-radius:50%;overflow:hidden;pointer-events:none;">
-              <div style="position:absolute;top:-10%;bottom:-10%;width:18%;background:linear-gradient(90deg,transparent,rgba(247,237,240,.16),transparent);transform:rotate(16deg);animation:sheenSweep 4.8s ease-in-out infinite;animation-play-state:{{ spinState }};"></div>
-            </div>
-            </div>
-            <div style="position:absolute;right:-3%;top:4%;width:54%;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--line3),var(--dim));transform-origin:right center;transform:rotate({{ armAngle }}deg);transition:transform .75s cubic-bezier(.34,1.28,.5,1);box-shadow:0 4px 10px rgba(0,0,0,.55);"></div>
-          </div>
-          <div style="min-width:240px;flex:1;">
-            <div style="font-family:'Space Mono',monospace;font-size:clamp(11px,1.3vw,13px);letter-spacing:0.24em;color:var(--accent);text-transform:uppercase;margin-bottom:14px;animation:riseIn .8s ease both;">Put the headphones on</div>
-            <h1 style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(44px,7.6vw,104px);line-height:0.9;letter-spacing:-0.035em;margin:0;">
-              <span style="display:inline-block;animation:riseIn .9s ease both;">Emortia</span>
-            </h1>
-            <button onClick="{{ startPlay }}" style="display:inline-flex;align-items:center;gap:11px;margin-top:26px;background:var(--accent);color:var(--bg);border:none;font-weight:700;font-size:15px;padding:15px 26px;border-radius:999px;cursor:pointer;animation:glow 2.6s ease-in-out infinite;" style-hover="background:var(--accentB);">
-              <svg width="15" height="15" viewBox="0 0 24 24"><polygon points="7,4 20,12 7,20" fill="var(--bg)"></polygon></svg> Press play to enter
+      <!-- HERO: the catalogue behind the name.
+           The record and the arm are gone. The covers do the work instead -
+           the whole catalogue laid out behind the wordmark, dimmed back so the
+           name reads over it. It is a truer front page: the first thing on it
+           is the music, not an ornament of a record player. -->
+      <div class="hero">
+        <div class="hero-wall" aria-hidden="true">{{ heroWall }}</div>
+        <div class="hero-front">
+          <h1 class="wm">{{ heroWordmark }}</h1>
+          <div class="hero-act">
+            <button class="playall" onClick="{{ playEverything }}">
+              <svg width="13" height="13" viewBox="0 0 24 24"><polygon points="7,4 20,12 7,20" fill="currentColor"></polygon></svg>
+              Play everything
             </button>
+            <div class="spin-now">
+              <span class="spin-dot"></span>
+              <span>
+                <span class="spin-lab">Now spinning</span>
+                <b class="spin-tit">{{ nowSpinning }}</b>
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -2293,6 +2334,30 @@ class Component extends DCLogic {
      rather than a bare "Loading…", because saying what is being waited for
      costs nothing and a bare one tells you only that something is wrong when
      it takes too long. */
+  /* The catalogue behind the name. Enough tiles to fill the width at any
+     size, so the covers repeat rather than leaving a gap - and they are lazy
+     and aria-hidden, because this is wallpaper, not content anyone needs read
+     to them. */
+  renderHeroWall(){
+    const covers = this.tracks.filter(t=>t.img);
+    if(!covers.length) return null;
+    const out = [];
+    for(let i=0;i<14;i++){
+      const t = covers[i % covers.length];
+      out.push(React.createElement('div',{key:i,className:'tile'},
+        React.createElement('img',{src:t.img, alt:'', width:900, height:900,
+          loading:'lazy', decoding:'async'})));
+    }
+    return out;
+  }
+
+  /* One span per letter so each can arrive on its own. 75ms apart, which is
+     slow enough to read as a run and quick enough not to hold the page up. */
+  renderWordmark(){
+    return 'Emortia'.split('').map((ch,i)=>React.createElement('span',{key:i,
+      style:{animationDelay:(i*0.075).toFixed(3)+'s'}}, ch));
+  }
+
   waveLoader(caption, small){
     const H = small
       ? [6,10,15,20,17,22,13,18,10,15,8,12,6,9,5,7,4,6,3,4,3,3,3,3]
@@ -3275,6 +3340,17 @@ class Component extends DCLogic {
       musicScene: s.page==='music' ? this.renderMusicBg() : null,
       dustField: this.dustField(),
       heroPetals: this.heroPetalField(),
+      heroWall: this.renderHeroWall(),
+      heroWordmark: this.renderWordmark(),
+      /* what the front page is playing, or that it is not */
+      nowSpinning: s.picked ? (t.t + ' · ' + t.a) : 'Nothing playing',
+      /* "everything" means the catalogue from the top, not whatever happened
+         to be cued - the button says play everything and it should. */
+      playEverything: ()=>{
+        if(s.picked && s.playing){ this.audio.pause(); return; }
+        if(s.picked){ this.audio.play().catch(e=>this.playFailed(e)); return; }
+        this.loadTrack(this.playOrder()[0], true);
+      },
       toolsGate: this.renderToolsGate(),
       toolsGridClass: s.toolsIn ? '' : 'hidden',
       lyricsOverlay: this.renderDrawer(),
