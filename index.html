@@ -331,16 +331,13 @@ input,textarea,button{font-family:inherit;}
 .dust{position:absolute;bottom:-12px;border-radius:50%;background:radial-gradient(circle,var(--accentB),transparent 70%);will-change:transform,opacity;animation:dustRise linear infinite;}
 @keyframes dustRise{0%{transform:translateY(0) translateX(0);opacity:0;}14%{opacity:.7;}100%{transform:translateY(-106vh) translateX(3vw);opacity:0;}}
 /* ---- hero: vinyl + petal drift ---- */
-@keyframes vinylSpin{to{transform:rotate(360deg);}}
-@keyframes sheenSweep{0%{transform:translateX(-130%);}100%{transform:translateX(560%);}}
+100%{transform:translateX(560%);}}
 @keyframes armRock{0%,100%{transform:rotate(-3deg);}50%{transform:rotate(1.6deg);}}
-@keyframes discFlipA{0%{transform:rotateY(92deg) scale(.9);opacity:0;}100%{transform:rotateY(0deg) scale(1);opacity:1;}}
-@keyframes discFlipB{0%{transform:rotateY(92deg) scale(.9);opacity:0;}100%{transform:rotateY(0deg) scale(1);opacity:1;}}
-@keyframes heroBloom{0%,100%{opacity:.38;transform:scale(1);}50%{opacity:.76;transform:scale(1.12);}}
-@keyframes heroPetalDrop{0%{transform:translateY(-50px) rotate(0deg);}100%{transform:translateY(520px) rotate(330deg);}}
-@keyframes heroPetalSide{0%{transform:translateX(-13px);}100%{transform:translateX(13px);}}
-.hero-petal-fall{position:absolute;top:-50px;will-change:transform;animation:heroPetalDrop linear infinite;}
-.hero-petal{border-radius:60% 40% 55% 45%;box-shadow:0 0 9px rgba(240,90,140,.4);will-change:transform;animation:heroPetalSide ease-in-out infinite alternate;}
+100%{transform:rotateY(0deg) scale(1);opacity:1;}}
+100%{transform:rotateY(0deg) scale(1);opacity:1;}}
+50%{opacity:.76;transform:scale(1.12);}}
+100%{transform:translateY(520px) rotate(330deg);}}
+100%{transform:translateX(13px);}}
 @keyframes riseIn{0%{opacity:0;transform:translateY(15px);}100%{opacity:1;transform:none;}}
 /* ---- nav: petal drift ---- */
 @keyframes navBreathe{0%,100%{opacity:.55;}50%{opacity:1;}}
@@ -600,7 +597,7 @@ html.bk-reading-on,html.bk-reading-on body{overflow:hidden;}
 .social-pill:hover .sp-mono,.social-pill:focus-visible .sp-mono{opacity:0;}
 .social-pill:hover .sp-colour,.social-pill:focus-visible .sp-colour{opacity:1;}
 @media (prefers-reduced-motion:reduce){
-  .dust-layer *,.hero-petal-fall,.hero-petal,.paper-card,.term-card *{animation:none !important;}
+  .dust-layer *,.paper-card,.term-card *{animation:none !important;}
 }
 /* ---- synced lyrics ---- */
 .lyrics-box{position:relative;max-height:340px;overflow-y:auto;scrollbar-width:none;text-align:center;-webkit-mask-image:linear-gradient(180deg,transparent 0%,#000 18%,#000 82%,transparent 100%);mask-image:linear-gradient(180deg,transparent 0%,#000 18%,#000 82%,transparent 100%);}
@@ -1652,24 +1649,6 @@ class Component extends DCLogic {
     }
     this._dust=React.createElement(React.Fragment,null,arr);
     return this._dust;
-  }
-  heroPetalField(){
-    if(this._heroPetals) return this._heroPetals;
-    const rnd=(a,b)=>a+Math.random()*(b-a);
-    const arr=[];
-    for(let i=0;i<11;i++){
-      const w=rnd(9,16);
-      arr.push(React.createElement('div',{key:'hp'+i, className:'hero-petal-fall', style:{
-        left:rnd(1,97).toFixed(1)+'%',
-        animationDuration:rnd(10,20).toFixed(1)+'s', animationDelay:(-rnd(0,20)).toFixed(1)+'s',
-      }}, React.createElement('div',{className:'hero-petal', style:{
-        width:Math.round(w)+'px', height:Math.round(w*0.7)+'px',
-        background:'linear-gradient(135deg,#f0b8c8,'+(i%2?'var(--accent)':'var(--accentD)')+')',
-        animationDuration:rnd(3,6).toFixed(1)+'s', animationDelay:(-rnd(0,4)).toFixed(1)+'s',
-      }})));
-    }
-    this._heroPetals=React.createElement(React.Fragment,null,arr);
-    return this._heroPetals;
   }
   /* ================= journal: the wire-bound book =================
      Spread s shows the verso of sheet s-1 on the left and the recto of sheet
@@ -3334,12 +3313,11 @@ class Component extends DCLogic {
       curArtImgLg: this.artImg(t.img,{width:'190px',height:'190px',borderRadius:'14px',boxShadow:'0 18px 46px rgba(0,0,0,0.5)'}),
       curArtImgDock: this.artImg(t.img,{width:'46px',height:'46px',borderRadius:'10px',border:'1px solid var(--line3)'}),
       pct, pctLabel: pct.toFixed(2)+'%',
-      playing:s.playing, paused:!s.playing, spinState: s.playing?'running':'paused', flipAnim: (s.idx%2===0)?'discFlipA':'discFlipB', armAngle: s.playing?-1:-15,
+      playing:s.playing, paused:!s.playing, spinState: s.playing?'running':'paused',
       audioMissing:!!s.audioMissing, notMissing:!s.audioMissing,
       musicBgClass: (s.page==='music' && s.playing) ? 'music-bg on' : 'music-bg',
       musicScene: s.page==='music' ? this.renderMusicBg() : null,
       dustField: this.dustField(),
-      heroPetals: this.heroPetalField(),
       heroWall: this.renderHeroWall(),
       heroWordmark: this.renderWordmark(),
       /* what the front page is playing, or that it is not */
