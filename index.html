@@ -1027,7 +1027,7 @@ html.bk-reading-on,html.bk-reading-on body{overflow:hidden;}
         <div style="min-width:0;">
           <div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ curTitle }}</div>
           <sc-if value="{{ audioMissing }}" hint-placeholder-val="{{ false }}">
-            <div style="color:#f0523f;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Audio file not found – see audio/README.md</div>
+            <div style="color:#f0523f;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">This track wouldn't play</div>
           </sc-if>
           <sc-if value="{{ notMissing }}" hint-placeholder-val="{{ true }}">
             <div style="color:var(--mute);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ curArtist }}</div>
@@ -1163,8 +1163,23 @@ class Component extends DCLogic {
     this.loadLyrics(i);
     this.setState({ idx:i, picked:true, progress:0, audioMissing:false });
     if(autoplay){
-      this.audio.play().catch(()=>this.setState({playing:false, audioMissing:true}));
+      this.audio.play().catch(e=>this.playFailed(e));
     }
+  }
+
+  /* play() rejects for reasons that have nothing to do with the file. The
+     common two are NotAllowedError, when the browser blocks sound before
+     anyone has clicked anything, and AbortError, when a new track interrupts
+     a play already in flight. Neither means the audio is missing, and saying
+     it was sent people to a README about a file that was sitting right there,
+     served and two hundred OK. The element's own error is the only thing that
+     actually knows, so that is what is asked. */
+  playFailed(e){
+    const err = this.audio.error;
+    /* 2 network, 3 cannot be decoded, 4 cannot be played at all. Anything
+       else - or no element error whatever - is not the file's fault. */
+    const reallyBad = !!err && (err.code === 2 || err.code === 3 || err.code === 4);
+    this.setState({ playing:false, audioMissing:reallyBad });
   }
   // Read every track's real duration from its file, so the list shows true
   // times instead of the hardcoded fallbacks (only the loaded track used to).
@@ -1205,7 +1220,9 @@ class Component extends DCLogic {
         this.setState({playing:false, progress:0}); return; }
       this.loadTrack(this.pickNext(), true);
     });
-    this.audio.addEventListener('error', ()=>this.setState({playing:false, audioMissing:true}));
+    /* a genuine media error: the element knows why, so ask it rather than
+       assuming the worst */
+    this.audio.addEventListener('error', ()=>this.playFailed());
     this.audio.addEventListener('volumechange', ()=>{
       // keep UI in sync if volume changes from OS/media keys
       const v=this.audio.volume;
@@ -3329,8 +3346,8 @@ class Component extends DCLogic {
          is what the button looks like it should do. */
       togglePlay: ()=>{
         if(!this.state.picked){ const order=this.playOrder(); this.loadTrack(order.length?order[0]:0, true); return; }
-        if(this.audio.paused) this.audio.play().catch(()=>this.setState({playing:false, audioMissing:true})); else this.audio.pause(); },
-      startPlay: ()=>this.audio.play().catch(()=>this.setState({playing:false, audioMissing:true})),
+        if(this.audio.paused) this.audio.play().catch(e=>this.playFailed(e)); else this.audio.pause(); },
+      startPlay: ()=>this.audio.play().catch(e=>this.playFailed(e)),
       playNext: ()=>this.playNextTrack(),
       playPrev: ()=>this.playPrevTrack(),
       toggleQueue: ()=>this.openDrawer('queue'),
