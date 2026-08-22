@@ -34,6 +34,44 @@
 <script src="./support.js" defer></script>
 </head>
 <body>
+<!-- ============ BOOT ============
+     The app is drawn by support.js, which is deferred, so between the HTML
+     arriving and the first paint there is a moment of empty page. This fills
+     it with the mark playing rather than nothing at all - the same waveform
+     the rest of the site uses for waiting. It is plain HTML and CSS on
+     purpose: anything that had to wait for a script would show up after the
+     thing it is meant to cover. -->
+<div id="boot">
+  <div class="boot-wave" aria-hidden="true"></div>
+  <div class="boot-cap">Emortia</div>
+</div>
+<script>
+/* Built here rather than written out thirty-two times, and removed as soon as
+   the app has painted. The overlay is a courtesy, not a gate: if anything below
+   fails it takes itself away on a timer regardless. */
+(function () {
+  var H = [9,15,22,30,26,34,20,28,16,24,12,19,9,14,7,11,6,9,5,7,4,6,4,5,3,4,3,3,3,3,3,3];
+  var w = document.querySelector('.boot-wave'), h = '';
+  for (var i = 0; i < H.length; i++) {
+    h += '<i style="height:' + H[i] + 'px;opacity:' +
+         Math.max(0.12, 1 - (i / H.length) * 1.15).toFixed(2) +
+         ';animation-delay:' + (i * 0.045).toFixed(3) + 's"></i>';
+  }
+  w.innerHTML = h;
+
+  var done = false;
+  function drop() {
+    if (done) return; done = true;
+    var b = document.getElementById('boot');
+    if (!b) return;
+    b.classList.add('gone');
+    setTimeout(function () { if (b.parentNode) b.parentNode.removeChild(b); }, 420);
+  }
+  /* the app is up once it has put something in the page */
+  addEventListener('load', function () { setTimeout(drop, 300); });
+  setTimeout(drop, 4000);          // a stuck script must never leave it stranded
+})();
+</script>
 <x-dc>
 <helmet>
 <title>Emortia</title>
@@ -465,6 +503,35 @@ html.bk-reading-on,html.bk-reading-on body{overflow:hidden;}
 .term-card>*{position:relative;z-index:1;}
 @keyframes tickerRun{to{transform:translateX(-50%);}}
 @media (max-width:700px){.hm-feature{grid-template-columns:1fr !important;}}
+
+/* ---- waiting ----
+   One shape for every wait on the site: the logo's bars carried on into a
+   waveform, playing. Full and solid on the left, trailing away to dots on the
+   right, so it reads as a track running rather than a spinner going nowhere.
+   The 404 uses the same figure standing still. */
+.wv{display:flex;align-items:center;gap:3px;height:34px}
+.wv i{width:3px;border-radius:2px;background:var(--accentB);flex-shrink:0;
+  animation:wvBar .9s ease-in-out infinite;transform-origin:center;}
+@keyframes wvBar{0%,100%{transform:scaleY(.35)}50%{transform:scaleY(1)}}
+.wv.sm{height:22px;gap:2px}
+.wv.sm i{width:2px}
+.wv-cap{font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--mute);}
+
+#boot{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:16px;
+  background:radial-gradient(120% 80% at 80% -10%,#221318 0%,#170d10 60%);
+  transition:opacity .4s ease;}
+#boot.gone{opacity:0;pointer-events:none}
+.boot-wave{display:flex;align-items:center;gap:3px;height:34px}
+.boot-wave i{width:3px;border-radius:2px;background:#d15873;flex-shrink:0;
+  animation:wvBar .9s ease-in-out infinite;transform-origin:center;}
+.boot-cap{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.3em;
+  text-transform:uppercase;color:#8d6a75;}
+@media (prefers-reduced-motion:reduce){
+  .wv i,.boot-wave i{animation:none;transform:none}
+  #boot{transition:none}
+}
 @keyframes termRoll{0%,42%{transform:translateY(0);}50%,92%{transform:translateY(-1.6em);}100%{transform:translateY(0);}}
 .hm-card{transition:border-color .22s ease,transform .22s ease,box-shadow .3s ease;}
 .hm-card:hover{transform:translateY(-2px);border-color:rgba(var(--hmRGB),.7) !important;box-shadow:0 20px 48px -22px rgba(var(--hmRGB),.6);}
@@ -2204,10 +2271,28 @@ class Component extends DCLogic {
               whiteSpace:'nowrap'}}, s))))));
   }
 
+  /* The waiting figure, wherever something is still coming. Caption above,
+     bars below, exactly as the design sets it - "JOURNAL · LOADING POEMS"
+     rather than a bare "Loading…", because saying what is being waited for
+     costs nothing and a bare one tells you only that something is wrong when
+     it takes too long. */
+  waveLoader(caption, small){
+    const H = small
+      ? [6,10,15,20,17,22,13,18,10,15,8,12,6,9,5,7,4,6,3,4,3,3,3,3]
+      : [9,15,22,30,26,34,20,28,16,24,12,19,9,14,7,11,6,9,5,7,4,6,4,5,3,4,3,3,3,3,3,3];
+    return React.createElement('div',{style:{padding:'18px 0'}},
+      caption ? React.createElement('div',{className:'wv-cap',style:{marginBottom:'9px'}}, caption) : null,
+      React.createElement('div',{className:'wv' + (small?' sm':''), 'aria-label':caption || 'Loading'},
+        H.map((h,i)=>React.createElement('i',{key:i, style:{
+          height:h+'px',
+          opacity:Math.max(0.12, 1 - (i/H.length)*1.15),
+          animationDelay:(i*0.045).toFixed(3)+'s'}}))));
+  }
+
   renderJournal(){
     const s=this.state;
     if(!s.poemsLoaded){
-      return React.createElement('div',{style:{color:'var(--mute)',fontFamily:"'Space Mono',monospace",fontSize:'13px',padding:'20px 0'}},'Loading…');
+      return this.waveLoader('Journal · loading poems');
     }
     if(!s.poems.length){
       return React.createElement('div',{style:{border:'1px dashed var(--line3)',borderRadius:'18px',background:'var(--panel)',padding:'48px 28px',textAlign:'center',color:'var(--dim)',fontSize:'15px',lineHeight:1.6}},
@@ -2604,7 +2689,7 @@ class Component extends DCLogic {
     const ly=this.effectiveLines();
     const noteStyle={fontFamily:"'Space Mono',monospace",fontSize:'13px',color:'var(--mute)',padding:'26px 4px',lineHeight:1.6};
     if(this.state.wordsEdit) return this.renderWordsEditor(t, ly);
-    if(ly===undefined || ly===null) return React.createElement('div',{style:noteStyle},'Loading lyrics…');
+    if(ly===undefined || ly===null) return this.waveLoader('Player · loading lyrics', true);
     if(!ly.length) return React.createElement('div',{style:noteStyle},
       window.IS_OWNER
         ? React.createElement('div',null,

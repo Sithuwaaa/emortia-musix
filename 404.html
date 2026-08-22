@@ -2,30 +2,97 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#170d10">
 <meta name="robots" content="noindex">
-<title>Emortia</title>
+<title>Nothing plays here · Emortia</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b03a56'/%3E%3Cg fill='%23170d10'%3E%3Crect x='8' y='13' width='3' height='8' rx='1.5'/%3E%3Crect x='13' y='9' width='3' height='14' rx='1.5'/%3E%3Crect x='18' y='11' width='3' height='10' rx='1.5'/%3E%3Crect x='23' y='8' width='3' height='15' rx='1.5'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&family=Hanken+Grotesk:wght@400;500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
-  html,body{height:100%;margin:0;background:#170d10;color:#f3e7ea;
-    font-family:'Hanken Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
-  .mid{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center}
-  .spin{width:34px;height:34px;border-radius:50%;border:3px solid rgba(255,255,255,.15);
-    border-top-color:#d15873;animation:t .8s linear infinite}
-  @keyframes t{to{transform:rotate(360deg)}}
-  a{color:#e87a94}
-  .gone{display:none}
+  :root{
+    --bg:#170d10;--bg2:#221318;--text:#f7edf0;--dim:#c19da8;--mute:#8d6a75;
+    --line:#352027;--line3:#51313c;--accent:#b03a56;--accentB:#d15873;--ink:#170d10;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{min-height:100%}
+  body{
+    background:radial-gradient(120% 80% at 80% -10%,var(--bg2) 0%,var(--bg) 60%);
+    color:var(--text);font-family:'Hanken Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    min-height:100vh;display:flex;flex-direction:column;
+    padding:calc(env(safe-area-inset-top) + 24px) 24px calc(env(safe-area-inset-bottom) + 24px);
+  }
+  /* the mark, top left, the same one the site wears */
+  .brand{display:flex;align-items:center;gap:11px;text-decoration:none;color:inherit;width:fit-content}
+  .brand .logo{width:30px;height:30px;border-radius:50%;flex-shrink:0;
+    background:linear-gradient(150deg,#d15873,#87213c);display:flex;align-items:center;
+    justify-content:center;gap:2.4px;box-shadow:0 0 16px rgba(176,58,86,.45)}
+  .brand .logo i{width:2.6px;border-radius:2px;background:#170d10;display:block}
+  .brand .logo i:nth-child(1){height:7px}  .brand .logo i:nth-child(2){height:12px}
+  .brand .logo i:nth-child(3){height:9px}  .brand .logo i:nth-child(4){height:13px}
+  .brand b{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:17px;letter-spacing:-.02em}
+
+  .mid{flex:1;display:flex;align-items:center}
+  .box{max-width:560px;width:100%}
+
+  /* A waveform that starts full and trails away to nothing - a track running
+     out, which is what a missing page is. It is also the logo's four bars,
+     carried on. */
+  .wave{display:flex;align-items:center;gap:3px;height:34px;margin-bottom:34px}
+  .wave i{width:3px;border-radius:2px;background:var(--accentB);flex-shrink:0}
+
+  .eyebrow{font-family:'Space Mono',monospace;font-size:11.5px;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--accentB);margin-bottom:14px}
+  h1{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;
+    font-size:clamp(34px,6.5vw,56px);letter-spacing:-.035em;line-height:1.02;margin-bottom:14px}
+  .sub{color:var(--dim);font-size:16.5px;line-height:1.6;margin-bottom:28px}
+
+  /* what they actually typed, so it is obvious where the typo is */
+  .path{font-family:'Space Mono',monospace;font-size:12.5px;color:var(--mute);
+    border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:28px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  .go{display:inline-flex;align-items:center;gap:9px;background:var(--accent);color:#fff;
+    text-decoration:none;font-weight:600;font-size:14.5px;border-radius:999px;
+    padding:12px 22px;border:none;cursor:pointer;
+    transition:transform .18s ease,box-shadow .18s ease,background .18s ease}
+  .go:hover{background:var(--accentB);transform:translateY(-1px);box-shadow:0 10px 26px rgba(176,58,86,.35)}
+  .go:focus-visible{outline:2px solid var(--accentB);outline-offset:3px}
+
+  .links{margin-top:26px;display:flex;gap:18px;flex-wrap:wrap;
+    font-family:'Space Mono',monospace;font-size:12.5px}
+  .links a{color:var(--mute);text-decoration:none;transition:color .18s ease}
+  .links a:hover{color:var(--accentB)}
+
+  /* ---- the waiting state ----
+     A known address lands here too, because GitHub Pages has no routes and
+     every one of them is a file that does not exist. That is a redirect about
+     to happen, not a dead end, so the bars play like a track running rather
+     than sitting still like one that has stopped. */
+  .waiting .wave i{animation:bar .9s ease-in-out infinite}
+  .waiting h1,.waiting .sub,.waiting .path,.waiting .go,.waiting .links{display:none}
+  .waiting .eyebrow{color:var(--mute)}
+  @keyframes bar{0%,100%{transform:scaleY(.35)}50%{transform:scaleY(1)}}
+  @media (prefers-reduced-motion:reduce){ .waiting .wave i{animation:none} }
 </style>
 </head>
-<body>
-<div class="mid">
-  <div class="spin" id="spin"></div>
-  <div id="msg">Finding that page…</div>
-  <div class="gone" id="lost">
-    <h1 style="font-family:'Bricolage Grotesque',sans-serif;font-size:28px;margin:0 0 8px">Nothing here</h1>
-    <p style="color:#b09aa1;margin:0 0 16px">That address does not match anything on the site.</p>
-    <a href="/">Back to the front page</a>
+<body class="waiting">
+
+<a class="brand" href="/"><span class="logo"><i></i><i></i><i></i><i></i></span><b>Emortia</b></a>
+
+<div class="mid"><div class="box">
+  <div class="wave" id="wave"></div>
+  <div class="eyebrow" id="eyebrow">Finding that page…</div>
+  <h1>Nothing plays here.</h1>
+  <p class="sub">That address isn't part of the site.</p>
+  <div class="path" id="path"></div>
+  <a class="go" href="/">← Go home</a>
+  <div class="links">
+    <a href="/music">Music</a><a href="/tools/">Tools</a><a href="/about">About</a><a href="/contact">Contact</a>
   </div>
-</div>
+</div></div>
+
 <script>
 /* GitHub Pages serves files, not routes. A visitor who refreshes on /music, or
    follows a link straight to it, asks the server for a file that does not
@@ -36,6 +103,16 @@
    address and is told so, rather than being bounced to the front page as if it
    had been found - a redirect for every typo hides broken links. */
 (function () {
+  /* the bars: full on the left, trailing away to nothing on the right */
+  var H = [9,15,22,30,26,34,20,28,16,24,12,19,9,14,7,11,6,9,5,7,4,6,4,5,3,4,3,3,3,3,3,3];
+  var wave = document.getElementById('wave'), html = '';
+  for (var i = 0; i < H.length; i++) {
+    var fade = Math.max(0.12, 1 - (i / H.length) * 1.15);
+    html += '<i style="height:' + H[i] + 'px;opacity:' + fade.toFixed(2) +
+            ';animation-delay:' + (i * 0.045).toFixed(3) + 's"></i>';
+  }
+  wave.innerHTML = html;
+
   var KNOWN = ['/music', '/journal', '/tools', '/about', '/contact', '/owner'];
   var path = location.pathname.replace(/\/+$/, '') || '/';
   var ok = KNOWN.indexOf(path) >= 0;
@@ -47,9 +124,11 @@
     location.replace('/' + location.search + location.hash);
     return;
   }
-  document.getElementById('spin').style.display = 'none';
-  document.getElementById('msg').style.display = 'none';
-  document.getElementById('lost').style.display = 'block';
+
+  /* a real wrong turn: stop the bars and show where it went wrong */
+  document.body.classList.remove('waiting');
+  document.getElementById('eyebrow').textContent = '404 · Error';
+  document.getElementById('path').textContent = location.pathname + location.search;
 })();
 </script>
 </body>
