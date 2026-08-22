@@ -3278,7 +3278,8 @@ class Component extends DCLogic {
         const up=()=>{ document.removeEventListener('mousemove',at); document.removeEventListener('mouseup',up); };
         document.addEventListener('mousemove',at); document.addEventListener('mouseup',up);
       },
-      curRemain: '-'+this.fmt(Math.max(0,(this.tracks[s.idx].dur||0)-s.progress)),
+      /* no song, no time left to count down to */
+      curRemain: s.picked ? '-'+this.fmt(Math.max(0,(this.tracks[s.idx].dur||0)-s.progress)) : '0:00',
       fsView: this.renderFsView(),
 
       journalContent: this.renderJournal(),
